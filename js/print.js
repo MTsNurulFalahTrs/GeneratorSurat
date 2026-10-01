@@ -1,8 +1,16 @@
 /* =============================================================
    print.js — Logika cetak dokumen
-   ============================================================= */
+   =============================================================
+   Mengambil konfigurasi kertas, margin, dan skala dari
+   State.getSettings() agar sinkron dengan tab Pengaturan.
+   Print TIDAK menggunakan transform scale dari preview —
+   preview zoom dan print scale adalah dua hal yang terpisah.
+*/
 
 const Print = (() => {
+
+  /* ── ID style element yang diinjeksi ── */
+  const STYLE_ID = 'print-page-style';
 
   /* ── Cetak surat ── */
   function printDocument() {
@@ -24,41 +32,85 @@ const Print = (() => {
       return;
     }
 
-    // Set orientasi halaman via @page style dinamis
-    const isLandscape = tpl.meta.orientation === 'landscape';
-    _setPageOrientation(isLandscape);
+    // Terapkan @page style dari settings
+    _applyPageStyle();
 
     // Beri browser waktu untuk apply style, lalu cetak
     requestAnimationFrame(() => {
       setTimeout(() => {
         window.print();
-        // Setelah dialog print ditutup, cleanup style
-        setTimeout(() => _cleanupPageStyle(), 1000);
+        // Cleanup setelah dialog cetak ditutup
+        setTimeout(_cleanupPageStyle, 1500);
       }, 150);
     });
   }
 
-  /* ── Set @page orientation via injected style ── */
-  function _setPageOrientation(isLandscape) {
-    _cleanupPageStyle(); // hapus jika sudah ada
+  /* ── Bangun dan injeksi @page style dari State.settings ── */
+  function _applyPageStyle() {
+    _cleanupPageStyle();
+
+    const s    = State.getSettings();
+    const dim  = State.getPaperDimensions(); // sudah memperhitungkan orientasi
+    const m    = State.getMarginMm();
+    const ori  = s.orientation;
+    const scale = Utils.clamp(s.print.scale || 100, 50, 150);
+
+    // Tentukan @page size
+    let pageSize;
+    if (s.paper.size === 'Custom') {
+      // Untuk custom, gunakan dimensi aktual (sudah dirotasi jika landscape)
+      pageSize = `${dim.widthMm}mm ${dim.heightMm}mm`;
+    } else {
+      // Gunakan nama standar jika tersedia di CSS, fallback ke dimensi mm
+      const cssNames = {
+        A4:     'A4',
+        A5:     'A5',
+        Letter: 'letter',
+        Legal:  'legal',
+        F4:     '215mm 330mm',   // F4/Folio tidak punya nama CSS standar
+      };
+      const cssName = cssNames[s.paper.size] || `${dim.widthMm}mm ${dim.heightMm}mm`;
+      pageSize = ori === 'landscape' ? `${cssName} landscape` : `${cssName} portrait`;
+    }
+
+    // Skala cetak: browser mendukung transform pada @page terbatas.
+    // Kita gunakan zoom pada .doc-content saat print sebagai pendekatan terbaik.
+    const scaleDecimal = scale / 100;
+
+    const css = `
+@page {
+  size: ${pageSize};
+  margin: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;
+}
+@media print {
+  .doc-content {
+    padding: 0 !important;
+    transform: scale(${scaleDecimal});
+    transform-origin: top left;
+    /* Kompensasi shrink agar konten tidak terpotong */
+    width: ${(100 / scaleDecimal).toFixed(4)}%;
+  }
+  .surat-preview {
+    box-shadow: none !important;
+  }
+}`;
 
     const styleEl = document.createElement('style');
-    styleEl.id = 'print-page-style';
-    styleEl.textContent = isLandscape
-      ? `@page { size: A4 landscape; margin: 0; }`
-      : `@page { size: A4 portrait; margin: 0; }`;
+    styleEl.id = STYLE_ID;
+    styleEl.textContent = css;
     document.head.appendChild(styleEl);
   }
 
   /* ── Hapus injected style ── */
   function _cleanupPageStyle() {
-    const existing = document.getElementById('print-page-style');
-    if (existing) existing.remove();
+    document.getElementById(STYLE_ID)?.remove();
   }
 
   /* ── Public API ── */
   return {
     printDocument,
+    applyPageStyle:   _applyPageStyle,
+    cleanupPageStyle: _cleanupPageStyle,
   };
 
 })();
