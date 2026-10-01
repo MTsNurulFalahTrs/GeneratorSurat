@@ -3,13 +3,30 @@
    =============================================================
    Bertanggung jawab atas:
    - Default config per kolom (header & body terpisah)
+   - Konfigurasi lebar kolom per-kolom (columnWidths)
    - Normalisasi & migrasi config lama
    - Merge template default ← user override
    - Menyediakan config yang sudah resolved ke TableRenderer
-   - Validasi nilai (fontSize range, enum alignment, dll.)
+   - Validasi nilai (fontSize range, enum alignment, width range)
 
    Tidak mengandung logika UI. Untuk rendering accordion,
    lihat table-config-ui.js.
+
+   ── Column Width ──────────────────────────────────────────────
+   Lebar kolom adalah properti STRUKTURAL tabel (bukan styling teks).
+   Disimpan di { columnWidths: { byKey: { [colKey]: { mode, value, unit } } } }
+
+   Mode:
+     "auto"   → Fit to Content (table-layout: auto, tidak ada colgroup width)
+     "custom" → lebar manual, diterapkan via <colgroup> + table-layout: fixed
+
+   Satuan: "%" (default) atau "mm"
+
+   Perilaku total %:
+     Saat ada kolom custom, table-layout:fixed dipakai.
+     Jika total % ≠ 100%, browser mendistribusikan sisa ke kolom auto.
+     Sistem tidak memaksa total = 100%, tapi UI menampilkan total
+     sebagai informasi. Nilai per-kolom di-clamp 0.1–99%.
    =============================================================
 */
 
@@ -21,6 +38,17 @@ const TableConfigManager = (() => {
 
   const VALID_H_ALIGN   = ['left', 'center', 'right', 'justify'];
   const VALID_V_ALIGN   = ['top', 'middle', 'bottom'];
+
+  /* ── Column Width Konstanta ── */
+  const WIDTH_MODE_AUTO   = 'auto';
+  const WIDTH_MODE_CUSTOM = 'custom';
+  const WIDTH_UNIT_PCT    = '%';
+  const WIDTH_UNIT_MM     = 'mm';
+  const VALID_WIDTH_UNITS = [WIDTH_UNIT_PCT, WIDTH_UNIT_MM];
+  const WIDTH_PCT_MIN     = 0.1;
+  const WIDTH_PCT_MAX     = 99;
+  const WIDTH_MM_MIN      = 1;
+  const WIDTH_MM_MAX      = 500;
 
   /* ── Default per section (header / body) ── */
   const DEFAULT_HEADER_COL = () => ({
@@ -44,16 +72,19 @@ const TableConfigManager = (() => {
         berdasarkan definisi kolom template.
   ──────────────────────────────────────────────── */
   /**
-   * @param  {Array}  columns  — array dari template: [{key, header, align, ...}]
+   * @param  {Array}  columns    — array dari template: [{key, header, align, width, ...}]
    * @param  {Object} tplDefault — opsional: tableDefaultConfig dari template
-   * @returns {Object} { header: { columns: {0: {...}, 1: {...}} }, body: { columns: {...} } }
+   * @returns {Object} {
+   *   columnWidths: { byKey: { [colKey]: { mode, value, unit } } },
+   *   header: { columns: {0:{...}} },
+   *   body:   { columns: {0:{...}} }
+   * }
    */
   function buildDefaultConfig(columns, tplDefault = null) {
     const headerCols = {};
     const bodyCols   = {};
 
     columns.forEach((col, idx) => {
-      // Seed dari template alignment jika ada
       const tplAlign = col.align || null;
 
       headerCols[idx] = Object.assign(DEFAULT_HEADER_COL(), {
@@ -65,12 +96,15 @@ const TableConfigManager = (() => {
       });
     });
 
+    // Build default columnWidths dari definisi kolom template
+    const columnWidths = buildDefaultWidthConfig(columns);
+
     const base = {
+      columnWidths,
       header: { columns: headerCols },
       body:   { columns: bodyCols },
     };
 
-    // Terapkan template default jika ada
     if (tplDefault && typeof tplDefault === 'object') {
       return _deepMergeConfig(base, tplDefault);
     }
@@ -79,13 +113,46 @@ const TableConfigManager = (() => {
   }
 
   /* ────────────────────────────────────────────────
+     1b. Build default columnWidths dari definisi kolom
+  ──────────────────────────────────────────────── */
+  /**
+   * @param  {Array}  columns — definisi kolom template
+   * @returns {Object} { byKey: { [colKey]: { mode, value, unit } } }
+   *
+   * Kolom yang sudah punya width di template → mode custom dengan nilai tsb.
+   * Kolom tanpa width → mode auto.
+   */
+  function buildDefaultWidthConfig(columns) {
+    const byKey = {};
+    columns.forEach(col => {
+      const key = col.key;
+      if (!key) return;
+
+      if (col.widthMode === WIDTH_MODE_CUSTOM && col.width != null) {
+        // Template menyediakan custom width eksplisit
+        byKey[key] = {
+          mode:  WIDTH_MODE_CUSTOM,
+          value: parseFloat(col.width) || 10,
+          unit:  col.unit || WIDTH_UNIT_PCT,
+        };
+      } else {
+        // Default: auto
+        byKey[key] = { mode: WIDTH_MODE_AUTO };
+      }
+    });
+    return { byKey };
+  }
+
+  /* ────────────────────────────────────────────────
      2. Normalisasi / migrasi config tersimpan
         agar aman digunakan meski ada perubahan kolom
   ──────────────────────────────────────────────── */
   /**
    * Gabungkan default config (berdasarkan definisi kolom terkini)
-   * dengan config tersimpan (user override). Kolom baru mendapat
-   * default; kolom lama yang hilang diabaikan.
+   * dengan config tersimpan (user override).
+   * - Kolom baru mendapat default
+   * - Kolom yang hilang diabaikan
+   * - columnWidths diidentifikasi via colKey (stabil), bukan index
    *
    * @param  {Object} defaultCfg  — dari buildDefaultConfig()
    * @param  {Object} savedCfg    — dari State.getTableConfig()
@@ -95,11 +162,26 @@ const TableConfigManager = (() => {
     if (!savedCfg || typeof savedCfg !== 'object') return defaultCfg;
 
     const result = {
+      columnWidths: { byKey: {} },
       header: { columns: {} },
       body:   { columns: {} },
     };
 
-    // Header columns
+    // ── columnWidths: gunakan colKey sebagai identifier stabil ──
+    const defaultWidthsByKey = defaultCfg.columnWidths?.byKey || {};
+    const savedWidthsByKey   = savedCfg.columnWidths?.byKey   || {};
+
+    // Iterasi berdasarkan kolom yang ada di default (berdasarkan template terkini)
+    Object.keys(defaultWidthsByKey).forEach(colKey => {
+      const savedW = savedWidthsByKey[colKey];
+      if (savedW) {
+        result.columnWidths.byKey[colKey] = _sanitizeWidthConfig(savedW);
+      } else {
+        result.columnWidths.byKey[colKey] = { ...defaultWidthsByKey[colKey] };
+      }
+    });
+
+    // ── Header columns ──
     const defaultHeaderCols = defaultCfg.header?.columns || {};
     const savedHeaderCols   = savedCfg.header?.columns   || {};
     Object.keys(defaultHeaderCols).forEach(idx => {
@@ -111,7 +193,7 @@ const TableConfigManager = (() => {
       );
     });
 
-    // Body columns
+    // ── Body columns ──
     const defaultBodyCols = defaultCfg.body?.columns || {};
     const savedBodyCols   = savedCfg.body?.columns   || {};
     Object.keys(defaultBodyCols).forEach(idx => {
@@ -183,11 +265,11 @@ const TableConfigManager = (() => {
    *   Config yang sudah siap dipakai renderer.
    */
   function getResolvedConfig(templateId, tableId) {
-    if (!templateId || !tableId) return { header: { columns: {} }, body: { columns: {} } };
+    if (!templateId || !tableId) return { columnWidths: { byKey: {} }, header: { columns: {} }, body: { columns: {} } };
 
     const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
     const tableDef  = tableDefs.find(t => t.id === tableId);
-    if (!tableDef) return { header: { columns: {} }, body: { columns: {} } };
+    if (!tableDef) return { columnWidths: { byKey: {} }, header: { columns: {} }, body: { columns: {} } };
 
     const defaultCfg = buildDefaultConfig(tableDef.columns, tableDef.tableDefaultConfig);
     const savedAll   = State.getTableConfig(templateId);
@@ -305,6 +387,111 @@ const TableConfigManager = (() => {
   }
 
   /* ────────────────────────────────────────────────
+     8b. Update lebar satu kolom (dipanggil dari UI)
+  ──────────────────────────────────────────────── */
+  /**
+   * @param {string} templateId
+   * @param {string} tableId
+   * @param {string} colKey     — col.key dari definisi kolom template
+   * @param {Object} partial    — { mode?, value?, unit? }
+   */
+  function updateColumnWidth(templateId, tableId, colKey, partial) {
+    if (!templateId || !tableId || !colKey) return;
+
+    const sanitized = _sanitizeWidthConfig(partial);
+    if (Object.keys(sanitized).length === 0) return;
+
+    const currentAll = State.getTableConfig(templateId);
+    const current    = currentAll[tableId] || { columnWidths: { byKey: {} }, header: { columns: {} }, body: { columns: {} } };
+
+    const byKey = { ...(current.columnWidths?.byKey || {}) };
+    byKey[colKey] = Object.assign({}, byKey[colKey] || { mode: WIDTH_MODE_AUTO }, sanitized);
+
+    State.setTableConfig(templateId, tableId, {
+      ...current,
+      columnWidths: { byKey },
+    });
+  }
+
+  /* ────────────────────────────────────────────────
+     8c. Reset lebar semua kolom di satu tabel ke auto
+  ──────────────────────────────────────────────── */
+  function resetColumnWidths(templateId, tableId) {
+    if (!templateId || !tableId) return;
+
+    const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
+    const tableDef  = tableDefs.find(t => t.id === tableId);
+    if (!tableDef) return;
+
+    const currentAll = State.getTableConfig(templateId);
+    const current    = currentAll[tableId] || {};
+
+    // Set semua kolom ke auto
+    const byKey = {};
+    tableDef.columns.forEach(col => {
+      if (col.key) byKey[col.key] = { mode: WIDTH_MODE_AUTO };
+    });
+
+    State.setTableConfig(templateId, tableId, {
+      ...current,
+      columnWidths: { byKey },
+    });
+  }
+
+  /* ────────────────────────────────────────────────
+     8d. Hitung total lebar kolom dalam % (untuk UI indicator)
+  ──────────────────────────────────────────────── */
+  /**
+   * @param  {Object} columnWidths — { byKey: {...} }
+   * @returns {number|null} — total % dari kolom yang custom+%, atau null jika tidak ada
+   */
+  function getTotalWidthPercent(columnWidths) {
+    if (!columnWidths?.byKey) return null;
+    let total = 0;
+    let hasCustomPct = false;
+    Object.values(columnWidths.byKey).forEach(w => {
+      if (w.mode === WIDTH_MODE_CUSTOM && w.unit === WIDTH_UNIT_PCT && w.value != null) {
+        total += w.value;
+        hasCustomPct = true;
+      }
+    });
+    return hasCustomPct ? Math.round(total * 10) / 10 : null;
+  }
+
+  /* ────────────────────────────────────────────────
+     8e. Cek apakah tabel punya setidaknya satu custom width
+  ──────────────────────────────────────────────── */
+  function hasAnyCustomWidth(columnWidths) {
+    if (!columnWidths?.byKey) return false;
+    return Object.values(columnWidths.byKey).some(w => w.mode === WIDTH_MODE_CUSTOM);
+  }
+
+  /* ────────────────────────────────────────────────
+     8f. Build <colgroup> HTML dari columnWidths + columns
+         (dipakai oleh TableRenderer)
+  ──────────────────────────────────────────────── */
+  /**
+   * @param  {Array}  columns      — definisi kolom template (untuk urutan & key)
+   * @param  {Object} columnWidths — { byKey: { [colKey]: { mode, value, unit } } }
+   * @returns {string|null}        — HTML <colgroup>...</colgroup> atau null jika semua auto
+   */
+  function buildColGroupHtml(columns, columnWidths) {
+    if (!hasAnyCustomWidth(columnWidths)) return null;
+
+    const byKey = columnWidths?.byKey || {};
+    const cols = columns.map(col => {
+      const w = byKey[col.key];
+      if (w && w.mode === WIDTH_MODE_CUSTOM && w.value != null) {
+        const val  = w.unit === WIDTH_UNIT_MM ? `${w.value}mm` : `${w.value}%`;
+        return `<col style="width:${val}">`;
+      }
+      return `<col>`; // auto
+    }).join('');
+
+    return `<colgroup>${cols}</colgroup>`;
+  }
+
+  /* ────────────────────────────────────────────────
      9. Build inline style string untuk <th> / <td>
         berdasarkan config kolom + fallback tableSize
   ──────────────────────────────────────────────── */
@@ -357,7 +544,7 @@ const TableConfigManager = (() => {
      Internal helpers
   ──────────────────────────────────────────────── */
 
-  /** Sanitasi & validasi satu kolom config object */
+  /** Sanitasi & validasi satu kolom config object (untuk header/body) */
   function _sanitizeColConfig(obj) {
     if (!obj || typeof obj !== 'object') return {};
     const out = {};
@@ -383,14 +570,69 @@ const TableConfigManager = (() => {
     return out;
   }
 
-  /** Deep merge khusus config struktur { header: { columns: {...} }, body: { columns: {...} } } */
+  /** Sanitasi & validasi satu kolom width config */
+  function _sanitizeWidthConfig(obj) {
+    if (!obj || typeof obj !== 'object') return {};
+    const out = {};
+
+    if ('mode' in obj) {
+      if (obj.mode === WIDTH_MODE_AUTO || obj.mode === WIDTH_MODE_CUSTOM) {
+        out.mode = obj.mode;
+      }
+    }
+    if ('unit' in obj) {
+      if (VALID_WIDTH_UNITS.includes(obj.unit)) {
+        out.unit = obj.unit;
+      }
+    }
+    if ('value' in obj) {
+      if (obj.value === null || obj.value === undefined) {
+        // null = reset
+      } else {
+        const n    = parseFloat(obj.value);
+        const unit = out.unit || obj.unit || WIDTH_UNIT_PCT;
+        if (!isNaN(n)) {
+          if (unit === WIDTH_UNIT_MM) {
+            out.value = Utils.clamp(n, WIDTH_MM_MIN, WIDTH_MM_MAX);
+          } else {
+            out.value = Utils.clamp(n, WIDTH_PCT_MIN, WIDTH_PCT_MAX);
+          }
+        }
+      }
+    }
+
+    // Jika mode diset ke auto, hapus value/unit (tidak diperlukan)
+    if (out.mode === WIDTH_MODE_AUTO) {
+      delete out.value;
+      delete out.unit;
+    }
+
+    return out;
+  }
+
+  /** Deep merge khusus config struktur */
   function _deepMergeConfig(base, override) {
     if (!override || typeof override !== 'object') return base;
 
     const result = {
+      columnWidths: { byKey: { ...(base.columnWidths?.byKey || {}) } },
       header: { columns: { ...(base.header?.columns || {}) } },
       body:   { columns: { ...(base.body?.columns   || {}) } },
     };
+
+    // Merge columnWidths
+    if (override.columnWidths?.byKey) {
+      Object.entries(override.columnWidths.byKey).forEach(([colKey, wCfg]) => {
+        const sanitized = _sanitizeWidthConfig(wCfg);
+        if (Object.keys(sanitized).length > 0) {
+          result.columnWidths.byKey[colKey] = Object.assign(
+            {},
+            result.columnWidths.byKey[colKey] || { mode: WIDTH_MODE_AUTO },
+            sanitized
+          );
+        }
+      });
+    }
 
     if (override.header?.columns) {
       Object.entries(override.header.columns).forEach(([idx, colCfg]) => {
@@ -417,6 +659,7 @@ const TableConfigManager = (() => {
   /* ── Public API ── */
   return {
     buildDefaultConfig,
+    buildDefaultWidthConfig,
     normalizeConfig,
     initForTemplate,
     getResolvedConfig,
@@ -425,6 +668,12 @@ const TableConfigManager = (() => {
     copyHeaderToBody,
     resetToDefault,
     buildCellStyle,
+    // Column width API
+    updateColumnWidth,
+    resetColumnWidths,
+    getTotalWidthPercent,
+    hasAnyCustomWidth,
+    buildColGroupHtml,
 
     // Konstanta yang berguna untuk UI
     FONT_SIZE_MIN,
@@ -433,6 +682,14 @@ const TableConfigManager = (() => {
     VALID_V_ALIGN,
     DEFAULT_HEADER_COL,
     DEFAULT_BODY_COL,
+    WIDTH_MODE_AUTO,
+    WIDTH_MODE_CUSTOM,
+    WIDTH_UNIT_PCT,
+    WIDTH_UNIT_MM,
+    WIDTH_PCT_MIN,
+    WIDTH_PCT_MAX,
+    WIDTH_MM_MIN,
+    WIDTH_MM_MAX,
   };
 
 })();
