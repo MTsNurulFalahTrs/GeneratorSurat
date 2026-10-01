@@ -75,14 +75,17 @@
   background: white;
   box-shadow: 0 4px 20px rgba(0,0,0,.12), 0 1px 4px rgba(0,0,0,.08);
   position: relative;
-  width: 210mm;   /* Default A4 portrait width */
+  /* Lebar dan tinggi diatur via inline style oleh preview-renderer.js
+     berdasarkan State.getPaperDimensions(). Nilai default A4 portrait
+     sebagai fallback jika JS belum berjalan. */
+  width: 210mm;
   min-height: 297mm;
   box-sizing: border-box;
-  /* overflow: visible agar konten tidak terpotong */
   overflow: visible;
 }
 
-/* A4 Landscape */
+/* A4 Landscape — dipertahankan sebagai CSS fallback,
+   tetapi nilai riil diset via inline style oleh JS */
 .surat-preview.orientation-landscape {
   width: 297mm;
   min-height: 210mm;
@@ -115,7 +118,8 @@
 
 /* ── 6. Document Content (dalam surat-preview) ── */
 .doc-content {
-  padding: 20mm 20mm 25mm 25mm; /* top right bottom left */
+  /* Padding (margin surat) diatur via inline style oleh preview-renderer.js
+     dari State.getMarginMm(). CSS ini hanya menyediakan font dan warna dasar. */
   box-sizing: border-box;
   font-family: var(--font-surat);
   font-size: 12pt;
@@ -123,10 +127,8 @@
   width: 100%;
 }
 
-/* Override padding for landscape */
-.surat-preview.orientation-landscape .doc-content {
-  padding: 15mm 15mm 20mm 20mm;
-}
+/* Override padding untuk landscape sudah tidak diperlukan
+   karena ditangani sepenuhnya oleh JS */
 
 /* ── 7. KOP dalam preview ── */
 .doc-kop {
