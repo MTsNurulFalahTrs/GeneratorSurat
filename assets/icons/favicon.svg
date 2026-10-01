@@ -1,0 +1,85 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+
+    <linearGradient id="bg" x1="80" y1="64" x2="432" y2="448" gradientUnits="userSpaceOnUse">
+
+      <stop stop-color="#1E3A5F"/>
+
+      <stop offset="1" stop-color="#0F2742"/>
+
+    </linearGradient>
+
+    <linearGradient id="gold" x1="228" y1="184" x2="350" y2="350" gradientUnits="userSpaceOnUse">
+
+      <stop stop-color="#F7C948"/>
+
+      <stop offset="1" stop-color="#D99A16"/>
+
+    </linearGradient>
+
+  </defs>
+
+  <!-- Background -->
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Document -->
+
+  <path
+
+    d="M150 96
+
+       H312
+
+       L380 164
+
+       V380
+
+       C380 397.673 365.673 412 348 412
+
+       H150
+
+       C132.327 412 118 397.673 118 380
+
+       V128
+
+       C118 110.327 132.327 96 150 96Z"
+
+    fill="white"
+
+  />
+
+  <!-- Fold -->
+
+  <path
+
+    d="M312 96V156
+
+       C312 163.732 318.268 170 326 170H380L312 96Z"
+
+    fill="#DCE6F0"
+
+  />
+
+  <!-- Document lines -->
+
+  <rect x="158" y="218" width="138" height="16" rx="8" fill="#1E3A5F"/>
+
+  <rect x="158" y="254" width="110" height="13" rx="6.5" fill="#9AA9B8"/>
+
+  <rect x="158" y="284" width="125" height="13" rx="6.5" fill="#9AA9B8"/>
+
+  <!-- Pen -->
+
+  <g transform="rotate(-45 330 330)">
+
+    <rect x="310" y="250" width="42" height="120" rx="12" fill="url(#gold)"/>
+
+    <path d="M310 250L331 220L352 250H310Z" fill="#F7C948"/>
+
+    <path d="M310 370L331 400L352 370H310Z" fill="#B77900"/>
+
+  </g>
+
+</svg>

@@ -1,0 +1,222 @@
+/* =============================================================
+   print.css — @media print styles, hanya surat yang dicetak
+   ============================================================= */
+
+@media print {
+
+  /* ── Reset global untuk print ── */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html, body {
+    overflow: visible !important;
+    height: auto !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 12pt !important;
+  }
+
+  /* ── Sembunyikan semua elemen UI aplikasi ── */
+  .app-header,
+  .editor-panel,
+  .panel-resizer,
+  .preview-toolbar,
+  .preview-viewport,
+  .toast-container,
+  .modal-overlay,
+  .expired-banner,
+  .storage-info,
+  #btn-save,
+  #btn-print,
+  #btn-reset,
+  #btn-zoom-in,
+  #btn-zoom-out,
+  #btn-zoom-reset,
+  .zoom-level-text {
+    display: none !important;
+  }
+
+  /* ── App container reset ── */
+  .app-container,
+  .app-body,
+  .preview-panel {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+
+  /* ── Tampilkan hanya surat preview ── */
+  #preview-viewport,
+  .preview-viewport {
+    display: block !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  .preview-canvas-wrapper {
+    transform: none !important;
+    display: block !important;
+    width: auto !important;
+  }
+
+  /* ── Surat Preview (paper) ── */
+  .surat-preview {
+    box-shadow: none !important;
+    width: auto !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    page-break-after: always;
+  }
+
+  .surat-preview:last-child {
+    page-break-after: auto;
+  }
+
+  /* ── Page setup ── */
+  @page {
+    margin: 0;
+    /* Margin ditangani oleh .doc-content padding */
+  }
+
+  @page :first {
+    margin: 0;
+  }
+
+  /* A4 Portrait */
+  .surat-preview:not(.orientation-landscape) {
+    width: 210mm !important;
+  }
+
+  /* A4 Landscape */
+  .surat-preview.orientation-landscape {
+    width: 297mm !important;
+  }
+
+  /* ── Landscape page orientation ── */
+  .print-landscape {
+    /* Applied via JS to body/html before print */
+  }
+
+  /* ── Doc content padding ── */
+  .doc-content {
+    font-family: 'Times New Roman', Times, serif !important;
+    padding: 20mm 20mm 25mm 25mm !important;
+    box-sizing: border-box !important;
+    color: #000 !important;
+    font-size: 12pt !important;
+  }
+
+  .surat-preview.orientation-landscape .doc-content {
+    padding: 15mm 15mm 20mm 20mm !important;
+  }
+
+  /* ── KOP ── */
+  .doc-kop {
+    display: flex !important;
+    align-items: stretch !important;
+  }
+
+  .doc-kop__logo img {
+    object-fit: contain !important;
+  }
+
+  .doc-kop-divider {
+    border-top: 3px solid #000 !important;
+  }
+
+  .doc-kop-divider-thin {
+    border-top: 1px solid #000 !important;
+  }
+
+  /* ── Table ── */
+  .doc-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    page-break-inside: auto;
+  }
+
+  .doc-table thead {
+    display: table-header-group; /* Repeat header on each page */
+  }
+
+  .doc-table tfoot {
+    display: table-footer-group;
+  }
+
+  .doc-table tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .doc-table th,
+  .doc-table td {
+    border: 1px solid #000 !important;
+    padding: 2pt 3pt !important;
+    font-size: 7.5pt !important;
+    color: #000 !important;
+    background: white !important;
+  }
+
+  .doc-table th {
+    background: white !important;
+    font-weight: bold !important;
+  }
+
+  /* ── Tanda tangan ── */
+  .doc-ttd-section {
+    page-break-inside: avoid !important;
+  }
+
+  .doc-ttd-row {
+    display: flex !important;
+  }
+
+  /* ── Checkbox ── */
+  .doc-checkbox {
+    border: 1px solid #000 !important;
+    display: inline-block !important;
+  }
+
+  /* ── Rekap ── */
+  .doc-rekap {
+    page-break-inside: avoid !important;
+  }
+
+  /* ── Catatan ── */
+  .doc-catatan {
+    page-break-inside: avoid !important;
+  }
+
+  /* ── Remove hover effects, transitions ── */
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /* ── Sembunyikan elemen preview-only ── */
+  .preview-placeholder {
+    display: none !important;
+  }
+
+  /* ── Hyperlink tidak perlu URL ── */
+  a[href]::after {
+    content: none !important;
+  }
+}
+
+/* ── Print page orientation helper class (applied to <html>) ── */
+@media print {
+  html.print-portrait  { }
+  html.print-landscape { }
+}
+
+/* @page portrait/landscape handled via JS window.print() call */

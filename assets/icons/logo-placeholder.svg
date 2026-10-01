@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="8" fill="#f1f5f9"/>
+  <rect x="4" y="4" width="56" height="56" rx="6" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <path d="M20 44 L26 34 L32 40 L38 30 L44 44 Z" fill="#e2e8f0"/>
+  <circle cx="24" cy="26" r="4" fill="#e2e8f0"/>
+  <text x="32" y="54" text-anchor="middle" font-family="system-ui,sans-serif"
+    font-size="7" fill="#94a3b8">Logo</text>
+</svg>

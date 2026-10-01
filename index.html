@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Generator Surat Madrasah - Buat surat resmi madrasah secara mudah dan cepat" />
+  <title>Generator Surat Madrasah</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg" />
+  <!-- Fallback untuk browser lama yang tidak mendukung SVG favicon -->
+  <link rel="alternate icon" href="assets/icons/favicon.svg" />
+  <meta name="theme-color" content="#1E3A5F" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/kop-editor.css" />
+  <link rel="stylesheet" href="css/preview.css" />
+  <link rel="stylesheet" href="css/print.css" />
+</head>
+<body>
+
+  <!-- ===== TOAST NOTIFICATION ===== -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- ===== MODAL OVERLAY ===== -->
+  <div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-title" class="modal-title"></h3>
+        <button id="modal-close-btn" class="modal-close-btn" aria-label="Tutup modal">&times;</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+      <div id="modal-footer" class="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- ===== APP SHELL ===== -->
+  <div id="app" class="app-container">
+
+    <!-- EXPIRED DATA BANNER (inside app container agar layout benar) -->
+    <div id="expired-banner" class="expired-banner hidden" role="alert">
+      <span class="expired-banner__icon">⚠️</span>
+      <span id="expired-banner-text" class="expired-banner__text">
+        Data lokal telah kedaluwarsa dan dihapus otomatis.
+      </span>
+      <button id="expired-banner-close" class="expired-banner__close" aria-label="Tutup notifikasi">&times;</button>
+    </div>
+
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="app-header__brand">
+        <img
+          src="assets/icons/logo.svg"
+          alt="Generator Surat Madrasah"
+          class="app-header__logo-icon"
+          width="28"
+          height="28"
+        />
+        <span class="app-header__title">Generator Surat Madrasah</span>
+      </div>
+      <div class="app-header__actions">
+        <!-- Storage info -->
+        <div id="storage-info" class="storage-info hidden">
+          <span class="storage-info__icon">💾</span>
+          <span id="storage-info-text" class="storage-info__text"></span>
+        </div>
+        <!-- Action buttons -->
+        <button id="btn-save" class="btn btn--sm btn--secondary" title="Simpan data ke penyimpanan lokal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+          Simpan
+        </button>
+        <button id="btn-print" class="btn btn--sm btn--primary" title="Cetak surat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6,9 6,2 18,2 18,9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Cetak
+        </button>
+        <button id="btn-reset" class="btn btn--sm btn--danger-outline" title="Reset dan hapus semua data">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+          Reset
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN LAYOUT -->
+    <div class="app-body">
+
+      <!-- LEFT PANEL: EDITOR -->
+      <aside class="editor-panel" id="editor-panel">
+
+        <!-- Tab Navigation -->
+        <nav class="editor-tabs" role="tablist" aria-label="Bagian editor">
+          <button class="editor-tab active" role="tab" aria-selected="true" aria-controls="tab-template" id="tab-btn-template" data-tab="template">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Template
+          </button>
+          <button class="editor-tab" role="tab" aria-selected="false" aria-controls="tab-kop" id="tab-btn-kop" data-tab="kop">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M2 12h20M2 17h20"/></svg>
+            KOP Surat
+          </button>
+          <button class="editor-tab" role="tab" aria-selected="false" aria-controls="tab-form" id="tab-btn-form" data-tab="form">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Isi Surat
+          </button>
+        </nav>
+
+        <!-- Tab: Pilih Template -->
+        <div class="editor-tab-content active" id="tab-template" role="tabpanel" aria-labelledby="tab-btn-template">
+          <div class="section-header">
+            <h2 class="section-title">Pilih Template Surat</h2>
+            <p class="section-desc">Pilih jenis surat yang ingin dibuat.</p>
+          </div>
+          <div id="template-list" class="template-list">
+            <!-- Diisi oleh template-registry.js -->
+          </div>
+        </div>
+
+        <!-- Tab: KOP Surat -->
+        <div class="editor-tab-content" id="tab-kop" role="tabpanel" aria-labelledby="tab-btn-kop">
+          <div class="section-header">
+            <h2 class="section-title">Editor KOP Surat</h2>
+            <p class="section-desc">Atur logo dan baris teks KOP surat.</p>
+          </div>
+          <!-- KOP Editor akan di-render oleh kop-editor.js -->
+          <div id="kop-editor-root"></div>
+        </div>
+
+        <!-- Tab: Isi Surat -->
+        <div class="editor-tab-content" id="tab-form" role="tabpanel" aria-labelledby="tab-btn-form">
+          <div id="form-container">
+            <div class="form-empty-state" id="form-empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+              <p>Pilih template surat terlebih dahulu.</p>
+              <button class="btn btn--sm btn--secondary" onclick="window.App.switchTab('template')">Pilih Template</button>
+            </div>
+            <!-- Form input surat akan di-render oleh form-renderer.js -->
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- RESIZER -->
+      <div class="panel-resizer" id="panel-resizer" aria-hidden="true"></div>
+
+      <!-- RIGHT PANEL: PREVIEW -->
+      <main class="preview-panel" id="preview-panel">
+        <div class="preview-toolbar">
+          <span class="preview-toolbar__label">Preview Surat</span>
+          <div class="preview-toolbar__actions">
+            <button id="btn-zoom-out" class="btn-icon" title="Perkecil tampilan" aria-label="Perkecil tampilan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <span id="zoom-level-text" class="zoom-level-text">100%</span>
+            <button id="btn-zoom-in" class="btn-icon" title="Perbesar tampilan" aria-label="Perbesar tampilan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button id="btn-zoom-reset" class="btn-icon" title="Reset zoom" aria-label="Reset zoom">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3.51 15a9 9 0 1 0 .49-4.95"/><polyline points="1,4 1,10 7,10"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="preview-viewport" id="preview-viewport">
+          <div class="preview-canvas-wrapper" id="preview-canvas-wrapper">
+            <!-- Surat preview dirender di sini -->
+            <div id="surat-preview" class="surat-preview">
+              <div class="preview-placeholder" id="preview-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <p>Preview surat akan muncul di sini setelah template dipilih dan data diisi.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+    </div><!-- /.app-body -->
+
+  </div><!-- /#app -->
+
+  <!-- ===== SCRIPTS ===== -->
+  <!-- Urutan penting: utils → storage → state → validation → templates → registry → modules → app -->
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/validation.js"></script>
+  <script src="templates/dpu.js"></script>
+  <script src="templates/mutasi-masuk.js"></script>
+  <script src="templates/siswa-baru.js"></script>
+  <script src="js/template-registry.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/kop-editor.js"></script>
+  <script src="js/form-renderer.js"></script>
+  <script src="js/preview-renderer.js"></script>
+  <script src="js/print.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
