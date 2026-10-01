@@ -57,6 +57,7 @@ const TableConfigManager = (() => {
     bold:            true,
     italic:          false,
     fontSize:        null,   // null = ikuti global tableSize
+    wrapText:        false,  // header default: nowrap (label kolom satu baris)
   });
 
   const DEFAULT_BODY_COL = () => ({
@@ -65,6 +66,7 @@ const TableConfigManager = (() => {
     bold:            false,
     italic:          false,
     fontSize:        null,   // null = ikuti global tableSize
+    wrapText:        true,   // body default: wrap (konten bisa panjang)
   });
 
   /* ────────────────────────────────────────────────
@@ -378,6 +380,42 @@ const TableConfigManager = (() => {
   }
 
   /* ────────────────────────────────────────────────
+     7b. Apply Wrap Text ke semua kolom di satu section
+  ──────────────────────────────────────────────── */
+  /**
+   * @param {string}  templateId
+   * @param {string}  tableId
+   * @param {string}  section   — 'header' | 'body'
+   * @param {boolean} wrapText  — true = wrap, false = nowrap
+   */
+  function applyWrapTextToAll(templateId, tableId, section, wrapText) {
+    if (!templateId || !tableId) return;
+    if (section !== 'header' && section !== 'body') return;
+
+    const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
+    const tableDef  = tableDefs.find(t => t.id === tableId);
+    if (!tableDef) return;
+
+    const currentAll = State.getTableConfig(templateId);
+    const current    = currentAll[tableId] || { header: { columns: {} }, body: { columns: {} } };
+
+    const updated = {
+      header: { columns: { ...(current.header?.columns || {}) } },
+      body:   { columns: { ...(current.body?.columns   || {}) } },
+    };
+
+    tableDef.columns.forEach((_, idx) => {
+      updated[section].columns[idx] = Object.assign(
+        {},
+        updated[section].columns[idx] || {},
+        { wrapText: Boolean(wrapText) }
+      );
+    });
+
+    State.setTableConfig(templateId, tableId, updated);
+  }
+
+  /* ────────────────────────────────────────────────
      8. Reset satu tabel atau semua tabel ke default template
   ──────────────────────────────────────────────── */
   function resetToDefault(templateId, tableId = null) {
@@ -494,11 +532,27 @@ const TableConfigManager = (() => {
   /* ────────────────────────────────────────────────
      9. Build inline style string untuk <th> / <td>
         berdasarkan config kolom + fallback tableSize
+
+     ── Wrap Text strategy ────────────────────────
+     white-space dan overflow-wrap diterapkan via
+     inline style agar menang atas class CSS global.
+
+     wrapText = true  → white-space:normal; overflow-wrap:break-word
+     wrapText = false → white-space:nowrap
+
+     Inline style menang atas .doc-table th { white-space:nowrap }
+     dan .doc-table td { overflow-wrap:break-word } tanpa perlu
+     mengubah class CSS global.
+
+     PENTING: print.css punya overflow-wrap:break-word!important
+     dan word-break:break-word!important pada .doc-table th,td.
+     Untuk nowrap saat cetak, kita butuh counter-declaration yang
+     lebih spesifik — ditangani di print.css (task 6).
   ──────────────────────────────────────────────── */
   /**
    * @param  {Object} colCfg    — satu entri dari header.columns[i] atau body.columns[i]
    * @param  {number} tableSize — font size fallback (pt) dari typography settings
-   * @param  {Object} templateColDef — definisi kolom dari template (untuk width, noWrap, dll.)
+   * @param  {Object} templateColDef — definisi kolom dari template
    * @returns {string} CSS inline style string
    */
   function buildCellStyle(colCfg, tableSize, templateColDef = {}) {
@@ -537,6 +591,21 @@ const TableConfigManager = (() => {
       : tableSize;
     if (fs) parts.push(`font-size:${fs}pt`);
 
+    // ── Wrap Text ──
+    // wrapText: true  → normal wrapping (default body behavior)
+    // wrapText: false → no-wrap (one-line, default header behavior)
+    // null/undefined  → tidak diset (mengikuti CSS class default)
+    if (colCfg.wrapText === true) {
+      parts.push('white-space:normal');
+      parts.push('overflow-wrap:break-word');
+      parts.push('word-break:break-word');
+    } else if (colCfg.wrapText === false) {
+      parts.push('white-space:nowrap');
+      // overflow-wrap dan word-break tidak diperlukan saat nowrap
+      // karena teks tidak dibungkus sama sekali
+    }
+    // wrapText === null/undefined: tidak inject style, ikuti CSS class
+
     return parts.join(';');
   }
 
@@ -565,6 +634,14 @@ const TableConfigManager = (() => {
         out.fontSize = Utils.clamp(n, FONT_SIZE_MIN, FONT_SIZE_MAX);
       } else if (obj.fontSize === null) {
         out.fontSize = null; // reset ke global
+      }
+    }
+    // wrapText: true = wrap, false = nowrap, null = ikuti default CSS
+    if ('wrapText' in obj) {
+      if (obj.wrapText === null || obj.wrapText === undefined) {
+        out.wrapText = null;
+      } else {
+        out.wrapText = Boolean(obj.wrapText);
       }
     }
     return out;
@@ -665,6 +742,7 @@ const TableConfigManager = (() => {
     getResolvedConfig,
     updateColumn,
     applyToAllColumns,
+    applyWrapTextToAll,
     copyHeaderToBody,
     resetToDefault,
     buildCellStyle,
