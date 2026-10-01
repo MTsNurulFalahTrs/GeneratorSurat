@@ -132,6 +132,11 @@ const TableRenderer = (() => {
    * Menggunakan width di <th> bersamaan dengan table-layout:fixed dan <colgroup>
    * menyebabkan konflik — <colgroup> yang menang untuk table-layout:fixed.
    * Tetap pertahankan min-width legacy untuk Fit to Content (saat tidak ada custom).
+   *
+   * Wrap Text priority:
+   *   tableConfig.header.columns[idx].wrapText = explicit user config → wins
+   *   col.noWrap || _isShortColumn(col) = template hint → used only when no tableConfig
+   *   .doc-table th { white-space:nowrap } = CSS class default → lowest priority
    */
   function _buildThStyle(col, headerFontSize, tableConfig, colIdx) {
     const parts = [];
@@ -147,11 +152,15 @@ const TableRenderer = (() => {
           parts.push(`max-width:${widthNum * 2}${unit}`);
         }
       }
-      if (col.noWrap || _isShortColumn(col)) parts.push('white-space:nowrap');
+      // Template hint nowrap — hanya diterapkan jika tableConfig tidak punya wrapText eksplisit
+      const hasCfgWrap = tableConfig?.header?.columns?.[colIdx]?.wrapText !== undefined
+        && tableConfig?.header?.columns?.[colIdx]?.wrapText !== null;
+      if (!hasCfgWrap && (col.noWrap || _isShortColumn(col))) {
+        parts.push('white-space:nowrap');
+      }
     }
-    // Custom width mode: lebar diatur <colgroup>, tidak perlu min/max-width di sini
 
-    // Terapkan tableConfig (styling teks header)
+    // Terapkan tableConfig (styling teks header — termasuk wrapText)
     if (tableConfig?.header?.columns) {
       const colCfg = tableConfig.header.columns[colIdx];
       if (colCfg) {
@@ -200,7 +209,7 @@ const TableRenderer = (() => {
     if (typeof TableConfigManager !== 'undefined') {
       return TableConfigManager.buildCellStyle(colCfg, fallbackFontSize);
     }
-    // Fallback inline
+    // Fallback inline (dipakai saat TableConfigManager belum tersedia — seharusnya tidak terjadi)
     const parts = [];
     if (colCfg.horizontalAlign) parts.push(`text-align:${colCfg.horizontalAlign}`);
     if (colCfg.verticalAlign)   parts.push(`vertical-align:${colCfg.verticalAlign}`);
@@ -210,6 +219,14 @@ const TableRenderer = (() => {
     if (colCfg.italic === false) parts.push('font-style:normal');
     const fs = colCfg.fontSize != null ? colCfg.fontSize : fallbackFontSize;
     if (fs) parts.push(`font-size:${fs}pt`);
+    // wrapText fallback
+    if (colCfg.wrapText === true) {
+      parts.push('white-space:normal');
+      parts.push('overflow-wrap:break-word');
+      parts.push('word-break:break-word');
+    } else if (colCfg.wrapText === false) {
+      parts.push('white-space:nowrap');
+    }
     return parts.join(';');
   }
 
