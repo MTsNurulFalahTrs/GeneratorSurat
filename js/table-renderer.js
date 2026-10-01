@@ -7,7 +7,15 @@
    - Kolom dengan width eksplisit dihormati sebagai min-width
    - Kolom flex mendapat ruang sisa secara proporsional
    - Konten panjang wrapping wajar tanpa horizontal overflow halaman
-   - API: TableRenderer.render(columns, rows, options)
+
+   Mendukung konfigurasi per-kolom (Pengaturan Tabel):
+   - tableConfig: { header: { columns: {0:{...}, 1:{...}} }, body: { columns: {...} } }
+   - Setiap kolom config: { horizontalAlign, verticalAlign, bold, italic, fontSize }
+   - Header dan Body dikonfigurasi secara TERPISAH
+   - Jika tableConfig tidak diberikan, renderer jatuh kembali ke perilaku lama
+
+   API: TableRenderer.render(columns, rows, options, tableSize, tableConfig)
+        TableRenderer.renderDpuTable(peserta, typo, minRows, tableConfig)
    =============================================================
 */
 
@@ -38,22 +46,22 @@ const TableRenderer = (() => {
 
   /* ── Render tabel lengkap ── */
   /**
-   * @param {Array}  columns  — definisi kolom dari template.tableColumns
+   * @param {Array}  columns    — definisi kolom dari template.tableColumns
    *   Setiap kolom: { key, header, width, align, minWidth, noWrap, flex }
-   *   - width     : lebar eksplisit (mis. '10mm') → diterapkan sebagai min-width
-   *   - align     : 'left' | 'center' | 'right'
-   *   - noWrap    : true → white-space: nowrap pada kolom ini
-   *   - flex      : true → kolom ini mendapat ruang sisa (class col-flex)
-   * @param {Array}  rows     — array data baris, setiap baris = object {key: value}
-   * @param {Object} options  — override DEFAULTS
-   * @param {number} tableSize — ukuran font tabel dari typography settings
+   * @param {Array}  rows       — array data baris, setiap baris = object {key: value}
+   * @param {Object} options    — override DEFAULTS
+   * @param {number} tableSize  — ukuran font tabel dari typography settings
+   * @param {Object} tableConfig — konfigurasi per-kolom dari TableConfigManager:
+   *   { header: { columns: {0:{...},1:{...}} }, body: { columns: {...} } }
+   *   Jika null/undefined, jatuh kembali ke perilaku legacy (align dari kolom definisi).
    * @returns {string} HTML string <div class="doc-table-wrap">...</div>
    */
-  function render(columns, rows, options = {}, tableSize = 7.5) {
+  function render(columns, rows, options = {}, tableSize = 7.5, tableConfig = null) {
     const opts = { ...DEFAULTS, ...options };
 
-    const theadHtml = opts.customHeader || _buildAutoHeader(columns, opts.headerFontSize || tableSize);
-    const tbodyHtml = _buildBody(columns, rows, tableSize, opts.minRows);
+    const theadHtml = opts.customHeader
+      || _buildAutoHeader(columns, opts.headerFontSize || tableSize, tableConfig);
+    const tbodyHtml = _buildBody(columns, rows, tableSize, opts.minRows, tableConfig);
     const tableClass = _buildTableClass(opts);
 
     return `
@@ -66,17 +74,17 @@ const TableRenderer = (() => {
   }
 
   /* ── Build thead otomatis dari kolom ── */
-  function _buildAutoHeader(columns, headerFontSize) {
-    const cells = columns.map(col => {
-      const style = _buildThStyle(col, headerFontSize);
+  function _buildAutoHeader(columns, headerFontSize, tableConfig) {
+    const cells = columns.map((col, idx) => {
+      const style = _buildThStyle(col, headerFontSize, tableConfig, idx);
       return `<th style="${style}">${Utils.escapeHtml(col.header || '')}</th>`;
     }).join('');
     return `<thead><tr>${cells}</tr></thead>`;
   }
 
   /* ── Build tbody ── */
-  function _buildBody(columns, rows, tableSize, minRows) {
-    const dataRows = rows.map(row => _buildRow(columns, row, tableSize));
+  function _buildBody(columns, rows, tableSize, minRows, tableConfig) {
+    const dataRows = rows.map(row => _buildRow(columns, row, tableSize, tableConfig));
 
     // Baris kosong pengisi jika minRows > 0
     const emptyCount = Math.max(0, minRows - rows.length);
@@ -89,45 +97,99 @@ const TableRenderer = (() => {
   }
 
   /* ── Build satu baris data ── */
-  function _buildRow(columns, rowData, tableSize) {
-    const cells = columns.map(col => {
+  function _buildRow(columns, rowData, tableSize, tableConfig) {
+    const cells = columns.map((col, idx) => {
       const val   = rowData[col.key] != null ? String(rowData[col.key]) : '';
-      const style = _buildTdStyle(col, tableSize);
+      const style = _buildTdStyle(col, tableSize, tableConfig, idx);
       return `<td style="${style}">${Utils.escapeHtml(val)}</td>`;
     }).join('');
     return `<tr>${cells}</tr>`;
   }
 
   /* ── Build style string untuk <th> ── */
-  function _buildThStyle(col, headerFontSize) {
+  function _buildThStyle(col, headerFontSize, tableConfig, colIdx) {
     const parts = [];
 
     // Width eksplisit → min-width (bukan width tetap)
-    // Tabel auto akan menggunakan ini sebagai batas bawah lebar kolom
     if (col.width && col.width !== 'auto') {
       parts.push(`min-width:${col.width}`);
-      // Untuk kolom pendek yang ditentukan eksplisit, tambahkan max-width juga
-      // agar kolom tersebut tidak terlalu lebar ketika tabel auto-sized
       const widthNum = parseFloat(col.width);
       if (!isNaN(widthNum) && widthNum <= 15) {
-        // Kolom sempit: beri max-width 2× untuk sedikit ruang tapi tidak berlebihan
         const unit = col.width.replace(/[\d.]/g, '');
         parts.push(`max-width:${widthNum * 2}${unit}`);
       }
     }
 
-    if (col.align) parts.push(`text-align:${col.align}`);
+    // noWrap legacy
     if (col.noWrap || _isShortColumn(col)) parts.push('white-space:nowrap');
+
+    // Terapkan tableConfig jika tersedia
+    if (tableConfig && tableConfig.header && tableConfig.header.columns) {
+      const colCfg = tableConfig.header.columns[colIdx];
+      if (colCfg) {
+        const cfgStyle = _buildConfigStyle(colCfg, headerFontSize);
+        if (cfgStyle) {
+          parts.push(cfgStyle);
+          return parts.join(';');
+        }
+      }
+    }
+
+    // Fallback: gunakan align dari definisi kolom + headerFontSize
+    if (col.align) parts.push(`text-align:${col.align}`);
     if (headerFontSize) parts.push(`font-size:${headerFontSize}pt`);
+    // Header default: bold
+    parts.push('font-weight:bold');
 
     return parts.join(';');
   }
 
   /* ── Build style string untuk <td> ── */
-  function _buildTdStyle(col, tableSize) {
+  function _buildTdStyle(col, tableSize, tableConfig, colIdx) {
     const parts = [];
+
+    // Terapkan tableConfig jika tersedia
+    if (tableConfig && tableConfig.body && tableConfig.body.columns) {
+      const colCfg = tableConfig.body.columns[colIdx];
+      if (colCfg) {
+        const cfgStyle = _buildConfigStyle(colCfg, tableSize);
+        if (cfgStyle) {
+          parts.push(cfgStyle);
+          return parts.join(';');
+        }
+      }
+    }
+
+    // Fallback legacy
     if (col.align) parts.push(`text-align:${col.align}`);
     if (tableSize) parts.push(`font-size:${tableSize}pt`);
+
+    return parts.join(';');
+  }
+
+  /* ── Build style dari satu kolom config ── */
+  /**
+   * Menggunakan TableConfigManager.buildCellStyle jika tersedia,
+   * jika tidak, bangun style secara langsung (fallback aman).
+   */
+  function _buildConfigStyle(colCfg, fallbackFontSize) {
+    if (!colCfg) return '';
+
+    // Gunakan TableConfigManager.buildCellStyle jika tersedia
+    if (typeof TableConfigManager !== 'undefined') {
+      return TableConfigManager.buildCellStyle(colCfg, fallbackFontSize);
+    }
+
+    // Fallback inline (seharusnya tidak terjadi di runtime normal)
+    const parts = [];
+    if (colCfg.horizontalAlign) parts.push(`text-align:${colCfg.horizontalAlign}`);
+    if (colCfg.verticalAlign)   parts.push(`vertical-align:${colCfg.verticalAlign}`);
+    if (colCfg.bold   === true)  parts.push('font-weight:bold');
+    if (colCfg.bold   === false) parts.push('font-weight:normal');
+    if (colCfg.italic === true)  parts.push('font-style:italic');
+    if (colCfg.italic === false) parts.push('font-style:normal');
+    const fs = colCfg.fontSize != null ? colCfg.fontSize : fallbackFontSize;
+    if (fs) parts.push(`font-size:${fs}pt`);
     return parts.join(';');
   }
 
@@ -150,11 +212,17 @@ const TableRenderer = (() => {
      HELPER: Render tabel DPU
      DPU memiliki header dua baris (colspan/rowspan kompleks)
      sehingga menggunakan customHeader alih-alih auto-header.
+
+     tableConfig untuk DPU: karena header DPU multi-row dengan
+     colspan/rowspan, konfigurasi per-kolom diterapkan hanya
+     pada <td> body. Header DPU menggunakan style template asli.
   ══════════════════════════════════════════════════════════ */
-  function renderDpuTable(peserta, typo, minRows = 5) {
+  function renderDpuTable(peserta, typo, minRows = 5, tableConfig = null) {
     const tableSize = typo?.tableSize ?? 7.5;
 
     /* ── Custom header DPU (2 baris, colspan + rowspan) ── */
+    /* Header DPU sangat spesifik → tidak di-override oleh tableConfig.
+       User hanya dapat mengatur body columns untuk DPU. */
     const customHeader = `
       <thead>
         <tr>
@@ -180,24 +248,37 @@ const TableRenderer = (() => {
         </tr>
       </thead>`;
 
-    const tbodyRows = peserta.map((p, i) => `
-      <tr>
-        <td style="text-align:center;font-size:${tableSize}pt;">${Utils.escapeHtml(String(p.urt || i + 1))}</td>
-        <td style="text-align:center;font-size:${tableSize}pt;">${Utils.escapeHtml(p.indk || '')}</td>
-        <td style="text-align:center;font-size:${tableSize}pt;">${Utils.escapeHtml(p.nisn || '')}</td>
-        <td style="font-size:${Math.max(6, tableSize - 1)}pt;">${Utils.escapeHtml(p.registrasi || '')}</td>
-        <td style="text-align:center;font-size:${Math.max(6, tableSize - 0.5)}pt;">${Utils.escapeHtml(p.nik || '')}</td>
-        <td style="font-size:${tableSize}pt;">${Utils.escapeHtml(p.namaSiswa || '')}</td>
-        <td style="text-align:center;font-size:${tableSize}pt;">${Utils.escapeHtml(p.jenisKelamin || '')}</td>
-        <td style="font-size:${tableSize}pt;">${Utils.escapeHtml(p.tempatLahir || '')}</td>
-        <td style="text-align:center;font-size:${tableSize}pt;">${p.tanggalLahir ? Utils.formatDateShort(p.tanggalLahir) : ''}</td>
-        <td style="font-size:${tableSize}pt;">${Utils.escapeHtml(p.namaOrangTua || '')}</td>
-        <td style="font-size:${tableSize}pt;">${Utils.escapeHtml(p.asalSekolah || '')}</td>
-        <td style="font-size:${Math.max(6, tableSize - 1)}pt;">${Utils.escapeHtml(p.noIjazah || '')}</td>
-        <td style="text-align:center;font-size:${tableSize}pt;">${p.terdaftarEmis !== false ? '☑' : ''}</td>
-        <td style="text-align:center;font-size:${tableSize}pt;">${p.terdaftarEmis === false ? '☐' : ''}</td>
-        <td style="font-size:${Math.max(6, tableSize - 1)}pt;">${Utils.escapeHtml(p.alasanBelum || '')}</td>
-      </tr>`).join('');
+    /* ── DPU: 15 kolom (urutan sama dengan customHeader) ── */
+    /* Kolom index map untuk DPU (dipakai resolusi tableConfig.body.columns):
+       0:urt, 1:indk, 2:nisn, 3:registrasi, 4:nik, 5:namaSiswa,
+       6:jenisKelamin, 7:tempatLahir, 8:tanggalLahir, 9:namaOrangTua,
+       10:asalSekolah, 11:noIjazah, 12:emisSudah, 13:emisBelum, 14:alasanBelum */
+    const bodyCfg = tableConfig?.body?.columns || {};
+
+    const tbodyRows = peserta.map((p, i) => {
+      const cells = [
+        { idx: 0,  val: String(p.urt || i + 1),                          defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 1,  val: p.indk || '',                                     defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 2,  val: p.nisn || '',                                     defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 3,  val: p.registrasi || '',                               defaultStyle: `font-size:${Math.max(6, tableSize - 1)}pt;` },
+        { idx: 4,  val: p.nik || '',                                      defaultStyle: `text-align:center;font-size:${Math.max(6, tableSize - 0.5)}pt;` },
+        { idx: 5,  val: p.namaSiswa || '',                                defaultStyle: `font-size:${tableSize}pt;` },
+        { idx: 6,  val: p.jenisKelamin || '',                             defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 7,  val: p.tempatLahir || '',                              defaultStyle: `font-size:${tableSize}pt;` },
+        { idx: 8,  val: p.tanggalLahir ? Utils.formatDateShort(p.tanggalLahir) : '', defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 9,  val: p.namaOrangTua || '',                             defaultStyle: `font-size:${tableSize}pt;` },
+        { idx: 10, val: p.asalSekolah || '',                              defaultStyle: `font-size:${tableSize}pt;` },
+        { idx: 11, val: p.noIjazah || '',                                 defaultStyle: `font-size:${Math.max(6, tableSize - 1)}pt;` },
+        { idx: 12, val: p.terdaftarEmis !== false ? '☑' : '',            defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 13, val: p.terdaftarEmis === false ? '☐' : '',            defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 14, val: p.alasanBelum || '',                              defaultStyle: `font-size:${Math.max(6, tableSize - 1)}pt;` },
+      ].map(c => {
+        const colCfg = bodyCfg[c.idx];
+        const style  = colCfg ? _buildConfigStyle(colCfg, tableSize) : c.defaultStyle;
+        return `<td style="${style}">${Utils.escapeHtml(c.val)}</td>`;
+      }).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
 
     // Baris kosong
     const emptyCount = Math.max(0, minRows - peserta.length);
@@ -205,12 +286,6 @@ const TableRenderer = (() => {
       `<tr class="doc-empty-row">${Array(15).fill('<td>&nbsp;</td>').join('')}</tr>`
     ).join('');
 
-    /*
-     * DPU: tabel selalu landscape A4 dengan 15 kolom → gunakan doc-table--dpu
-     * agar tabel memenuhi lebar halaman secara wajar (Fit to Window untuk DPU).
-     * Ini pengecualian dari prinsip umum Fit to Content karena konten DPU
-     * memang membutuhkan seluruh lebar landscape A4.
-     */
     return `
       <div class="doc-table-wrap doc-table-wrap--full">
         <table class="doc-table doc-table--dpu">
