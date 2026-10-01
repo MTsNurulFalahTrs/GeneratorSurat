@@ -1,21 +1,28 @@
 /* =============================================================
    table-renderer.js — Reusable table renderer untuk template surat
    =============================================================
-   Mengimplementasikan layout "Fit to Content, bounded by Window":
-   - Tabel tidak dipaksa width: 100% (kecuali template mensyaratkannya)
-   - Lebar tabel mengikuti konten, dibatasi oleh content area
-   - Kolom dengan width eksplisit dihormati sebagai min-width
-   - Kolom flex mendapat ruang sisa secara proporsional
-   - Konten panjang wrapping wajar tanpa horizontal overflow halaman
+   Layout strategy:
 
-   Mendukung konfigurasi per-kolom (Pengaturan Tabel):
-   - tableConfig: { header: { columns: {0:{...}, 1:{...}} }, body: { columns: {...} } }
-   - Setiap kolom config: { horizontalAlign, verticalAlign, bold, italic, fontSize }
-   - Header dan Body dikonfigurasi secara TERPISAH
-   - Jika tableConfig tidak diberikan, renderer jatuh kembali ke perilaku lama
+   A) Fit to Content (default — semua kolom mode "auto"):
+      - table-layout: auto, width: auto
+      - Browser menghitung lebar kolom dari konten
+      - Tabel tidak melebihi content area (.doc-table-wrap max-width:100%)
+      - Tidak ada <colgroup> dengan width
 
-   API: TableRenderer.render(columns, rows, options, tableSize, tableConfig)
-        TableRenderer.renderDpuTable(peserta, typo, minRows, tableConfig)
+   B) Custom Column Width (ada ≥1 kolom mode "custom"):
+      - table-layout: fixed, width: 100%
+      - <colgroup> dengan <col style="width:..."> per kolom
+      - Kolom "auto" → <col> tanpa width (browser bagi sisa proporsional)
+      - Tabel tetap dibatasi oleh content area (100% dari wrapper)
+
+   DPU (special case):
+      - Selalu table-layout: fixed + width: 100% (15 kolom landscape)
+      - columnWidths body bisa di-override user, diaplikasikan via <colgroup>
+      - Header DPU (colspan/rowspan kompleks) tidak di-override
+
+   API:
+     TableRenderer.render(columns, rows, options, tableSize, tableConfig)
+     TableRenderer.renderDpuTable(peserta, typo, minRows, tableConfig)
    =============================================================
 */
 
@@ -23,57 +30,71 @@ const TableRenderer = (() => {
 
   /* ── Opsi default ── */
   const DEFAULTS = {
-    /* 'auto'    : Fit to Content (default) — tabel selebar konten, max 100% */
-    /* 'full'    : tabel selalu 100% lebar content area (DPU landscape, dll) */
-    /* 'compact' : tabel sesempit mungkin, gunakan untuk tabel kecil */
+    /* 'auto'    : Fit to Content (default) */
+    /* 'full'    : selalu 100% lebar content area (DPU, dll) */
+    /* 'compact' : tabel sesempit mungkin */
     fitMode:        'auto',
-
-    /* Class tambahan pada elemen <table> */
     tableClass:     '',
-
-    /* Ukuran font default sel data (pt) — bisa di-override per kolom */
     fontSize:       7.5,
-
-    /* Ukuran font header (pt) */
     headerFontSize: 7.5,
-
-    /* Tambahkan baris kosong hingga minimal N baris terisi */
     minRows:        0,
-
-    /* Apakah header multi-baris (untuk colspan/rowspan kompleks) */
-    customHeader:   null,   // string HTML thead lengkap, jika diisi akan menggantikan auto-header
+    customHeader:   null,
   };
 
-  /* ── Render tabel lengkap ── */
+  /* ════════════════════════════════════════════════
+     RENDER UTAMA
+  ════════════════════════════════════════════════ */
   /**
-   * @param {Array}  columns    — definisi kolom dari template.tableColumns
-   *   Setiap kolom: { key, header, width, align, minWidth, noWrap, flex }
-   * @param {Array}  rows       — array data baris, setiap baris = object {key: value}
-   * @param {Object} options    — override DEFAULTS
-   * @param {number} tableSize  — ukuran font tabel dari typography settings
-   * @param {Object} tableConfig — konfigurasi per-kolom dari TableConfigManager:
-   *   { header: { columns: {0:{...},1:{...}} }, body: { columns: {...} } }
-   *   Jika null/undefined, jatuh kembali ke perilaku legacy (align dari kolom definisi).
-   * @returns {string} HTML string <div class="doc-table-wrap">...</div>
+   * @param {Array}  columns     — definisi kolom template [{key, header, width, align, ...}]
+   * @param {Array}  rows        — array baris data {key: value}
+   * @param {Object} options     — override DEFAULTS
+   * @param {number} tableSize   — font size fallback (pt)
+   * @param {Object} tableConfig — dari TableConfigManager.getResolvedConfig():
+   *   {
+   *     columnWidths: { byKey: { [colKey]: { mode, value, unit } } },
+   *     header: { columns: {0:{...}, ...} },
+   *     body:   { columns: {0:{...}, ...} }
+   *   }
+   * @returns {string} HTML
    */
   function render(columns, rows, options = {}, tableSize = 7.5, tableConfig = null) {
     const opts = { ...DEFAULTS, ...options };
 
+    // Tentukan apakah ada custom column width
+    const columnWidths = tableConfig?.columnWidths;
+    const hasCustom    = TableConfigManager?.hasAnyCustomWidth(columnWidths) ?? false;
+
+    // <colgroup> hanya ada saat custom mode
+    const colgroupHtml = hasCustom
+      ? (TableConfigManager?.buildColGroupHtml(columns, columnWidths) ?? '')
+      : '';
+
+    // Table class + layout mode
+    const tableClass = _buildTableClass(opts, hasCustom);
+
+    // thead
     const theadHtml = opts.customHeader
       || _buildAutoHeader(columns, opts.headerFontSize || tableSize, tableConfig);
+
+    // tbody
     const tbodyHtml = _buildBody(columns, rows, tableSize, opts.minRows, tableConfig);
-    const tableClass = _buildTableClass(opts);
+
+    // Wrapper class
+    const wrapClass = opts.fitMode === 'full'
+      ? 'doc-table-wrap doc-table-wrap--full'
+      : 'doc-table-wrap';
 
     return `
-      <div class="doc-table-wrap">
+      <div class="${wrapClass}">
         <table class="${tableClass}">
+          ${colgroupHtml}
           ${theadHtml}
           <tbody>${tbodyHtml}</tbody>
         </table>
       </div>`;
   }
 
-  /* ── Build thead otomatis dari kolom ── */
+  /* ── Build thead otomatis ── */
   function _buildAutoHeader(columns, headerFontSize, tableConfig) {
     const cells = columns.map((col, idx) => {
       const style = _buildThStyle(col, headerFontSize, tableConfig, idx);
@@ -86,9 +107,8 @@ const TableRenderer = (() => {
   function _buildBody(columns, rows, tableSize, minRows, tableConfig) {
     const dataRows = rows.map(row => _buildRow(columns, row, tableSize, tableConfig));
 
-    // Baris kosong pengisi jika minRows > 0
     const emptyCount = Math.max(0, minRows - rows.length);
-    const emptyRows = Array.from({ length: emptyCount }, () => {
+    const emptyRows  = Array.from({ length: emptyCount }, () => {
       const cells = columns.map(() => '<td>&nbsp;</td>').join('');
       return `<tr class="doc-empty-row">${cells}</tr>`;
     });
@@ -106,25 +126,33 @@ const TableRenderer = (() => {
     return `<tr>${cells}</tr>`;
   }
 
-  /* ── Build style string untuk <th> ── */
+  /* ── Build style string untuk <th> ──
+   *
+   * Catatan width: lebar kolom diatur via <colgroup>, BUKAN via style pada <th>/<td>.
+   * Menggunakan width di <th> bersamaan dengan table-layout:fixed dan <colgroup>
+   * menyebabkan konflik — <colgroup> yang menang untuk table-layout:fixed.
+   * Tetap pertahankan min-width legacy untuk Fit to Content (saat tidak ada custom).
+   */
   function _buildThStyle(col, headerFontSize, tableConfig, colIdx) {
     const parts = [];
+    const hasCustom = TableConfigManager?.hasAnyCustomWidth(tableConfig?.columnWidths) ?? false;
 
-    // Width eksplisit → min-width (bukan width tetap)
-    if (col.width && col.width !== 'auto') {
-      parts.push(`min-width:${col.width}`);
-      const widthNum = parseFloat(col.width);
-      if (!isNaN(widthNum) && widthNum <= 15) {
-        const unit = col.width.replace(/[\d.]/g, '');
-        parts.push(`max-width:${widthNum * 2}${unit}`);
+    if (!hasCustom) {
+      // Fit to Content: pakai min-width legacy dari definisi kolom
+      if (col.width && col.width !== 'auto') {
+        parts.push(`min-width:${col.width}`);
+        const widthNum = parseFloat(col.width);
+        if (!isNaN(widthNum) && widthNum <= 15) {
+          const unit = col.width.replace(/[\d.]/g, '');
+          parts.push(`max-width:${widthNum * 2}${unit}`);
+        }
       }
+      if (col.noWrap || _isShortColumn(col)) parts.push('white-space:nowrap');
     }
+    // Custom width mode: lebar diatur <colgroup>, tidak perlu min/max-width di sini
 
-    // noWrap legacy
-    if (col.noWrap || _isShortColumn(col)) parts.push('white-space:nowrap');
-
-    // Terapkan tableConfig jika tersedia
-    if (tableConfig && tableConfig.header && tableConfig.header.columns) {
+    // Terapkan tableConfig (styling teks header)
+    if (tableConfig?.header?.columns) {
       const colCfg = tableConfig.header.columns[colIdx];
       if (colCfg) {
         const cfgStyle = _buildConfigStyle(colCfg, headerFontSize);
@@ -135,10 +163,9 @@ const TableRenderer = (() => {
       }
     }
 
-    // Fallback: gunakan align dari definisi kolom + headerFontSize
+    // Fallback legacy
     if (col.align) parts.push(`text-align:${col.align}`);
     if (headerFontSize) parts.push(`font-size:${headerFontSize}pt`);
-    // Header default: bold
     parts.push('font-weight:bold');
 
     return parts.join(';');
@@ -148,8 +175,8 @@ const TableRenderer = (() => {
   function _buildTdStyle(col, tableSize, tableConfig, colIdx) {
     const parts = [];
 
-    // Terapkan tableConfig jika tersedia
-    if (tableConfig && tableConfig.body && tableConfig.body.columns) {
+    // Terapkan tableConfig (styling teks body)
+    if (tableConfig?.body?.columns) {
       const colCfg = tableConfig.body.columns[colIdx];
       if (colCfg) {
         const cfgStyle = _buildConfigStyle(colCfg, tableSize);
@@ -167,20 +194,13 @@ const TableRenderer = (() => {
     return parts.join(';');
   }
 
-  /* ── Build style dari satu kolom config ── */
-  /**
-   * Menggunakan TableConfigManager.buildCellStyle jika tersedia,
-   * jika tidak, bangun style secara langsung (fallback aman).
-   */
+  /* ── Build style dari satu kolom text config ── */
   function _buildConfigStyle(colCfg, fallbackFontSize) {
     if (!colCfg) return '';
-
-    // Gunakan TableConfigManager.buildCellStyle jika tersedia
     if (typeof TableConfigManager !== 'undefined') {
       return TableConfigManager.buildCellStyle(colCfg, fallbackFontSize);
     }
-
-    // Fallback inline (seharusnya tidak terjadi di runtime normal)
+    // Fallback inline
     const parts = [];
     if (colCfg.horizontalAlign) parts.push(`text-align:${colCfg.horizontalAlign}`);
     if (colCfg.verticalAlign)   parts.push(`vertical-align:${colCfg.verticalAlign}`);
@@ -193,36 +213,63 @@ const TableRenderer = (() => {
     return parts.join(';');
   }
 
-  /* ── Tentukan apakah kolom "pendek" (nomor, kode, L/P, checkbox) ── */
+  /* ── Kolom "pendek" (nomor, kode, L/P) — pakai white-space:nowrap di Fit to Content ── */
   function _isShortColumn(col) {
     const shortKeys = ['no', 'urt', 'lp', 'jenisKelamin', '_emisSudah', '_emisBelum'];
     return shortKeys.includes(col.key);
   }
 
-  /* ── Build class tabel berdasarkan fitMode ── */
-  function _buildTableClass(opts) {
+  /* ── Build class tabel berdasarkan fitMode dan custom width ── */
+  function _buildTableClass(opts, hasCustomWidth = false) {
     const classes = ['doc-table'];
     if (opts.tableClass) classes.push(opts.tableClass);
-    if (opts.fitMode === 'full') classes.push('doc-table--full');
+    if (opts.fitMode === 'full' || hasCustomWidth) {
+      // Custom width membutuhkan table-layout:fixed + width:100%
+      classes.push('doc-table--fixed');
+    }
     if (opts.fitMode === 'compact') classes.push('doc-table--compact');
     return classes.join(' ');
   }
 
-  /* ══════════════════════════════════════════════════════════
+  /* ════════════════════════════════════════════════
      HELPER: Render tabel DPU
-     DPU memiliki header dua baris (colspan/rowspan kompleks)
-     sehingga menggunakan customHeader alih-alih auto-header.
+     DPU: 15 kolom, header 2 baris (colspan/rowspan kompleks)
+     - Selalu menggunakan table-layout:fixed (doc-table--dpu)
+     - columnWidths body dapat di-override user via tableConfig
+     - Header DPU tidak di-override (terlalu kompleks)
 
-     tableConfig untuk DPU: karena header DPU multi-row dengan
-     colspan/rowspan, konfigurasi per-kolom diterapkan hanya
-     pada <td> body. Header DPU menggunakan style template asli.
-  ══════════════════════════════════════════════════════════ */
+     Kolom index map DPU:
+       0:urt, 1:indk, 2:nisn, 3:registrasi, 4:nik, 5:namaSiswa,
+       6:jenisKelamin, 7:tempatLahir, 8:tanggalLahir, 9:namaOrangTua,
+       10:asalSekolah, 11:noIjazah, 12:emisSudah, 13:emisBelum, 14:alasanBelum
+  ════════════════════════════════════════════════ */
+
+  /* Definisi kolom DPU (untuk keperluan colgroup) */
+  const DPU_COLUMNS = [
+    { key: 'urt',          defaultWidth: '5mm'  },
+    { key: 'indk',         defaultWidth: '9mm'  },
+    { key: 'nisn',         defaultWidth: '18mm' },
+    { key: 'registrasi',   defaultWidth: '30mm' },
+    { key: 'nik',          defaultWidth: '28mm' },
+    { key: 'namaSiswa',    defaultWidth: '32mm' },
+    { key: 'jenisKelamin', defaultWidth: '6mm'  },
+    { key: 'tempatLahir',  defaultWidth: '14mm' },
+    { key: 'tanggalLahir', defaultWidth: '12mm' },
+    { key: 'namaOrangTua', defaultWidth: '14mm' },
+    { key: 'asalSekolah',  defaultWidth: '16mm' },
+    { key: 'noIjazah',     defaultWidth: '18mm' },
+    { key: '_emisSudah',   defaultWidth: '6mm'  },
+    { key: '_emisBelum',   defaultWidth: '6mm'  },
+    { key: 'alasanBelum',  defaultWidth: '14mm' },
+  ];
+
   function renderDpuTable(peserta, typo, minRows = 5, tableConfig = null) {
     const tableSize = typo?.tableSize ?? 7.5;
 
-    /* ── Custom header DPU (2 baris, colspan + rowspan) ── */
-    /* Header DPU sangat spesifik → tidak di-override oleh tableConfig.
-       User hanya dapat mengatur body columns untuk DPU. */
+    // Build colgroup untuk DPU
+    // DPU selalu menggunakan table-layout:fixed, jadi colgroup sangat penting
+    const colgroupHtml = _buildDpuColgroup(tableConfig);
+
     const customHeader = `
       <thead>
         <tr>
@@ -248,30 +295,25 @@ const TableRenderer = (() => {
         </tr>
       </thead>`;
 
-    /* ── DPU: 15 kolom (urutan sama dengan customHeader) ── */
-    /* Kolom index map untuk DPU (dipakai resolusi tableConfig.body.columns):
-       0:urt, 1:indk, 2:nisn, 3:registrasi, 4:nik, 5:namaSiswa,
-       6:jenisKelamin, 7:tempatLahir, 8:tanggalLahir, 9:namaOrangTua,
-       10:asalSekolah, 11:noIjazah, 12:emisSudah, 13:emisBelum, 14:alasanBelum */
     const bodyCfg = tableConfig?.body?.columns || {};
 
     const tbodyRows = peserta.map((p, i) => {
       const cells = [
-        { idx: 0,  val: String(p.urt || i + 1),                          defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
-        { idx: 1,  val: p.indk || '',                                     defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
-        { idx: 2,  val: p.nisn || '',                                     defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
-        { idx: 3,  val: p.registrasi || '',                               defaultStyle: `font-size:${Math.max(6, tableSize - 1)}pt;` },
-        { idx: 4,  val: p.nik || '',                                      defaultStyle: `text-align:center;font-size:${Math.max(6, tableSize - 0.5)}pt;` },
-        { idx: 5,  val: p.namaSiswa || '',                                defaultStyle: `font-size:${tableSize}pt;` },
-        { idx: 6,  val: p.jenisKelamin || '',                             defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
-        { idx: 7,  val: p.tempatLahir || '',                              defaultStyle: `font-size:${tableSize}pt;` },
+        { idx: 0,  val: String(p.urt || i + 1),    defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 1,  val: p.indk || '',               defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 2,  val: p.nisn || '',               defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 3,  val: p.registrasi || '',         defaultStyle: `font-size:${Math.max(6, tableSize - 1)}pt;` },
+        { idx: 4,  val: p.nik || '',                defaultStyle: `text-align:center;font-size:${Math.max(6, tableSize - 0.5)}pt;` },
+        { idx: 5,  val: p.namaSiswa || '',          defaultStyle: `font-size:${tableSize}pt;` },
+        { idx: 6,  val: p.jenisKelamin || '',       defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 7,  val: p.tempatLahir || '',        defaultStyle: `font-size:${tableSize}pt;` },
         { idx: 8,  val: p.tanggalLahir ? Utils.formatDateShort(p.tanggalLahir) : '', defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
-        { idx: 9,  val: p.namaOrangTua || '',                             defaultStyle: `font-size:${tableSize}pt;` },
-        { idx: 10, val: p.asalSekolah || '',                              defaultStyle: `font-size:${tableSize}pt;` },
-        { idx: 11, val: p.noIjazah || '',                                 defaultStyle: `font-size:${Math.max(6, tableSize - 1)}pt;` },
-        { idx: 12, val: p.terdaftarEmis !== false ? '☑' : '',            defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
-        { idx: 13, val: p.terdaftarEmis === false ? '☐' : '',            defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
-        { idx: 14, val: p.alasanBelum || '',                              defaultStyle: `font-size:${Math.max(6, tableSize - 1)}pt;` },
+        { idx: 9,  val: p.namaOrangTua || '',       defaultStyle: `font-size:${tableSize}pt;` },
+        { idx: 10, val: p.asalSekolah || '',        defaultStyle: `font-size:${tableSize}pt;` },
+        { idx: 11, val: p.noIjazah || '',           defaultStyle: `font-size:${Math.max(6, tableSize - 1)}pt;` },
+        { idx: 12, val: p.terdaftarEmis !== false ? '☑' : '', defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 13, val: p.terdaftarEmis === false ? '☐' : '', defaultStyle: `text-align:center;font-size:${tableSize}pt;` },
+        { idx: 14, val: p.alasanBelum || '',        defaultStyle: `font-size:${Math.max(6, tableSize - 1)}pt;` },
       ].map(c => {
         const colCfg = bodyCfg[c.idx];
         const style  = colCfg ? _buildConfigStyle(colCfg, tableSize) : c.defaultStyle;
@@ -280,8 +322,7 @@ const TableRenderer = (() => {
       return `<tr>${cells}</tr>`;
     }).join('');
 
-    // Baris kosong
-    const emptyCount = Math.max(0, minRows - peserta.length);
+    const emptyCount    = Math.max(0, minRows - peserta.length);
     const emptyRowsHtml = Array.from({ length: emptyCount }, () =>
       `<tr class="doc-empty-row">${Array(15).fill('<td>&nbsp;</td>').join('')}</tr>`
     ).join('');
@@ -289,10 +330,33 @@ const TableRenderer = (() => {
     return `
       <div class="doc-table-wrap doc-table-wrap--full">
         <table class="doc-table doc-table--dpu">
+          ${colgroupHtml}
           ${customHeader}
           <tbody>${tbodyRows}${emptyRowsHtml}</tbody>
         </table>
       </div>`;
+  }
+
+  /* ── Build colgroup untuk DPU ──
+   * DPU selalu punya colgroup agar table-layout:fixed bisa mendistribusikan kolom.
+   * Jika user set custom width untuk kolom tertentu → gunakan itu.
+   * Jika tidak → gunakan default width DPU.
+   */
+  function _buildDpuColgroup(tableConfig) {
+    const columnWidths = tableConfig?.columnWidths;
+    const byKey        = columnWidths?.byKey || {};
+
+    const cols = DPU_COLUMNS.map(colDef => {
+      const w = byKey[colDef.key];
+      if (w && w.mode === 'custom' && w.value != null) {
+        const val = w.unit === 'mm' ? `${w.value}mm` : `${w.value}%`;
+        return `<col style="width:${val}">`;
+      }
+      // Default: gunakan lebar bawaan DPU
+      return `<col style="width:${colDef.defaultWidth}">`;
+    }).join('');
+
+    return `<colgroup>${cols}</colgroup>`;
   }
 
   /* ── Public API ── */
