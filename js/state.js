@@ -64,28 +64,33 @@ const State = (() => {
   /* ── Default Settings ── */
   const DEFAULT_SETTINGS = () => ({
     paper: {
-      size: 'A4',          // key dari PAPER_SIZES
-      customWidth: 210,    // mm, aktif hanya jika size === 'Custom'
+      size: 'A4',
+      customWidth: 210,
       customHeight: 297,
-      unit: 'mm',          // 'mm' | 'cm' | 'in' — unit input pengguna
+      unit: 'mm',
     },
-    orientation: 'portrait',  // 'portrait' | 'landscape'
+    orientation: 'portrait',
     margin: {
       top: 20,
       right: 20,
       bottom: 25,
       left: 25,
-      // unit selalu mm secara internal
+    },
+    typography: {
+      fontFamily:  'Times New Roman',  // font isi surat
+      fontSize:    12,                 // pt, range 7–22
+      lineHeight:  1.5,                // jarak baris konten
+      tableSize:   7.5,                // pt untuk teks dalam tabel
     },
     print: {
-      scale: 100,          // persen, 50–150
+      scale: 100,
     },
     preview: {
-      zoom: 'auto',        // 'auto' | 'fit-page' | 'fit-width' | number (0.3–2.5)
+      zoom: 'auto',
       showMarginGuide: false,
       showPrintableArea: false,
     },
-    activePreset: 'a4-normal',  // key dari DOCUMENT_PRESETS atau 'custom'
+    activePreset: 'a4-normal',
   });
 
   /* ── Default KOP Config ── */
@@ -452,6 +457,21 @@ const State = (() => {
     return n; // mm default
   }
 
+  /* ── Daftar font yang tersedia untuk isi surat ── */
+  const DOCUMENT_FONTS = [
+    { value: 'Times New Roman',    label: 'Times New Roman'    },
+    { value: 'Arial',              label: 'Arial'              },
+    { value: 'Calibri',            label: 'Calibri'            },
+    { value: 'Georgia',            label: 'Georgia'            },
+    { value: 'Verdana',            label: 'Verdana'            },
+    { value: 'Tahoma',             label: 'Tahoma'             },
+    { value: 'Trebuchet MS',       label: 'Trebuchet MS'       },
+    { value: 'Palatino Linotype',  label: 'Palatino Linotype'  },
+    { value: 'Garamond',           label: 'Garamond'           },
+    { value: 'Book Antiqua',       label: 'Book Antiqua'       },
+    { value: 'Courier New',        label: 'Courier New'        },
+  ];
+
   /* ── Reset state (setelah data expired atau user reset) ── */
   function reset() {
     _state = {
@@ -535,6 +555,7 @@ const State = (() => {
     getSettings,
     getPaperDimensions,
     getMarginMm,
+    getTypography: () => Utils.deepClone(_state.settings.typography || DEFAULT_SETTINGS().typography),
     isDirty,
 
     // Setters
@@ -565,12 +586,13 @@ const State = (() => {
     emit,
 
     // Default factories & constants (untuk digunakan module lain)
-    createDefaultKopRow: DEFAULT_KOP_ROW,
-    createDefaultKop:    DEFAULT_KOP_CONFIG,
-    createDefaultSettings: DEFAULT_SETTINGS,
+    createDefaultKopRow:    DEFAULT_KOP_ROW,
+    createDefaultKop:       DEFAULT_KOP_CONFIG,
+    createDefaultSettings:  DEFAULT_SETTINGS,
     PAPER_SIZES,
     MARGIN_PRESETS,
     DOCUMENT_PRESETS,
+    DOCUMENT_FONTS,
   };
 
 })();
