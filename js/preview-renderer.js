@@ -48,7 +48,9 @@ const PreviewRenderer = (() => {
     State.on('kop:change',        debouncedRender);
     State.on('form:change',       debouncedRender);
     State.on('template:change',   debouncedRender);
-    State.on('settings:change',   debouncedRender); // ← settings baru
+    State.on('settings:change',   debouncedRender);
+    State.on('table:change',      debouncedRender); // ← pengaturan tabel berubah
+    State.on('table:reset',       debouncedRender); // ← reset pengaturan tabel
     State.on('state:restore', () => {
       _currentZoom = State.getUi().previewZoom || 1;
       _applyZoom(_currentZoom);
@@ -171,9 +173,12 @@ const PreviewRenderer = (() => {
         <h2 class="doc-subtitle">TAHUN PELAJARAN ${_esc(meta.tahunPelajaran)}</h2>
       </div>`;
 
-    /* ── Tabel Peserta — pakai TableRenderer (Fit to Content via doc-table--dpu) ── */
+    /* ── Tabel Peserta — ambil tableConfig dari State ── */
+    // DPU memakai tableId = 'dpu' (sama dengan TEMPLATE_ID, format legacy)
+    const tableConfig = _getTableConfig('dpu', 'dpu');
+
     const tableHtml = (typeof TableRenderer !== 'undefined')
-      ? TableRenderer.renderDpuTable(peserta, t, 5)
+      ? TableRenderer.renderDpuTable(peserta, t, 5, tableConfig)
       : _fallbackDpuTable(peserta, t);
 
     /* ── Tanda Tangan ── */
@@ -295,12 +300,17 @@ const PreviewRenderer = (() => {
       return row;
     });
 
+    // Ambil tableConfig dari State untuk template ini
+    // tableId = tpl.TEMPLATE_ID (format legacy: satu tabel per template)
+    const tableConfig = _getTableConfig(tpl.TEMPLATE_ID, tpl.TEMPLATE_ID);
+
     const tableHtml = (typeof TableRenderer !== 'undefined')
       ? TableRenderer.render(
           cols,
           resolvedRows,
           { fitMode: 'auto', minRows: 5 },
-          t.tableSize
+          t.tableSize,
+          tableConfig
         )
       : _fallbackSiswaTable(cols, resolvedRows, t.tableSize);
 
@@ -580,6 +590,18 @@ const PreviewRenderer = (() => {
         </svg>
         <p>Preview surat akan muncul di sini setelah template dipilih dan data diisi.</p>
       </div>`;
+  }
+
+  /* ── Ambil tableConfig yang sudah resolved dari State + TableConfigManager ── */
+  function _getTableConfig(templateId, tableId) {
+    if (!templateId || !tableId) return null;
+    if (typeof TableConfigManager === 'undefined') return null;
+    try {
+      return TableConfigManager.getResolvedConfig(templateId, tableId);
+    } catch (e) {
+      console.warn('[PreviewRenderer] Gagal mengambil tableConfig:', e);
+      return null;
+    }
   }
 
   /* ── Escape helper ── */
