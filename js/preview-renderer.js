@@ -172,7 +172,9 @@ const PreviewRenderer = (() => {
       </div>`;
 
     /* ── Tabel Peserta — pakai TableRenderer (Fit to Content via doc-table--dpu) ── */
-    const tableHtml = TableRenderer.renderDpuTable(peserta, t, 5);
+    const tableHtml = (typeof TableRenderer !== 'undefined')
+      ? TableRenderer.renderDpuTable(peserta, t, 5)
+      : _fallbackDpuTable(peserta, t);
 
     /* ── Tanda Tangan ── */
     const ttdHtml = _buildTtdDpu(ttd);
@@ -293,12 +295,14 @@ const PreviewRenderer = (() => {
       return row;
     });
 
-    const tableHtml = TableRenderer.render(
-      cols,
-      resolvedRows,
-      { fitMode: 'auto', minRows: 5 },
-      t.tableSize
-    );
+    const tableHtml = (typeof TableRenderer !== 'undefined')
+      ? TableRenderer.render(
+          cols,
+          resolvedRows,
+          { fitMode: 'auto', minRows: 5 },
+          t.tableSize
+        )
+      : _fallbackSiswaTable(cols, resolvedRows, t.tableSize);
 
     /* ── Rekap ── */
     const laki   = siswa.filter(s => s.jenisKelamin === 'L').length;
@@ -413,6 +417,83 @@ const PreviewRenderer = (() => {
             </div>
           </div>
         </div>
+      </div>`;
+  }
+
+  /* ────────────────────────────────────────────────
+     FALLBACK TABLE RENDERERS
+     Digunakan jika TableRenderer belum tersedia
+     (cache lama, file gagal load, dll).
+  ──────────────────────────────────────────────── */
+
+  function _fallbackDpuTable(peserta, typo) {
+    const ts = typo?.tableSize ?? 7.5;
+    const emptyCount = Math.max(0, 5 - peserta.length);
+    const rows = peserta.map((p, i) => `
+      <tr>
+        <td style="text-align:center;">${_esc(p.urt || i + 1)}</td>
+        <td style="text-align:center;">${_esc(p.indk)}</td>
+        <td style="text-align:center;">${_esc(p.nisn)}</td>
+        <td>${_esc(p.registrasi)}</td>
+        <td style="text-align:center;">${_esc(p.nik)}</td>
+        <td>${_esc(p.namaSiswa)}</td>
+        <td style="text-align:center;">${_esc(p.jenisKelamin)}</td>
+        <td>${_esc(p.tempatLahir)}</td>
+        <td style="text-align:center;">${p.tanggalLahir ? Utils.formatDateShort(p.tanggalLahir) : ''}</td>
+        <td>${_esc(p.namaOrangTua)}</td>
+        <td>${_esc(p.asalSekolah)}</td>
+        <td>${_esc(p.noIjazah)}</td>
+        <td style="text-align:center;">${p.terdaftarEmis !== false ? '☑' : ''}</td>
+        <td style="text-align:center;">${p.terdaftarEmis === false ? '☐' : ''}</td>
+        <td>${_esc(p.alasanBelum)}</td>
+      </tr>`).join('');
+    const empties = Array.from({ length: emptyCount }, () =>
+      `<tr class="doc-empty-row">${Array(15).fill('<td>&nbsp;</td>').join('')}</tr>`
+    ).join('');
+    return `
+      <div class="doc-table-wrap doc-table-wrap--full">
+        <table class="doc-table doc-table--dpu" style="font-size:${ts}pt;">
+          <thead>
+            <tr>
+              <th rowspan="2">URT</th><th rowspan="2">INDK</th>
+              <th colspan="2">NOMOR</th>
+              <th rowspan="2">NIK</th><th rowspan="2">NAMA SISWA</th>
+              <th rowspan="2">L/P</th><th rowspan="2">TEMPAT LAHIR</th>
+              <th rowspan="2">TANGGAL LAHIR</th><th rowspan="2">NAMA ORANG TUA</th>
+              <th rowspan="2">ASAL SEKOLAH</th><th rowspan="2">No. IJAZAH</th>
+              <th colspan="3">TERDAFTAR DI EMIS</th>
+            </tr>
+            <tr>
+              <th>NISN</th><th>REGISTRASI</th>
+              <th>SUDAH</th><th>BELUM</th><th>ALASAN</th>
+            </tr>
+          </thead>
+          <tbody>${rows}${empties}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function _fallbackSiswaTable(cols, rows, tableSize) {
+    const ts = tableSize ?? 7.5;
+    const theadCells = cols.map(c =>
+      `<th style="text-align:${c.align};font-size:${ts}pt;">${_esc(c.header)}</th>`
+    ).join('');
+    const tbodyRows = rows.map(row => {
+      const cells = cols.map(c =>
+        `<td style="text-align:${c.align};font-size:${ts}pt;">${_esc(row[c.key] ?? '')}</td>`
+      ).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+    const emptyCount = Math.max(0, 5 - rows.length);
+    const empties = Array.from({ length: emptyCount }, () =>
+      `<tr class="doc-empty-row">${cols.map(() => '<td>&nbsp;</td>').join('')}</tr>`
+    ).join('');
+    return `
+      <div class="doc-table-wrap">
+        <table class="doc-table" style="font-size:${ts}pt;">
+          <thead><tr>${theadCells}</tr></thead>
+          <tbody>${tbodyRows}${empties}</tbody>
+        </table>
       </div>`;
   }
 
