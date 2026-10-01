@@ -9,6 +9,85 @@
 
 const State = (() => {
 
+  /* ── Ukuran kertas baku (dalam mm) ── */
+  const PAPER_SIZES = {
+    A4:     { width: 210,    height: 297,   label: 'A4 (210 × 297 mm)'     },
+    A5:     { width: 148,    height: 210,   label: 'A5 (148 × 210 mm)'     },
+    F4:     { width: 215,    height: 330,   label: 'F4 / Folio (215 × 330 mm)' },
+    Letter: { width: 215.9,  height: 279.4, label: 'Letter (215.9 × 279.4 mm)' },
+    Legal:  { width: 215.9,  height: 355.6, label: 'Legal (215.9 × 355.6 mm)'  },
+    Custom: { width: 210,    height: 297,   label: 'Custom'                 },
+  };
+
+  /* ── Preset margin (mm) ── */
+  const MARGIN_PRESETS = {
+    default: { top: 20, right: 20, bottom: 25, left: 25, label: 'Default'  },
+    normal:  { top: 25, right: 25, bottom: 25, left: 25, label: 'Normal'   },
+    narrow:  { top: 12, right: 12, bottom: 12, left: 12, label: 'Sempit'   },
+    wide:    { top: 30, right: 30, bottom: 30, left: 35, label: 'Lebar'    },
+  };
+
+  /* ── Preset dokumen lengkap ── */
+  const DOCUMENT_PRESETS = {
+    'a4-normal': {
+      label: 'A4 Normal',
+      paper: { size: 'A4', unit: 'mm' },
+      orientation: 'portrait',
+      margin: { ...MARGIN_PRESETS.default },
+    },
+    'a4-narrow': {
+      label: 'A4 Sempit',
+      paper: { size: 'A4', unit: 'mm' },
+      orientation: 'portrait',
+      margin: { ...MARGIN_PRESETS.narrow },
+    },
+    'a5-normal': {
+      label: 'A5',
+      paper: { size: 'A5', unit: 'mm' },
+      orientation: 'portrait',
+      margin: { top: 15, right: 15, bottom: 15, left: 15 },
+    },
+    'f4-normal': {
+      label: 'F4 / Folio',
+      paper: { size: 'F4', unit: 'mm' },
+      orientation: 'portrait',
+      margin: { ...MARGIN_PRESETS.default },
+    },
+    'landscape': {
+      label: 'A4 Landscape',
+      paper: { size: 'A4', unit: 'mm' },
+      orientation: 'landscape',
+      margin: { top: 15, right: 15, bottom: 20, left: 20 },
+    },
+  };
+
+  /* ── Default Settings ── */
+  const DEFAULT_SETTINGS = () => ({
+    paper: {
+      size: 'A4',          // key dari PAPER_SIZES
+      customWidth: 210,    // mm, aktif hanya jika size === 'Custom'
+      customHeight: 297,
+      unit: 'mm',          // 'mm' | 'cm' | 'in' — unit input pengguna
+    },
+    orientation: 'portrait',  // 'portrait' | 'landscape'
+    margin: {
+      top: 20,
+      right: 20,
+      bottom: 25,
+      left: 25,
+      // unit selalu mm secara internal
+    },
+    print: {
+      scale: 100,          // persen, 50–150
+    },
+    preview: {
+      zoom: 'auto',        // 'auto' | 'fit-page' | 'fit-width' | number (0.3–2.5)
+      showMarginGuide: false,
+      showPrintableArea: false,
+    },
+    activePreset: 'a4-normal',  // key dari DOCUMENT_PRESETS atau 'custom'
+  });
+
   /* ── Default KOP Config ── */
   const DEFAULT_KOP_ROW = (index) => ({
     id: Utils.generateId('kop-row'),
@@ -105,19 +184,22 @@ const State = (() => {
   /* ── Application State (in-memory) ── */
   let _state = {
     /* Template aktif */
-    activeTemplate: null,     // string: 'dpu' | 'mutasi-masuk' | 'siswa-baru' | null
+    activeTemplate: null,
 
     /* KOP konfigurasi */
     kop: DEFAULT_KOP_CONFIG(),
 
+    /* Pengaturan dokumen (kertas, margin, cetak, preview) */
+    settings: DEFAULT_SETTINGS(),
+
     /* Data form per-template */
-    forms: {},                // { 'dpu': {...}, 'mutasi-masuk': {...}, ... }
+    forms: {},
 
     /* UI state */
     ui: {
-      activeTab: 'template',  // 'template' | 'kop' | 'form'
-      previewZoom: 1,         // scale factor
-      isDirty: false,         // ada perubahan belum disimpan
+      activeTab: 'template',
+      previewZoom: 1,
+      isDirty: false,
     },
 
     /* Storage meta (di-sync dari Storage) */
@@ -289,11 +371,93 @@ const State = (() => {
     emit('storage:metaChange', { meta: Utils.deepClone(_state.storage) });
   }
 
+  /* ────────────────────────────────────────────────
+     SETTINGS GETTERS & SETTERS
+  ──────────────────────────────────────────────── */
+
+  /** Kembalikan seluruh settings (deep clone) */
+  function getSettings() {
+    return Utils.deepClone(_state.settings);
+  }
+
+  /** Update settings secara partial, lalu emit event */
+  function setSettings(partial) {
+    _state.settings = Utils.deepMerge(_state.settings, partial);
+    _state.ui.isDirty = true;
+    emit('settings:change', { settings: Utils.deepClone(_state.settings) });
+    emit('state:change', { field: 'settings' });
+  }
+
+  /**
+   * Hitung dimensi kertas aktif dalam mm.
+   * Memperhitungkan orientasi landscape (tukar lebar/tinggi).
+   */
+  function getPaperDimensions() {
+    const s    = _state.settings;
+    const size = s.paper.size;
+    let w, h;
+
+    if (size === 'Custom') {
+      w = _toMm(s.paper.customWidth,  s.paper.unit);
+      h = _toMm(s.paper.customHeight, s.paper.unit);
+    } else {
+      const def = PAPER_SIZES[size] || PAPER_SIZES.A4;
+      w = def.width;
+      h = def.height;
+    }
+
+    // Landscape → tukar lebar & tinggi
+    if (s.orientation === 'landscape') {
+      return { widthMm: h, heightMm: w };
+    }
+    return { widthMm: w, heightMm: h };
+  }
+
+  /** Kembalikan margin aktif dalam mm */
+  function getMarginMm() {
+    const m = _state.settings.margin;
+    return { top: m.top, right: m.right, bottom: m.bottom, left: m.left };
+  }
+
+  /** Terapkan preset dokumen */
+  function applyDocumentPreset(presetKey) {
+    const preset = DOCUMENT_PRESETS[presetKey];
+    if (!preset) return;
+    _state.settings = Utils.deepMerge(_state.settings, {
+      paper:       { size: preset.paper.size, unit: preset.paper.unit || 'mm' },
+      orientation: preset.orientation,
+      margin:      { ...preset.margin },
+      activePreset: presetKey,
+    });
+    _state.ui.isDirty = true;
+    emit('settings:change', { settings: Utils.deepClone(_state.settings) });
+    emit('settings:presetApplied', { presetKey });
+    emit('state:change', { field: 'settings' });
+  }
+
+  /** Reset settings ke default */
+  function resetSettings() {
+    _state.settings = DEFAULT_SETTINGS();
+    _state.ui.isDirty = true;
+    emit('settings:change', { settings: Utils.deepClone(_state.settings) });
+    emit('settings:reset', {});
+    emit('state:change', { field: 'settings' });
+  }
+
+  /* ── Konversi satuan ke mm (internal selalu mm) ── */
+  function _toMm(value, unit) {
+    const n = parseFloat(value) || 0;
+    if (unit === 'cm')  return n * 10;
+    if (unit === 'in')  return n * 25.4;
+    return n; // mm default
+  }
+
   /* ── Reset state (setelah data expired atau user reset) ── */
   function reset() {
     _state = {
       activeTemplate: null,
       kop: DEFAULT_KOP_CONFIG(),
+      settings: DEFAULT_SETTINGS(),
       forms: {},
       ui: {
         activeTab: 'template',
@@ -314,28 +478,29 @@ const State = (() => {
   function serialize() {
     return Utils.deepClone({
       activeTemplate: _state.activeTemplate,
-      kop: _state.kop,
-      forms: _state.forms,
+      kop:            _state.kop,
+      settings:       _state.settings,
+      forms:          _state.forms,
     });
   }
 
   /* ── Restore state dari data tersimpan ── */
   function restore(savedData) {
     if (!savedData) return;
-
     try {
       if (savedData.activeTemplate !== undefined) {
         _state.activeTemplate = savedData.activeTemplate;
       }
       if (savedData.kop) {
-        // Merge dengan default untuk memastikan semua field ada
         _state.kop = Utils.deepMerge(DEFAULT_KOP_CONFIG(), savedData.kop);
+      }
+      if (savedData.settings) {
+        _state.settings = Utils.deepMerge(DEFAULT_SETTINGS(), savedData.settings);
       }
       if (savedData.forms) {
         _state.forms = Utils.deepClone(savedData.forms);
       }
       _state.ui.isDirty = false;
-
       emit('state:restore', { data: savedData });
       emit('state:change', { field: 'all' });
     } catch (err) {
@@ -367,6 +532,9 @@ const State = (() => {
     getFormData,
     getUi,
     getStorageMeta,
+    getSettings,
+    getPaperDimensions,
+    getMarginMm,
     isDirty,
 
     // Setters
@@ -381,6 +549,9 @@ const State = (() => {
     setActiveTab,
     setZoom,
     setStorageMeta,
+    setSettings,
+    applyDocumentPreset,
+    resetSettings,
 
     // State lifecycle
     reset,
@@ -393,9 +564,13 @@ const State = (() => {
     off,
     emit,
 
-    // Default factories (untuk digunakan module lain)
+    // Default factories & constants (untuk digunakan module lain)
     createDefaultKopRow: DEFAULT_KOP_ROW,
-    createDefaultKop: DEFAULT_KOP_CONFIG,
+    createDefaultKop:    DEFAULT_KOP_CONFIG,
+    createDefaultSettings: DEFAULT_SETTINGS,
+    PAPER_SIZES,
+    MARGIN_PRESETS,
+    DOCUMENT_PRESETS,
   };
 
 })();
