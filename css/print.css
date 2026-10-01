@@ -135,14 +135,41 @@
   }
 
   /* ── Table ── */
+  /*
+   * Print: pertahankan Fit to Content.
+   * .doc-table--dpu menggunakan width: 100% karena DPU memiliki banyak
+   * kolom dan selalu landscape, sehingga memenuhi halaman adalah behavior
+   * yang benar. Tabel non-DPU tetap auto-sized.
+   */
+  .doc-table-wrap {
+    width: fit-content !important;
+    max-width: 100% !important;
+    overflow-x: visible !important;
+    display: block !important;
+  }
+
+  /* Full-width wrapper (DPU) */
+  .doc-table-wrap--full {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: visible !important;
+    display: block !important;
+  }
+
   .doc-table {
     border-collapse: collapse !important;
-    width: 100% !important;
     page-break-inside: auto;
+    /* Pertahankan table-layout: auto (Fit to Content) */
+  }
+
+  /* DPU: banyak kolom landscape → full width, fixed layout */
+  .doc-table--dpu {
+    width: 100% !important;
+    table-layout: fixed !important;
   }
 
   .doc-table thead {
-    display: table-header-group; /* Repeat header on each page */
+    display: table-header-group;
   }
 
   .doc-table tfoot {
@@ -158,14 +185,27 @@
   .doc-table td {
     border: 1px solid #000 !important;
     padding: 2pt 3pt !important;
-    font-size: 7.5pt !important;
     color: #000 !important;
     background: white !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
   }
 
   .doc-table th {
     background: white !important;
     font-weight: bold !important;
+  }
+
+  /* Meta table (info madrasah): auto sizing */
+  .doc-meta table {
+    width: auto !important;
+    table-layout: auto !important;
+    border: none !important;
+  }
+
+  .doc-meta td {
+    border: none !important;
+    padding: 0 4pt !important;
   }
 
   /* ── Tanda tangan ── */
