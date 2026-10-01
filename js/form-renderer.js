@@ -15,6 +15,30 @@ const FormRenderer = (() => {
       return;
     }
 
+    // Buat mount point untuk TableConfigUI (accordion Pengaturan Tabel)
+    // Mount point ini berada di luar #form-container agar tidak terhapus
+    // saat FormRenderer.render() mengosongkan innerHTML #form-container.
+    let mountEl = document.getElementById('table-config-mount');
+    if (!mountEl) {
+      mountEl = document.createElement('div');
+      mountEl.id = 'table-config-mount';
+      mountEl.setAttribute('hidden', '');
+      mountEl.style.display = 'none';
+      // Sisipkan tepat setelah #form-container di dalam tab-form
+      const tabForm = document.getElementById('tab-form');
+      if (tabForm) {
+        tabForm.appendChild(mountEl);
+      } else {
+        // Fallback: sisipkan setelah form-container
+        _containerEl.parentNode?.insertBefore(mountEl, _containerEl.nextSibling);
+      }
+    }
+
+    // Init TableConfigUI dengan mount point
+    if (typeof TableConfigUI !== 'undefined') {
+      TableConfigUI.init(mountEl);
+    }
+
     State.on('template:change', ({ templateId }) => {
       render(templateId);
     });
@@ -53,6 +77,16 @@ const FormRenderer = (() => {
       const sectionEl = _buildSection(section, formData, templateId);
       _containerEl.appendChild(sectionEl);
     });
+
+    // Init & render accordion Pengaturan Tabel
+    // TableConfigManager.initForTemplate dipanggil oleh TableConfigUI.render
+    // via state event, tapi panggil juga langsung di sini untuk keamanan
+    if (typeof TableConfigManager !== 'undefined') {
+      TableConfigManager.initForTemplate(templateId);
+    }
+    if (typeof TableConfigUI !== 'undefined') {
+      TableConfigUI.render(templateId);
+    }
   }
 
   /* ── Tampilkan empty state ── */
@@ -70,6 +104,14 @@ const FormRenderer = (() => {
           Pilih Template
         </button>
       </div>`;
+
+    // Sembunyikan accordion Pengaturan Tabel
+    const mountEl = document.getElementById('table-config-mount');
+    if (mountEl) {
+      mountEl.setAttribute('hidden', '');
+      mountEl.style.display = 'none';
+      mountEl.innerHTML = '';
+    }
   }
 
   /* ── Build satu section ── */
