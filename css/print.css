@@ -58,6 +58,7 @@
     padding: 0 !important;
     overflow: visible !important;
     background: white !important;
+    /* Hilangkan background abu-abu viewport saat cetak */
   }
 
   .preview-canvas-wrapper {
@@ -107,16 +108,19 @@
   }
 
   /* ── Doc content padding ── */
+  /* Margin/padding ditangani oleh @page rule yang diinjeksi oleh print.js
+     dari State.getSettings().margin. Jangan override di sini. */
   .doc-content {
     font-family: 'Times New Roman', Times, serif !important;
-    padding: 20mm 20mm 25mm 25mm !important;
-    box-sizing: border-box !important;
+    /* Padding inline style dari preview-renderer dibiarkan bekerja,
+       @page margin sudah mengatur margin halaman fisik */
     color: #000 !important;
     font-size: 12pt !important;
+    /* Scale dari print.js: transform diatur per-print via injected style */
   }
 
   .surat-preview.orientation-landscape .doc-content {
-    padding: 15mm 15mm 20mm 20mm !important;
+    /* Landscape margin juga diatur via @page di print.js */
   }
 
   /* ── KOP ── */
