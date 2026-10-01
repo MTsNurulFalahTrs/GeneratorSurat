@@ -113,6 +113,52 @@ const TemplateRegistry = (() => {
     });
   }
 
+  /* ── Cek apakah template memiliki tabel ── */
+  function templateHasTables(templateId) {
+    const tpl = _templates.get(templateId);
+    if (!tpl) return false;
+    // Template dianggap punya tabel jika ada tableColumns atau tables array
+    if (Array.isArray(tpl.tableColumns) && tpl.tableColumns.length > 0) return true;
+    if (Array.isArray(tpl.tables) && tpl.tables.length > 0) return true;
+    return false;
+  }
+
+  /**
+   * Kembalikan definisi semua tabel yang ada di template.
+   * Mendukung dua format:
+   *   1. Legacy: template.tableColumns (single table)
+   *   2. Multi-table: template.tables = [{ id, label, columns }]
+   *
+   * Selalu return array: [{ id, label, columns }]
+   */
+  function getTableDefinitions(templateId) {
+    const tpl = _templates.get(templateId);
+    if (!tpl) return [];
+
+    // Format baru: multi-table
+    if (Array.isArray(tpl.tables) && tpl.tables.length > 0) {
+      return tpl.tables.map(t => ({
+        id:      t.id      || 'table-0',
+        label:   t.label   || 'Tabel',
+        columns: Array.isArray(t.columns) ? t.columns : [],
+        tableDefaultConfig: t.tableDefaultConfig || null,
+      }));
+    }
+
+    // Format legacy: single tableColumns → dibungkus jadi satu tabel
+    if (Array.isArray(tpl.tableColumns) && tpl.tableColumns.length > 0) {
+      // Gunakan template ID sebagai table ID agar stabil
+      return [{
+        id:      templateId,
+        label:   tpl.meta?.name || 'Tabel Utama',
+        columns: tpl.tableColumns,
+        tableDefaultConfig: tpl.tableDefaultConfig || null,
+      }];
+    }
+
+    return [];
+  }
+
   /* ── Inisialisasi: daftarkan semua template yang sudah di-load ── */
   function init() {
     // Template didefinisikan di file terpisah dan sudah di-load sebelum registry
@@ -150,6 +196,8 @@ const TemplateRegistry = (() => {
     count,
     renderTemplateList,
     updateActiveCard,
+    templateHasTables,
+    getTableDefinitions,
     init,
   };
 
