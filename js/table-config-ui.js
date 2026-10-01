@@ -353,6 +353,8 @@ const TableConfigUI = (() => {
     const isBold    = colCfg.bold   === true;
     const isItalic  = colCfg.italic === true;
     const fontSize  = colCfg.fontSize != null ? colCfg.fontSize : '';
+    // wrapText: null/undefined = mengikuti default, true = wrap, false = nowrap
+    const isWrap    = colCfg.wrapText !== false; // default true (wrap)
 
     const dataAttrs = [
       `data-template-id="${_esc(templateId)}"`,
@@ -445,6 +447,37 @@ const TableConfigUI = (() => {
               </div>
             </div>
           </div>
+
+          <!-- Wrap Text toggle -->
+          <div class="tbl-cfg__control-group tbl-cfg__wrap-row">
+            <label class="tbl-cfg__control-label"
+              id="wrap-lbl-${_esc(tableId)}-${section}-${colIdx}">Wrap Teks</label>
+            <div class="tbl-cfg__wrap-toggle-wrap">
+              <button type="button"
+                class="tbl-cfg__wrap-btn${!isWrap ? ' is-active' : ''}"
+                data-action="wrap-text"
+                data-value="false"
+                ${dataAttrs}
+                title="Teks dalam satu baris (nowrap)"
+                aria-label="Wrap Teks OFF untuk ${_esc(colLabel)}"
+                aria-pressed="${!isWrap}">
+                <svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="13" aria-hidden="true"><line x1="1" y1="3" x2="19" y2="3"/><line x1="1" y1="7" x2="19" y2="7"/><line x1="1" y1="11" x2="13" y2="11"/></svg>
+                <span>Off</span>
+              </button>
+              <button type="button"
+                class="tbl-cfg__wrap-btn${isWrap ? ' is-active' : ''}"
+                data-action="wrap-text"
+                data-value="true"
+                ${dataAttrs}
+                title="Teks dapat membungkus ke baris berikutnya"
+                aria-label="Wrap Teks ON untuk ${_esc(colLabel)}"
+                aria-pressed="${isWrap}">
+                <svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="13" aria-hidden="true"><line x1="1" y1="3" x2="19" y2="3"/><line x1="1" y1="7" x2="14" y2="7"/><path d="M14 5 L14 9 L17 7" stroke-linejoin="round" stroke-linecap="round"/><line x1="1" y1="11" x2="10" y2="11"/></svg>
+                <span>On</span>
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>`;
   }
@@ -481,6 +514,20 @@ const TableConfigUI = (() => {
             title="Semua kolom ${sectionLabel}: Bold OFF"
             aria-label="Semua kolom ${sectionLabel}: Bold OFF"
           ><span style="font-weight:normal;opacity:.6">B</span></button>
+          <button type="button"
+            class="tbl-cfg__apply-btn tbl-cfg__apply-btn--wrap-on"
+            data-action="apply-all-wrap-on"
+            ${da}
+            title="Semua kolom ${sectionLabel}: Wrap Teks ON"
+            aria-label="Semua kolom ${sectionLabel}: Wrap Teks ON"
+          ><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="2" width="16" height="11" aria-hidden="true"><line x1="1" y1="3" x2="19" y2="3"/><line x1="1" y1="7" x2="14" y2="7"/><path d="M14 5 L14 9 L17 7" stroke-linejoin="round" stroke-linecap="round"/><line x1="1" y1="11" x2="10" y2="11"/></svg></button>
+          <button type="button"
+            class="tbl-cfg__apply-btn"
+            data-action="apply-all-wrap-off"
+            ${da}
+            title="Semua kolom ${sectionLabel}: Wrap Teks OFF"
+            aria-label="Semua kolom ${sectionLabel}: Wrap Teks OFF"
+          ><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="2" width="16" height="11" aria-hidden="true" style="opacity:.6"><line x1="1" y1="3" x2="19" y2="3"/><line x1="1" y1="7" x2="19" y2="7"/><line x1="1" y1="11" x2="13" y2="11"/></svg></button>
         </div>
       </div>`;
   }
@@ -594,6 +641,16 @@ const TableConfigUI = (() => {
         break;
       }
 
+      /* ── Wrap Text toggle (per kolom) ── */
+      case 'wrap-text': {
+        if (!isNaN(colIdx)) {
+          TableConfigManager.updateColumn(templateId, tableId, section, colIdx, {
+            wrapText: value === 'true',
+          });
+        }
+        break;
+      }
+
       /* ── Apply all: horizontal alignment ── */
       case 'apply-all-h-align': {
         TableConfigManager.applyToAllColumns(templateId, tableId, section, {
@@ -609,6 +666,16 @@ const TableConfigUI = (() => {
       }
       case 'apply-all-bold-off': {
         TableConfigManager.applyToAllColumns(templateId, tableId, section, { bold: false });
+        break;
+      }
+
+      /* ── Apply all: wrap text ── */
+      case 'apply-all-wrap-on': {
+        TableConfigManager.applyWrapTextToAll(templateId, tableId, section, true);
+        break;
+      }
+      case 'apply-all-wrap-off': {
+        TableConfigManager.applyWrapTextToAll(templateId, tableId, section, false);
         break;
       }
 
