@@ -8,7 +8,6 @@
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    color-adjust: exact !important;
   }
 
   html, body {
@@ -103,9 +102,7 @@
   }
 
   /* ── Landscape page orientation ── */
-  .print-landscape {
-    /* Applied via JS to body/html before print */
-  }
+  /* .print-landscape orientation is applied via JS to body/html before print */
 
   /* ── Doc content padding ── */
   /* Margin/padding ditangani oleh @page rule yang diinjeksi oleh print.js
@@ -117,10 +114,6 @@
     color: #000 !important;
     font-size: 12pt !important;
     /* Scale dari print.js: transform diatur per-print via injected style */
-  }
-
-  .surat-preview.orientation-landscape .doc-content {
-    /* Landscape margin juga diatur via @page di print.js */
   }
 
   /* ── KOP ── */
@@ -217,10 +210,4 @@
   }
 }
 
-/* ── Print page orientation helper class (applied to <html>) ── */
-@media print {
-  html.print-portrait  { }
-  html.print-landscape { }
-}
-
-/* @page portrait/landscape handled via JS window.print() call */
+/* ── Print page orientation: portrait/landscape handled via JS window.print() call ── */
