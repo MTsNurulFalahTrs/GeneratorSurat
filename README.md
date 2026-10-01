@@ -24,8 +24,9 @@ Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesi
 
 - **3 Template Surat** siap pakai: DPU, Mutasi Masuk, Siswa Baru
 - **Editor KOP Surat** fleksibel — logo kiri (wajib) + logo kanan (opsional), jumlah baris dapat diatur (1–10), setiap baris dapat dikonfigurasi secara individual (font, ukuran, tebal, miring, garis bawah, rata teks, warna, transformasi huruf)
+- **Tab Pengaturan** — kontrol penuh atas ukuran kertas, orientasi, margin, skala cetak, dan tampilan preview
 - **Live Preview** surat secara real-time dengan kontrol zoom
-- **Cetak / Print** langsung dari browser dengan format A4 yang tepat
+- **Cetak / Print** langsung dari browser dengan format halaman yang tepat sesuai pengaturan
 - **Penyimpanan Lokal** otomatis dengan TTL 2 jam — data tidak hilang saat refresh, tetapi terhapus otomatis setelah 2 jam sejak penyimpanan terakhir
 - **100% Client-Side** — tidak ada server, tidak ada database, tidak ada data dikirim ke luar perangkat
 - **Extensible** — template baru dapat ditambahkan tanpa mengubah arsitektur inti
@@ -59,7 +60,7 @@ Tidak menggunakan React, Vue, Angular, Next.js, backend, database server, Fireba
 │
 ├── css/
 │   ├── main.css                  # Layout global, CSS Custom Properties, reset
-│   ├── components.css            # Komponen UI reusable (button, form, modal, toast)
+│   ├── components.css            # Komponen UI reusable (button, form, modal, toast, settings)
 │   ├── kop-editor.css            # Styling khusus editor KOP Surat
 │   ├── preview.css               # Area preview dan rendering dokumen surat
 │   └── print.css                 # @media print — hanya surat yang dicetak
@@ -68,12 +69,15 @@ Tidak menggunakan React, Vue, Angular, Next.js, backend, database server, Fireba
 │   ├── utils.js                  # Helper functions (format tanggal, escapeHtml, dll)
 │   ├── storage.js                # localStorage wrapper dengan TTL 2 jam
 │   ├── state.js                  # Centralized state management + event emitter
+│   │                             # (termasuk PAPER_SIZES, MARGIN_PRESETS, DOCUMENT_PRESETS,
+│   │                             #  DEFAULT_SETTINGS, getPaperDimensions, getMarginMm)
 │   ├── validation.js             # Validasi input form dan konfigurasi KOP
 │   ├── template-registry.js      # Registrasi dan manajemen template (extensible)
 │   ├── kop-editor.js             # UI Editor KOP Surat (logo, baris teks)
 │   ├── form-renderer.js          # Render form input dinamis per template
-│   ├── preview-renderer.js       # Render live preview surat
-│   ├── print.js                  # Logika cetak dengan orientasi halaman
+│   ├── preview-renderer.js       # Render live preview surat (gunakan settings dari state)
+│   ├── print.js                  # Logika cetak — @page style dinamis dari settings
+│   ├── settings.js               # UI dan logika tab Pengaturan
 │   ├── ui.js                     # Toast, Modal, Tabs, Panel Resizer, Storage Info
 │   └── app.js                    # Entry point — boot sequence aplikasi
 │
@@ -84,7 +88,9 @@ Tidak menggunakan React, Vue, Angular, Next.js, backend, database server, Fireba
 │
 └── assets/
     └── icons/
-        └── logo-placeholder.svg  # Ikon placeholder logo
+        ├── logo.svg              # Logo aplikasi (512×512)
+        ├── favicon.svg           # Favicon aplikasi
+        └── logo-placeholder.svg  # Ikon placeholder logo KOP
 ```
 
 ---
@@ -163,6 +169,90 @@ File `vercel.json` sudah dikonfigurasi dengan:
 - **Keterangan:** Daftar pengesahan siswa baru per tahun ajaran. Kelas tercantum di header, bukan per baris.
 - **Kolom:** No, NIS, NISN, Nama Siswa, L/P, Tempat/Tgl Lahir, Nama Orang Tua, Sekolah Asal, No. Ijazah, K.K.R.P.S, No. Pengesahan
 - **Tanda Tangan:** 4 pihak + Pengesahan Palembang
+
+---
+
+## Tab Pengaturan
+
+Tab **Pengaturan** tersedia di panel editor kiri (ikon ⚙️). Semua perubahan langsung memengaruhi preview secara real-time dan diterapkan pada hasil cetak.
+
+### Preset Dokumen
+
+| Preset | Ukuran | Orientasi | Margin |
+|--------|--------|-----------|--------|
+| A4 Normal | A4 | Portrait | 20/20/25/25 mm |
+| A4 Sempit | A4 | Portrait | 12/12/12/12 mm |
+| A5 | A5 | Portrait | 15/15/15/15 mm |
+| F4 / Folio | F4 | Portrait | 20/20/25/25 mm |
+| A4 Landscape | A4 | Landscape | 15/15/20/20 mm |
+
+Setelah preset dipilih dan salah satu nilai diubah manual, status preset otomatis berubah menjadi **Custom**.
+
+### Ukuran Kertas
+
+Tersedia: **A4**, **A5**, **F4/Folio**, **Letter**, **Legal**, dan **Custom**.
+
+Untuk ukuran Custom, masukkan lebar dan tinggi dengan satuan **mm**, **cm**, atau **inch**. Konversi antar satuan dilakukan otomatis.
+
+### Orientasi
+
+**Portrait** atau **Landscape**. Perubahan langsung memperbarui dimensi paper di preview.
+
+### Margin
+
+Atur margin atas, kanan, bawah, dan kiri secara individual (satuan mm, range 0–60 mm). Tersedia 4 preset margin: Default, Normal, Sempit, Lebar.
+
+### Skala Cetak
+
+80%, 85%, 90%, 95%, **100%** (default), 105%, 110%, 115%, 120%, atau Custom (50–150%).
+
+> **Catatan browser**: Skala cetak diupayakan melalui CSS `@page`. Beberapa browser tetap menampilkan dialog cetak mereka sendiri. Nilai yang dikonfigurasi di aplikasi ini adalah rekomendasi — bukan perintah yang dapat memaksa pengaturan printer.
+
+### Tampilan Preview
+
+| Pengaturan | Keterangan |
+|------------|------------|
+| Zoom Auto | Menyesuaikan otomatis ke viewport |
+| Fit Page | Surat penuh terlihat dalam viewport |
+| Fit Width | Lebar surat mengisi viewport |
+| 100% | Ukuran aktual (1:1) |
+| Panduan Margin | Garis biru putus sebagai panduan margin |
+| Area Cetak | Highlight area yang akan dicetak |
+
+> **Penting**: Zoom preview HANYA mengubah tampilan di layar. Ukuran dokumen dan margin tidak berubah.
+
+### Pemisahan Preview dan Print
+
+```
+Preview zoom 70%  →  Tampilan di layar diperkecil 70%
+                      Ukuran dokumen asli tidak berubah
+
+Print scale 90%   →  Hasil cetak 90% dari ukuran dokumen
+                      (via @page CSS yang diinjeksi saat cetak)
+```
+
+### Alur Pengaturan
+
+```
+Tab Pengaturan
+    │
+    ▼
+State.setSettings()  ─── emit 'settings:change'
+    │                         │
+    ▼                         ▼
+State.getPaperDimensions()   PreviewRenderer._renderCurrent()
+State.getMarginMm()          (update ukuran & margin preview)
+    │
+    ▼
+Print.printDocument()
+└── _applyPageStyle()
+    └── @page { size: ...; margin: ... }
+        + @media print scale transform
+```
+
+---
+
+## Cara Menggunakan Tab Pengaturan
 
 ---
 
@@ -631,31 +721,37 @@ Page load berikutnya:
 
 | Modul | Tanggung Jawab |
 |-------|----------------|
-| `state.js` | Single source of truth — semua data aplikasi |
+| `state.js` | Single source of truth — semua data aplikasi termasuk settings |
 | `storage.js` | Persistensi ke localStorage + pengecekan TTL |
 | `template-registry.js` | Registrasi dan lookup template |
 | `kop-editor.js` | UI editor KOP, mengupdate `State.kop` |
 | `form-renderer.js` | Render form dinamis, mengupdate `State.forms[templateId]` |
-| `preview-renderer.js` | Subscribe event state, render HTML surat |
+| `preview-renderer.js` | Subscribe event state, render HTML surat dengan dimensi dari `State.getPaperDimensions()` |
+| `settings.js` | UI tab Pengaturan, mengupdate `State.settings`, menerapkan overlay preview |
+| `print.js` | Injeksi `@page` CSS dari `State.getSettings()`, cetak dokumen |
 | `ui.js` | Komponen UI murni (toast, modal, tabs) — tidak punya state sendiri |
-| `app.js` | Orchestrator — menginisialisasi semua modul |
+| `app.js` | Orchestrator — menginisialisasi semua modul termasuk `Settings.init()` |
 
 ### Event System
 
-Modul berkomunikasi melalui event sederhana di `State`:
+Modul berkomunikasi melalui event di `State`:
 
 ```javascript
 // Subscribe
-State.on('form:change', ({ templateId, data }) => { ... });
-State.on('kop:change', ({ kop }) => { ... });
+State.on('form:change',     ({ templateId, data }) => { ... });
+State.on('kop:change',      ({ kop }) => { ... });
 State.on('template:change', ({ templateId }) => { ... });
-State.on('state:restore', () => { ... });
-State.on('state:reset', () => { ... });
+State.on('settings:change', ({ settings }) => { ... });  // ← baru
+State.on('state:restore',   () => { ... });
+State.on('state:reset',     () => { ... });
 
 // Emit (dilakukan otomatis oleh setter di State)
-State.setFormData(templateId, partialData);  // → emit 'form:change'
-State.setKop(partial);                       // → emit 'kop:change'
-State.setActiveTemplate(templateId);         // → emit 'template:change'
+State.setFormData(templateId, partialData); // → emit 'form:change'
+State.setKop(partial);                      // → emit 'kop:change'
+State.setActiveTemplate(templateId);        // → emit 'template:change'
+State.setSettings(partial);                 // → emit 'settings:change'
+State.applyDocumentPreset(key);             // → emit 'settings:change' + 'settings:presetApplied'
+State.resetSettings();                      // → emit 'settings:change' + 'settings:reset'
 ```
 
 ---
