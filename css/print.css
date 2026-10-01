@@ -136,11 +136,23 @@
 
   /* ── Table ── */
   /*
-   * Print: pertahankan Fit to Content.
-   * .doc-table--dpu menggunakan width: 100% karena DPU memiliki banyak
-   * kolom dan selalu landscape, sehingga memenuhi halaman adalah behavior
-   * yang benar. Tabel non-DPU tetap auto-sized.
+   * Print layout strategy:
+   *
+   * A) Fit to Content (semua kolom auto, tidak ada .doc-table--fixed):
+   *    .doc-table-wrap → fit-content, .doc-table → table-layout:auto
+   *
+   * B) Custom Column Width (ada .doc-table--fixed):
+   *    .doc-table-wrap → width:100%, .doc-table → table-layout:fixed + width:100%
+   *    <colgroup> dengan width per kolom diterapkan via inline style (tidak di-override)
+   *
+   * C) DPU (.doc-table--dpu):
+   *    Selalu full-width + table-layout:fixed (sudah ada <colgroup> default)
+   *
+   * PENTING: Jangan gunakan !important pada table-layout dan width untuk
+   * .doc-table secara global — biarkan class-specific rule yang menang.
    */
+
+  /* Wrapper default: fit-content untuk Fit to Content */
   .doc-table-wrap {
     width: fit-content !important;
     max-width: 100% !important;
@@ -148,7 +160,7 @@
     display: block !important;
   }
 
-  /* Full-width wrapper (DPU) */
+  /* Wrapper untuk custom width dan DPU: full-width */
   .doc-table-wrap--full {
     width: 100% !important;
     max-width: 100% !important;
@@ -156,10 +168,26 @@
     display: block !important;
   }
 
+  /* Tabel dengan custom column width: wrapper juga harus full-width */
+  .doc-table-wrap:has(.doc-table--fixed) {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Base table: border-collapse saja, table-layout diserahkan ke class */
   .doc-table {
     border-collapse: collapse !important;
     page-break-inside: auto;
-    /* Pertahankan table-layout: auto (Fit to Content) */
+    /* table-layout TIDAK di-override di sini agar .doc-table--fixed dan
+       .doc-table--dpu bisa menentukan sendiri via rule di bawah */
+  }
+
+  /* Custom column width mode: pertahankan fixed layout saat cetak */
+  .doc-table--fixed {
+    width: 100% !important;
+    table-layout: fixed !important;
+    /* <colgroup> dengan width per-kolom sudah di-generate oleh TableRenderer,
+       tidak perlu override apapun di sini */
   }
 
   /* DPU: banyak kolom landscape → full width, fixed layout */
