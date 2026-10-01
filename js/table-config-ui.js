@@ -420,43 +420,44 @@ const TableConfigUI = (() => {
   }
 
   function _handleClick(e, templateId) {
+    // ── 1. Accordion utama (Pengaturan Tabel) ──────────────────────────
+    // Harus dicek PERTAMA, sebelum pemeriksaan data-action,
+    // karena tombol ini tidak memiliki data-action.
+    const mainToggle = e.target.closest('.tbl-cfg-accordion__toggle');
+    if (mainToggle) {
+      const body     = _mountEl ? _mountEl.querySelector('#tbl-cfg-body') : document.getElementById('tbl-cfg-body');
+      const expanded = mainToggle.getAttribute('aria-expanded') === 'true';
+      mainToggle.setAttribute('aria-expanded', String(!expanded));
+      const chevron  = mainToggle.querySelector('.tbl-cfg-accordion__chevron');
+      if (chevron) chevron.classList.toggle('is-collapsed', expanded);
+      if (body)    body.classList.toggle('is-collapsed', expanded);
+      return; // sudah ditangani, stop
+    }
+
+    // ── 2. Section toggle (Header Tabel / Isi Tabel) ───────────────────
+    // Harus dicek SEBELUM data-action, karena tombol ini juga
+    // tidak memiliki data-action.
+    const sectionToggle = e.target.closest('.tbl-cfg__section-toggle');
+    if (sectionToggle) {
+      const sectionKey = sectionToggle.dataset.sectionKey;
+      if (sectionKey) {
+        _openSections[sectionKey] = !(_openSections[sectionKey] !== false);
+        _toggleSection(sectionKey, sectionToggle);
+      }
+      return; // sudah ditangani, stop
+    }
+
+    // ── 3. Semua aksi per-kolom dan bulk (ada data-action) ─────────────
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
 
-    const action   = btn.dataset.action;
-    const tableId  = btn.dataset.tableId;
-    const section  = btn.dataset.section;
-    const colIdx   = parseInt(btn.dataset.colIdx, 10);
-    const value    = btn.dataset.value;
+    const action  = btn.dataset.action;
+    const tableId = btn.dataset.tableId;
+    const section = btn.dataset.section;
+    const colIdx  = parseInt(btn.dataset.colIdx, 10);
+    const value   = btn.dataset.value;
 
     switch (action) {
-
-      /* ── Accordion toggle utama ── */
-      case undefined:
-        break;
-
-      /* ── Section (header/body) toggle ── */
-      case 'section-toggle': {
-        const sectionKey = btn.dataset.sectionKey;
-        _openSections[sectionKey] = !(_openSections[sectionKey] !== false);
-        _toggleSection(root, sectionKey, btn);
-        break;
-      }
-
-      /* ── Accordion utama toggle ── */
-      case 'accordion-toggle': {
-        const body     = document.getElementById('tbl-cfg-body');
-        const expanded = btn.getAttribute('aria-expanded') === 'true';
-        btn.setAttribute('aria-expanded', String(!expanded));
-        if (body) {
-          body.classList.toggle('is-collapsed', expanded);
-        }
-        btn.closest('.tbl-cfg-accordion__header')
-          ?.querySelector('.tbl-cfg-accordion__chevron svg')
-          ?.closest('.tbl-cfg-accordion__chevron')
-          ?.classList.toggle('is-collapsed', expanded);
-        break;
-      }
 
       /* ── Horizontal alignment (per kolom) ── */
       case 'h-align': {
@@ -542,25 +543,6 @@ const TableConfigUI = (() => {
       default:
         break;
     }
-
-    /* ── Accordion utama ── */
-    const toggleBtn = e.target.closest('.tbl-cfg-accordion__toggle');
-    if (toggleBtn) {
-      const body     = document.getElementById('tbl-cfg-body');
-      const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-      toggleBtn.setAttribute('aria-expanded', String(!expanded));
-      const chevron  = toggleBtn.querySelector('.tbl-cfg-accordion__chevron');
-      if (chevron) chevron.classList.toggle('is-collapsed', expanded);
-      if (body)    body.classList.toggle('is-collapsed', expanded);
-    }
-
-    /* ── Section toggle (header / body) ── */
-    const sectionToggle = e.target.closest('.tbl-cfg__section-toggle');
-    if (sectionToggle && !btn) {
-      const sectionKey = sectionToggle.dataset.sectionKey;
-      _openSections[sectionKey] = !(_openSections[sectionKey] !== false);
-      _toggleSection(root, sectionKey, sectionToggle);
-    }
   }
 
   function _handleChange(e, templateId) {
@@ -615,16 +597,23 @@ const TableConfigUI = (() => {
   /* ────────────────────────────────────────────────
      Toggle section (header / body) tanpa full re-render
   ──────────────────────────────────────────────── */
-  function _toggleSection(root, sectionKey, toggleBtn) {
-    const sectionBodyId = toggleBtn.getAttribute('aria-controls');
-    const sectionBody   = sectionBodyId ? document.getElementById(sectionBodyId) : null;
-    const isNowOpen     = _openSections[sectionKey] !== false;
+  function _toggleSection(sectionKey, toggleBtn) {
+    const isNowOpen = _openSections[sectionKey] !== false;
 
+    // Update aria-expanded dan class pada tombol
     toggleBtn.setAttribute('aria-expanded', isNowOpen ? 'true' : 'false');
     toggleBtn.classList.toggle('is-open', isNowOpen);
 
-    if (sectionBody) {
-      sectionBody.classList.toggle('is-open', isNowOpen);
+    // Cari section body via aria-controls dari tombol itu sendiri
+    const sectionBodyId = toggleBtn.getAttribute('aria-controls');
+    if (sectionBodyId) {
+      // Cari di dalam _mountEl agar tidak salah ambil elemen lain di halaman
+      const sectionBody = _mountEl
+        ? _mountEl.querySelector(`#${CSS.escape(sectionBodyId)}`)
+        : document.getElementById(sectionBodyId);
+      if (sectionBody) {
+        sectionBody.classList.toggle('is-open', isNowOpen);
+      }
     }
   }
 
