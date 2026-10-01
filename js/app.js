@@ -72,7 +72,11 @@ const App = (() => {
     PreviewRenderer.init();
 
     /* 9. Init Settings */
-    Settings.init();
+    if (typeof Settings !== 'undefined') {
+      Settings.init();
+    } else {
+      console.warn('[App] Settings module tidak tersedia.');
+    }
 
     /* 10. Bind header action buttons */
     _bindHeaderButtons();
@@ -81,7 +85,7 @@ const App = (() => {
     if (wasRestored) {
       const meta = Storage.getMeta();
       UI.updateStorageInfo(meta);
-      Settings.updateStorageStatus();
+      if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
     }
     UI.startStorageInfoRefresh();
 
@@ -174,7 +178,7 @@ const App = (() => {
       State.markSaved(result);
       const meta = Storage.getMeta();
       UI.updateStorageInfo(meta);
-      Settings.updateStorageStatus();
+      if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
       UI.toast('Data berhasil disimpan.', 'success');
     } else {
       UI.toast(`Gagal menyimpan: ${result.reason}`, 'error');
@@ -199,7 +203,7 @@ const App = (() => {
     // Reset storage info
     UI.updateStorageInfo(null);
     UI.hideExpiredBanner();
-    Settings.updateStorageStatus();
+    if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
 
     UI.toast('Data berhasil direset.', 'info');
   }
@@ -219,7 +223,7 @@ const App = (() => {
     UI.showExpiredBanner(
       'Data lokal telah kedaluwarsa (lebih dari 2 jam sejak penyimpanan terakhir) dan dihapus otomatis.'
     );
-    Settings.updateStorageStatus();
+    if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
   }
 
   /* ── On state change (auto-save indicator) ── */
@@ -268,11 +272,15 @@ ${Utils.escapeHtml(err?.stack || err?.message || String(err))}
   }
 
   /* ── DOMContentLoaded ── */
+  // Selalu gunakan event listener agar semua script dipastikan sudah di-parse
+  // sebelum init() dipanggil, menghindari ReferenceError pada modul yang
+  // di-load tepat sebelum app.js (mis. Settings, PreviewRenderer).
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
-    // DOM sudah siap
-    init();
+    // DOM sudah siap, tapi tunda 1 tick agar semua const/IIFE di script
+    // sebelumnya selesai didefinisikan di scope global
+    setTimeout(init, 0);
   }
 
   return {
