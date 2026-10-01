@@ -1,25 +1,22 @@
 /* =============================================================
    table-config-ui.js — Accordion "Pengaturan Tabel" di Tab Isi Surat
    =============================================================
-   Tanggung jawab:
-   - Render accordion "Pengaturan Tabel" di mount point yang disediakan
-     FormRenderer (#table-config-mount).
-   - Show/hide accordion berdasarkan apakah template aktif punya tabel.
-   - Render per-tabel: header section + body section, per kolom.
-   - Bind semua event: alignment, bold, italic, fontSize, apply-all,
-     copy-header-to-body, reset.
-   - Setiap perubahan langsung → TableConfigManager.updateColumn()
-     → State.setTableConfig() → emit 'table:change' → PreviewRenderer
-     otomatis re-render.
+   Struktur accordion per tabel:
+     ► Lebar Kolom         ← BARU: pengaturan struktural (berlaku di header+body)
+     ► Header Tabel        ← styling teks header per kolom
+     ► Isi Tabel           ← styling teks body per kolom
+
+   Setiap perubahan langsung → TableConfigManager → State → emit →
+   PreviewRenderer.debounce → live update.
    =============================================================
 */
 
 const TableConfigUI = (() => {
 
   /* ── State UI lokal ── */
-  let _mountEl       = null;    // elemen #table-config-mount
-  let _templateId    = null;    // template aktif saat ini
-  let _openSections  = {};      // { 'tableId-header': true, ... } — accordion state
+  let _mountEl      = null;
+  let _templateId   = null;
+  let _openSections = {};   // { 'tableId-width': bool, 'tableId-header': bool, ... }
 
   /* ── Label dan ikon ── */
   const H_ALIGN_OPTIONS = [
@@ -36,28 +33,24 @@ const TableConfigUI = (() => {
   ];
 
   /* ────────────────────────────────────────────────
-     PUBLIC: Init (dipanggil sekali saat app boot)
+     PUBLIC: Init
   ──────────────────────────────────────────────── */
   function init(mountEl) {
     if (!mountEl) return;
     _mountEl = mountEl;
 
-    // Subscribe template change → re-render accordion
     State.on('template:change', ({ templateId }) => {
       _templateId = templateId;
       TableConfigManager.initForTemplate(templateId);
       render(templateId);
     });
 
-    // Subscribe table config change → re-render accordion agar sinkron
-    // (Debounced 50ms agar tidak berlebihan saat apply-all)
     const debouncedRender = Utils.debounce(() => {
       if (_templateId) render(_templateId);
     }, 50);
     State.on('table:change', debouncedRender);
     State.on('table:reset',  debouncedRender);
 
-    // Subscribe state restore → re-render
     State.on('state:restore', () => {
       _templateId = State.getActiveTemplate();
       if (_templateId) {
@@ -75,8 +68,7 @@ const TableConfigUI = (() => {
   }
 
   /* ────────────────────────────────────────────────
-     PUBLIC: Render (dipanggil saat template berubah
-     atau dari FormRenderer setelah render form)
+     PUBLIC: Render
   ──────────────────────────────────────────────── */
   function render(templateId) {
     if (!_mountEl) return;
@@ -95,22 +87,20 @@ const TableConfigUI = (() => {
   }
 
   /* ────────────────────────────────────────────────
-     Build HTML utama accordion
+     Build HTML accordion utama
   ──────────────────────────────────────────────── */
   function _buildAccordionHtml(templateId) {
     const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
     if (!tableDefs.length) return '';
 
-    const tablesHtml = tableDefs.map(tableDef => _buildTableSection(templateId, tableDef)).join('');
+    const tablesHtml = tableDefs.map(td => _buildTableSection(templateId, td)).join('');
 
     const hasMultiple = tableDefs.length > 1;
     const resetAllBtn = hasMultiple ? `
-      <button
-        type="button"
+      <button type="button"
         class="btn btn--sm btn--danger-outline tbl-cfg__reset-all"
         data-action="reset-all"
-        title="Reset semua pengaturan tabel ke default template"
-      >
+        title="Reset semua pengaturan tabel ke default template">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" aria-hidden="true"><path d="M3.51 15a9 9 0 1 0 .49-4.95"/><polyline points="1,4 1,10 7,10"/></svg>
         Reset Semua Tabel
       </button>` : '';
@@ -118,13 +108,11 @@ const TableConfigUI = (() => {
     return `
       <section class="tbl-cfg-accordion" aria-label="Pengaturan Tabel">
         <div class="tbl-cfg-accordion__header">
-          <button
-            type="button"
+          <button type="button"
             class="tbl-cfg-accordion__toggle"
             aria-expanded="true"
             aria-controls="tbl-cfg-body"
-            id="tbl-cfg-toggle"
-          >
+            id="tbl-cfg-toggle">
             <span class="tbl-cfg-accordion__toggle-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="9"/></svg>
             </span>
@@ -135,65 +123,183 @@ const TableConfigUI = (() => {
           </button>
           ${resetAllBtn}
         </div>
-        <div class="tbl-cfg-accordion__body" id="tbl-cfg-body" role="region" aria-labelledby="tbl-cfg-toggle">
+        <div class="tbl-cfg-accordion__body" id="tbl-cfg-body"
+          role="region" aria-labelledby="tbl-cfg-toggle">
           ${tablesHtml}
         </div>
       </section>`;
   }
 
   /* ────────────────────────────────────────────────
-     Build section untuk satu tabel
+     Build section satu tabel
   ──────────────────────────────────────────────── */
   function _buildTableSection(templateId, tableDef) {
     const resolvedCfg = TableConfigManager.getResolvedConfig(templateId, tableDef.id);
     const columns     = tableDef.columns;
     const tableId     = tableDef.id;
 
-    const headerHtml = _buildSectionPanel(
-      templateId, tableId, 'header', columns, resolvedCfg.header?.columns || {}
-    );
-    const bodyHtml = _buildSectionPanel(
-      templateId, tableId, 'body', columns, resolvedCfg.body?.columns || {}
-    );
+    // ── Tiga panel: Lebar Kolom | Header | Isi ──
+    const widthHtml  = _buildWidthPanel(templateId, tableId, columns, resolvedCfg.columnWidths);
+    const headerHtml = _buildSectionPanel(templateId, tableId, 'header', columns, resolvedCfg.header?.columns || {});
+    const bodyHtml   = _buildSectionPanel(templateId, tableId, 'body',   columns, resolvedCfg.body?.columns   || {});
 
-    // Reset tombol per-tabel
     const resetBtn = `
-      <button
-        type="button"
+      <button type="button"
         class="btn btn--sm btn--ghost tbl-cfg__reset-table"
         data-action="reset-table"
         data-table-id="${_esc(tableId)}"
-        title="Reset pengaturan tabel ini ke default template"
-      >
+        title="Reset pengaturan tabel ini ke default template">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" aria-hidden="true"><path d="M3.51 15a9 9 0 1 0 .49-4.95"/><polyline points="1,4 1,10 7,10"/></svg>
         Reset
       </button>`;
 
-    // Jika ada lebih dari satu tabel, tambahkan label tabel
-    const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
+    const tableDefs  = TemplateRegistry.getTableDefinitions(templateId);
     const tableLabel = tableDefs.length > 1
       ? `<div class="tbl-cfg__table-label">
            <span class="tbl-cfg__table-label-text">Tabel: ${_esc(tableDef.label)}</span>
            ${resetBtn}
          </div>`
-      : `<div class="tbl-cfg__table-label tbl-cfg__table-label--single">
-           ${resetBtn}
-         </div>`;
+      : `<div class="tbl-cfg__table-label tbl-cfg__table-label--single">${resetBtn}</div>`;
 
     return `
       <div class="tbl-cfg__table" data-table-id="${_esc(tableId)}">
         ${tableLabel}
+        ${widthHtml}
         ${headerHtml}
         ${bodyHtml}
       </div>`;
   }
 
-  /* ────────────────────────────────────────────────
-     Build panel untuk satu section (header / body)
-  ──────────────────────────────────────────────── */
+  /* ════════════════════════════════════════════════
+     PANEL LEBAR KOLOM (structural — berlaku untuk seluruh kolom)
+  ════════════════════════════════════════════════ */
+  function _buildWidthPanel(templateId, tableId, columns, columnWidths) {
+    const sectionKey = `${tableId}-width`;
+    const isOpen     = _openSections[sectionKey] !== false; // default open
+    const sectionId  = `tbl-sec-${_esc(tableId)}-width`;
+    const byKey      = columnWidths?.byKey || {};
+
+    // Total % indicator
+    const totalPct = TableConfigManager.getTotalWidthPercent(columnWidths);
+    const totalStr = totalPct !== null
+      ? `<span class="tbl-cfg__width-total${totalPct > 100 ? ' tbl-cfg__width-total--over' : ''}"
+           title="Total lebar kolom (mode %)">${totalPct}%</span>`
+      : '';
+
+    // Reset lebar kolom button
+    const resetWidthBtn = `
+      <button type="button"
+        class="btn btn--sm btn--ghost tbl-cfg__width-reset-btn"
+        data-action="reset-col-widths"
+        data-table-id="${_esc(tableId)}"
+        title="Reset semua lebar kolom ke Auto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" aria-hidden="true"><path d="M3.51 15a9 9 0 1 0 .49-4.95"/><polyline points="1,4 1,10 7,10"/></svg>
+        Reset Lebar
+      </button>`;
+
+    // Per-kolom width rows
+    const colRows = columns.map((col, idx) => {
+      const key  = col.key || `col-${idx}`;
+      const w    = byKey[key] || { mode: TableConfigManager.WIDTH_MODE_AUTO };
+      return _buildWidthRow(templateId, tableId, col, idx, key, w);
+    }).join('');
+
+    return `
+      <div class="tbl-cfg__section">
+        <button type="button"
+          class="tbl-cfg__section-toggle${isOpen ? ' is-open' : ''}"
+          aria-expanded="${isOpen}"
+          aria-controls="${sectionId}"
+          data-section-key="${_esc(sectionKey)}">
+          <span class="tbl-cfg__section-icon" aria-hidden="true">↔</span>
+          <span class="tbl-cfg__section-title">Lebar Kolom</span>
+          ${totalStr}
+          <span class="tbl-cfg__section-chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </button>
+        <div class="tbl-cfg__section-body${isOpen ? ' is-open' : ''}"
+          id="${sectionId}" role="region">
+          <div class="tbl-cfg__width-toolbar">
+            <span class="tbl-cfg__width-hint">Lebar berlaku pada Header &amp; Isi tabel.</span>
+            ${resetWidthBtn}
+          </div>
+          <div class="tbl-cfg__width-rows">
+            ${colRows}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* ── Build satu baris lebar kolom ── */
+  function _buildWidthRow(templateId, tableId, colDef, colIdx, colKey, widthCfg) {
+    const colLabel  = colDef.header || colDef.label || `Kolom ${colIdx + 1}`;
+    const isCustom  = widthCfg.mode === TableConfigManager.WIDTH_MODE_CUSTOM;
+    const curValue  = isCustom && widthCfg.value != null ? widthCfg.value : '';
+    const curUnit   = widthCfg.unit || TableConfigManager.WIDTH_UNIT_PCT;
+
+    const dataBase  = `data-template-id="${_esc(templateId)}" data-table-id="${_esc(tableId)}" data-col-key="${_esc(colKey)}"`;
+
+    // Unit selector (% / mm)
+    const unitOpts = [TableConfigManager.WIDTH_UNIT_PCT, TableConfigManager.WIDTH_UNIT_MM].map(u =>
+      `<option value="${u}"${curUnit === u ? ' selected' : ''}>${u}</option>`
+    ).join('');
+
+    return `
+      <div class="tbl-cfg__width-row" data-col-key="${_esc(colKey)}" data-table-id="${_esc(tableId)}">
+        <span class="tbl-cfg__width-col-label" title="${_esc(colLabel)}">${_esc(colLabel)}</span>
+        <div class="tbl-cfg__width-controls">
+          <!-- Mode toggle: Auto | Custom -->
+          <div class="tbl-cfg__width-mode-wrap" role="group" aria-label="Mode lebar ${_esc(colLabel)}">
+            <button type="button"
+              class="tbl-cfg__mode-btn${!isCustom ? ' is-active' : ''}"
+              data-action="width-mode"
+              data-value="${TableConfigManager.WIDTH_MODE_AUTO}"
+              ${dataBase}
+              aria-pressed="${!isCustom}"
+              title="Lebar otomatis mengikuti konten">Auto</button>
+            <button type="button"
+              class="tbl-cfg__mode-btn${isCustom ? ' is-active' : ''}"
+              data-action="width-mode"
+              data-value="${TableConfigManager.WIDTH_MODE_CUSTOM}"
+              ${dataBase}
+              aria-pressed="${isCustom}"
+              title="Atur lebar manual">Manual</button>
+          </div>
+          <!-- Value + unit (hanya aktif saat Custom) -->
+          <div class="tbl-cfg__width-input-wrap${!isCustom ? ' is-disabled' : ''}">
+            <input
+              type="number"
+              class="form-input tbl-cfg__width-input"
+              data-action="col-width-value"
+              ${dataBase}
+              data-unit="${_esc(curUnit)}"
+              value="${curValue}"
+              placeholder="–"
+              min="${curUnit === TableConfigManager.WIDTH_UNIT_MM ? TableConfigManager.WIDTH_MM_MIN : TableConfigManager.WIDTH_PCT_MIN}"
+              max="${curUnit === TableConfigManager.WIDTH_UNIT_MM ? TableConfigManager.WIDTH_MM_MAX : TableConfigManager.WIDTH_PCT_MAX}"
+              step="${curUnit === TableConfigManager.WIDTH_UNIT_MM ? '1' : '0.5'}"
+              ${!isCustom ? 'disabled' : ''}
+              aria-label="Lebar ${_esc(colLabel)}"
+            />
+            <select
+              class="tbl-cfg__width-unit-select"
+              data-action="col-width-unit"
+              ${dataBase}
+              ${!isCustom ? 'disabled' : ''}
+              aria-label="Satuan lebar ${_esc(colLabel)}"
+            >${unitOpts}</select>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* ════════════════════════════════════════════════
+     PANEL STYLING TEKS (header / body)
+  ════════════════════════════════════════════════ */
   function _buildSectionPanel(templateId, tableId, section, columns, colsConfig) {
     const sectionKey   = `${tableId}-${section}`;
-    const isOpen       = _openSections[sectionKey] !== false; // default open
+    const isOpen       = _openSections[sectionKey] !== false;
     const sectionLabel = section === 'header' ? 'Header Tabel' : 'Isi Tabel';
     const sectionIcon  = section === 'header' ? '📌' : '📝';
     const sectionId    = `tbl-sec-${_esc(tableId)}-${section}`;
@@ -203,19 +309,15 @@ const TableConfigUI = (() => {
       return _buildColumnCard(templateId, tableId, section, idx, col, colCfg);
     }).join('');
 
-    // Apply-to-all bar
     const applyAllBar = _buildApplyAllBar(templateId, tableId, section);
 
-    // Copy header → body (hanya di section body)
     const copyBar = section === 'body' ? `
       <div class="tbl-cfg__copy-bar">
-        <button
-          type="button"
+        <button type="button"
           class="btn btn--sm btn--ghost tbl-cfg__copy-btn"
           data-action="copy-header-to-body"
           data-table-id="${_esc(tableId)}"
-          title="Salin pengaturan Header ke Isi Tabel (bold akan di-off)"
-        >
+          title="Salin pengaturan Header ke Isi Tabel (bold akan di-off)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" aria-hidden="true"><polyline points="8,17 3,12 8,7"/><line x1="3" y1="12" x2="15" y2="12"/><path d="M21 12a6 6 0 0 1-6 6"/></svg>
           Salin dari Header
         </button>
@@ -223,44 +325,34 @@ const TableConfigUI = (() => {
 
     return `
       <div class="tbl-cfg__section">
-        <button
-          type="button"
+        <button type="button"
           class="tbl-cfg__section-toggle${isOpen ? ' is-open' : ''}"
-          aria-expanded="${isOpen ? 'true' : 'false'}"
+          aria-expanded="${isOpen}"
           aria-controls="${sectionId}"
-          data-section-key="${_esc(sectionKey)}"
-        >
+          data-section-key="${_esc(sectionKey)}">
           <span class="tbl-cfg__section-icon" aria-hidden="true">${sectionIcon}</span>
           <span class="tbl-cfg__section-title">${_esc(sectionLabel)}</span>
           <span class="tbl-cfg__section-chevron" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="6 9 12 15 18 9"/></svg>
           </span>
         </button>
-        <div
-          class="tbl-cfg__section-body${isOpen ? ' is-open' : ''}"
-          id="${sectionId}"
-          role="region"
-        >
+        <div class="tbl-cfg__section-body${isOpen ? ' is-open' : ''}"
+          id="${sectionId}" role="region">
           ${applyAllBar}
           ${copyBar}
-          <div class="tbl-cfg__columns">
-            ${columnsHtml}
-          </div>
+          <div class="tbl-cfg__columns">${columnsHtml}</div>
         </div>
       </div>`;
   }
 
-  /* ────────────────────────────────────────────────
-     Build card untuk satu kolom
-  ──────────────────────────────────────────────── */
+  /* ── Build card satu kolom (styling teks) ── */
   function _buildColumnCard(templateId, tableId, section, colIdx, colDef, colCfg) {
-    const colLabel    = colDef.header || colDef.label || `Kolom ${colIdx + 1}`;
-    const hAlign      = colCfg.horizontalAlign || 'center';
-    const vAlign      = colCfg.verticalAlign   || 'middle';
-    const isBold      = colCfg.bold   === true;
-    const isItalic    = colCfg.italic === true;
-    const fontSize    = colCfg.fontSize != null ? colCfg.fontSize : '';
-    const fsPlaceholder = 'global';
+    const colLabel  = colDef.header || colDef.label || `Kolom ${colIdx + 1}`;
+    const hAlign    = colCfg.horizontalAlign || 'center';
+    const vAlign    = colCfg.verticalAlign   || 'middle';
+    const isBold    = colCfg.bold   === true;
+    const isItalic  = colCfg.italic === true;
+    const fontSize  = colCfg.fontSize != null ? colCfg.fontSize : '';
 
     const dataAttrs = [
       `data-template-id="${_esc(templateId)}"`,
@@ -269,45 +361,42 @@ const TableConfigUI = (() => {
       `data-col-idx="${colIdx}"`,
     ].join(' ');
 
-    // Horizontal alignment buttons
     const hAlignBtns = H_ALIGN_OPTIONS.map(opt => `
-      <button
-        type="button"
+      <button type="button"
         class="tbl-cfg__align-btn${hAlign === opt.value ? ' is-active' : ''}"
         data-action="h-align"
         data-value="${opt.value}"
         ${dataAttrs}
         title="Horizontal: ${opt.label}"
         aria-label="Horizontal alignment: ${opt.label}"
-        aria-pressed="${hAlign === opt.value ? 'true' : 'false'}"
+        aria-pressed="${hAlign === opt.value}"
       >${opt.icon}</button>`).join('');
 
-    // Vertical alignment select
     const vAlignOptions = V_ALIGN_OPTIONS.map(opt =>
       `<option value="${opt.value}"${vAlign === opt.value ? ' selected' : ''}>${opt.label}</option>`
     ).join('');
 
     return `
-      <div class="tbl-cfg__col-card" data-col-idx="${colIdx}" data-table-id="${_esc(tableId)}" data-section="${section}">
+      <div class="tbl-cfg__col-card"
+        data-col-idx="${colIdx}"
+        data-table-id="${_esc(tableId)}"
+        data-section="${section}">
         <div class="tbl-cfg__col-header">
           <span class="tbl-cfg__col-num">${colIdx + 1}</span>
           <span class="tbl-cfg__col-label" title="${_esc(colLabel)}">${_esc(colLabel)}</span>
         </div>
         <div class="tbl-cfg__col-controls">
-
-          <!-- Horizontal Alignment -->
           <div class="tbl-cfg__control-group">
             <label class="tbl-cfg__control-label">Horizontal</label>
-            <div class="tbl-cfg__align-btns" role="group" aria-label="Horizontal alignment untuk ${_esc(colLabel)}">
+            <div class="tbl-cfg__align-btns" role="group"
+              aria-label="Horizontal alignment untuk ${_esc(colLabel)}">
               ${hAlignBtns}
             </div>
           </div>
-
-          <!-- Vertical Alignment + Bold + Italic row -->
           <div class="tbl-cfg__control-row">
-
             <div class="tbl-cfg__control-group tbl-cfg__control-group--flex">
-              <label class="tbl-cfg__control-label" for="v-align-${_esc(tableId)}-${section}-${colIdx}">Vertikal</label>
+              <label class="tbl-cfg__control-label"
+                for="v-align-${_esc(tableId)}-${section}-${colIdx}">Vertikal</label>
               <select
                 id="v-align-${_esc(tableId)}-${section}-${colIdx}"
                 class="form-select tbl-cfg__v-align-select"
@@ -316,93 +405,79 @@ const TableConfigUI = (() => {
                 aria-label="Vertical alignment untuk ${_esc(colLabel)}"
               >${vAlignOptions}</select>
             </div>
-
             <div class="tbl-cfg__control-group tbl-cfg__control-group--center">
               <label class="tbl-cfg__control-label">Style</label>
               <div class="tbl-cfg__style-btns">
-                <button
-                  type="button"
+                <button type="button"
                   class="style-btn style-btn--bold${isBold ? ' active' : ''}"
                   data-action="bold"
                   data-value="${isBold ? 'false' : 'true'}"
                   ${dataAttrs}
                   title="Bold"
                   aria-label="Bold untuk ${_esc(colLabel)}"
-                  aria-pressed="${isBold ? 'true' : 'false'}"
-                >B</button>
-                <button
-                  type="button"
+                  aria-pressed="${isBold}">B</button>
+                <button type="button"
                   class="style-btn style-btn--italic${isItalic ? ' active' : ''}"
                   data-action="italic"
                   data-value="${isItalic ? 'false' : 'true'}"
                   ${dataAttrs}
                   title="Italic"
                   aria-label="Italic untuk ${_esc(colLabel)}"
-                  aria-pressed="${isItalic ? 'true' : 'false'}"
-                >I</button>
+                  aria-pressed="${isItalic}">I</button>
               </div>
             </div>
-
             <div class="tbl-cfg__control-group tbl-cfg__control-group--fs">
-              <label class="tbl-cfg__control-label" for="fs-${_esc(tableId)}-${section}-${colIdx}">Ukuran</label>
+              <label class="tbl-cfg__control-label"
+                for="fs-${_esc(tableId)}-${section}-${colIdx}">Ukuran</label>
               <div class="tbl-cfg__fs-wrap">
-                <input
-                  type="number"
+                <input type="number"
                   id="fs-${_esc(tableId)}-${section}-${colIdx}"
                   class="form-input tbl-cfg__fs-input"
                   data-action="font-size"
                   ${dataAttrs}
                   value="${fontSize}"
-                  placeholder="${fsPlaceholder}"
+                  placeholder="global"
                   min="${TableConfigManager.FONT_SIZE_MIN}"
                   max="${TableConfigManager.FONT_SIZE_MAX}"
                   step="0.5"
-                  aria-label="Font size untuk ${_esc(colLabel)}"
-                />
+                  aria-label="Font size untuk ${_esc(colLabel)}" />
                 <span class="tbl-cfg__fs-unit">pt</span>
               </div>
             </div>
-
-          </div><!-- /.tbl-cfg__control-row -->
-
-        </div><!-- /.tbl-cfg__col-controls -->
+          </div>
+        </div>
       </div>`;
   }
 
-  /* ────────────────────────────────────────────────
-     Build "Apply to All" bar
-  ──────────────────────────────────────────────── */
+  /* ── Build Apply-to-all bar ── */
   function _buildApplyAllBar(templateId, tableId, section) {
     const sectionLabel = section === 'header' ? 'Header' : 'Isi';
-    const dataAttrs = `data-template-id="${_esc(templateId)}" data-table-id="${_esc(tableId)}" data-section="${section}"`;
+    const da = `data-template-id="${_esc(templateId)}" data-table-id="${_esc(tableId)}" data-section="${section}"`;
 
     return `
       <div class="tbl-cfg__apply-all-bar">
         <span class="tbl-cfg__apply-all-label">Terapkan ke semua kolom ${_esc(sectionLabel)}:</span>
         <div class="tbl-cfg__apply-all-btns">
           ${H_ALIGN_OPTIONS.map(opt => `
-            <button
-              type="button"
+            <button type="button"
               class="tbl-cfg__apply-btn"
               data-action="apply-all-h-align"
               data-value="${opt.value}"
-              ${dataAttrs}
-              title="Semua kolom ${sectionLabel}: Horizontal ${opt.label}"
+              ${da}
+              title="Semua kolom ${sectionLabel}: ${opt.label}"
               aria-label="Semua kolom ${sectionLabel}: Horizontal ${opt.label}"
             >${opt.icon}</button>`).join('')}
-          <button
-            type="button"
+          <button type="button"
             class="tbl-cfg__apply-btn tbl-cfg__apply-btn--bold"
             data-action="apply-all-bold-on"
-            ${dataAttrs}
+            ${da}
             title="Semua kolom ${sectionLabel}: Bold ON"
             aria-label="Semua kolom ${sectionLabel}: Bold ON"
           ><strong>B+</strong></button>
-          <button
-            type="button"
+          <button type="button"
             class="tbl-cfg__apply-btn"
             data-action="apply-all-bold-off"
-            ${dataAttrs}
+            ${da}
             title="Semua kolom ${sectionLabel}: Bold OFF"
             aria-label="Semua kolom ${sectionLabel}: Bold OFF"
           ><span style="font-weight:normal;opacity:.6">B</span></button>
@@ -410,33 +485,29 @@ const TableConfigUI = (() => {
       </div>`;
   }
 
-  /* ────────────────────────────────────────────────
-     Event binding via event delegation
-  ──────────────────────────────────────────────── */
+  /* ════════════════════════════════════════════════
+     EVENT BINDING
+  ════════════════════════════════════════════════ */
   function _bindEvents(root, templateId) {
-    root.addEventListener('click', (e) => _handleClick(e, templateId));
-    root.addEventListener('change', (e) => _handleChange(e, templateId));
-    root.addEventListener('input', (e) => _handleInput(e, templateId));
+    root.addEventListener('click',  e => _handleClick(e, templateId));
+    root.addEventListener('change', e => _handleChange(e, templateId));
+    root.addEventListener('input',  e => _handleInput(e, templateId));
   }
 
   function _handleClick(e, templateId) {
-    // ── 1. Accordion utama (Pengaturan Tabel) ──────────────────────────
-    // Harus dicek PERTAMA, sebelum pemeriksaan data-action,
-    // karena tombol ini tidak memiliki data-action.
+    // ── 1. Accordion utama ──────────────────────────────────────────────
     const mainToggle = e.target.closest('.tbl-cfg-accordion__toggle');
     if (mainToggle) {
-      const body     = _mountEl ? _mountEl.querySelector('#tbl-cfg-body') : document.getElementById('tbl-cfg-body');
+      const body     = _mountEl?.querySelector('#tbl-cfg-body');
       const expanded = mainToggle.getAttribute('aria-expanded') === 'true';
       mainToggle.setAttribute('aria-expanded', String(!expanded));
-      const chevron  = mainToggle.querySelector('.tbl-cfg-accordion__chevron');
-      if (chevron) chevron.classList.toggle('is-collapsed', expanded);
-      if (body)    body.classList.toggle('is-collapsed', expanded);
-      return; // sudah ditangani, stop
+      mainToggle.querySelector('.tbl-cfg-accordion__chevron')
+        ?.classList.toggle('is-collapsed', expanded);
+      body?.classList.toggle('is-collapsed', expanded);
+      return;
     }
 
-    // ── 2. Section toggle (Header Tabel / Isi Tabel) ───────────────────
-    // Harus dicek SEBELUM data-action, karena tombol ini juga
-    // tidak memiliki data-action.
+    // ── 2. Section toggle (Lebar Kolom / Header / Isi) ──────────────────
     const sectionToggle = e.target.closest('.tbl-cfg__section-toggle');
     if (sectionToggle) {
       const sectionKey = sectionToggle.dataset.sectionKey;
@@ -444,20 +515,54 @@ const TableConfigUI = (() => {
         _openSections[sectionKey] = !(_openSections[sectionKey] !== false);
         _toggleSection(sectionKey, sectionToggle);
       }
-      return; // sudah ditangani, stop
+      return;
     }
 
-    // ── 3. Semua aksi per-kolom dan bulk (ada data-action) ─────────────
+    // ── 3. Aksi per-kolom dan bulk (ada data-action) ────────────────────
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
 
-    const action  = btn.dataset.action;
-    const tableId = btn.dataset.tableId;
-    const section = btn.dataset.section;
-    const colIdx  = parseInt(btn.dataset.colIdx, 10);
-    const value   = btn.dataset.value;
+    const action   = btn.dataset.action;
+    const tableId  = btn.dataset.tableId;
+    const section  = btn.dataset.section;
+    const colIdx   = parseInt(btn.dataset.colIdx, 10);
+    const colKey   = btn.dataset.colKey;
+    const value    = btn.dataset.value;
 
     switch (action) {
+
+      /* ── Lebar kolom: toggle mode Auto / Manual ── */
+      case 'width-mode': {
+        if (colKey && tableId) {
+          if (value === TableConfigManager.WIDTH_MODE_AUTO) {
+            TableConfigManager.updateColumnWidth(templateId, tableId, colKey, {
+              mode: TableConfigManager.WIDTH_MODE_AUTO,
+            });
+          } else {
+            // Custom: beri nilai default jika belum ada
+            const currentAll = State.getTableConfig(templateId);
+            const existing   = currentAll[tableId]?.columnWidths?.byKey?.[colKey];
+            const defVal     = (existing?.mode === TableConfigManager.WIDTH_MODE_CUSTOM && existing.value)
+              ? existing.value : 10;
+            const defUnit    = existing?.unit || TableConfigManager.WIDTH_UNIT_PCT;
+            TableConfigManager.updateColumnWidth(templateId, tableId, colKey, {
+              mode:  TableConfigManager.WIDTH_MODE_CUSTOM,
+              value: defVal,
+              unit:  defUnit,
+            });
+          }
+        }
+        break;
+      }
+
+      /* ── Reset semua lebar kolom satu tabel ke Auto ── */
+      case 'reset-col-widths': {
+        if (tableId) {
+          TableConfigManager.resetColumnWidths(templateId, tableId);
+          UI.toast('Semua lebar kolom direset ke Auto.', 'info', 2000);
+        }
+        break;
+      }
 
       /* ── Horizontal alignment (per kolom) ── */
       case 'h-align': {
@@ -497,7 +602,7 @@ const TableConfigUI = (() => {
         break;
       }
 
-      /* ── Apply all: bold ON/OFF ── */
+      /* ── Apply all: bold ── */
       case 'apply-all-bold-on': {
         TableConfigManager.applyToAllColumns(templateId, tableId, section, { bold: true });
         break;
@@ -516,8 +621,7 @@ const TableConfigUI = (() => {
 
       /* ── Reset satu tabel ── */
       case 'reset-table': {
-        UI.confirm(
-          'Reset Pengaturan Tabel',
+        UI.confirm('Reset Pengaturan Tabel',
           'Reset pengaturan tabel ini ke default template?',
           () => {
             TableConfigManager.resetToDefault(templateId, tableId);
@@ -529,8 +633,7 @@ const TableConfigUI = (() => {
 
       /* ── Reset semua tabel ── */
       case 'reset-all': {
-        UI.confirm(
-          'Reset Semua Pengaturan Tabel',
+        UI.confirm('Reset Semua Pengaturan Tabel',
           'Reset SEMUA pengaturan tabel ke default template?',
           () => {
             TableConfigManager.resetToDefault(templateId, null);
@@ -546,85 +649,126 @@ const TableConfigUI = (() => {
   }
 
   function _handleChange(e, templateId) {
-    const el      = e.target;
-    const action  = el.dataset.action;
+    const el     = e.target;
+    const action = el.dataset.action;
     if (!action) return;
 
     const tableId = el.dataset.tableId;
     const section = el.dataset.section;
     const colIdx  = parseInt(el.dataset.colIdx, 10);
+    const colKey  = el.dataset.colKey;
 
+    /* ── Vertical alignment ── */
     if (action === 'v-align' && !isNaN(colIdx)) {
       TableConfigManager.updateColumn(templateId, tableId, section, colIdx, {
         verticalAlign: el.value,
       });
-    }
-  }
-
-  function _handleInput(e, templateId) {
-    const el      = e.target;
-    const action  = el.dataset.action;
-    if (action !== 'font-size') return;
-
-    const tableId = el.dataset.tableId;
-    const section = el.dataset.section;
-    const colIdx  = parseInt(el.dataset.colIdx, 10);
-    if (isNaN(colIdx)) return;
-
-    const rawVal = el.value.trim();
-    if (rawVal === '') {
-      // Kosong = reset ke global
-      TableConfigManager.updateColumn(templateId, tableId, section, colIdx, {
-        fontSize: null,
-      });
       return;
     }
 
-    const num = parseFloat(rawVal);
-    if (isNaN(num)) return;
-
-    const clamped = Utils.clamp(num, TableConfigManager.FONT_SIZE_MIN, TableConfigManager.FONT_SIZE_MAX);
-    // Jika nilai sudah di luar range, koreksi input
-    if (num !== clamped) {
-      el.value = clamped;
-    }
-
-    TableConfigManager.updateColumn(templateId, tableId, section, colIdx, {
-      fontSize: clamped,
-    });
-  }
-
-  /* ────────────────────────────────────────────────
-     Toggle section (header / body) tanpa full re-render
-  ──────────────────────────────────────────────── */
-  function _toggleSection(sectionKey, toggleBtn) {
-    const isNowOpen = _openSections[sectionKey] !== false;
-
-    // Update aria-expanded dan class pada tombol
-    toggleBtn.setAttribute('aria-expanded', isNowOpen ? 'true' : 'false');
-    toggleBtn.classList.toggle('is-open', isNowOpen);
-
-    // Cari section body via aria-controls dari tombol itu sendiri
-    const sectionBodyId = toggleBtn.getAttribute('aria-controls');
-    if (sectionBodyId) {
-      // Cari di dalam _mountEl agar tidak salah ambil elemen lain di halaman
-      const sectionBody = _mountEl
-        ? _mountEl.querySelector(`#${CSS.escape(sectionBodyId)}`)
-        : document.getElementById(sectionBodyId);
-      if (sectionBody) {
-        sectionBody.classList.toggle('is-open', isNowOpen);
+    /* ── Unit lebar kolom (% / mm) ── */
+    if (action === 'col-width-unit' && colKey) {
+      const currentAll = State.getTableConfig(templateId);
+      const existing   = currentAll[tableId]?.columnWidths?.byKey?.[colKey];
+      if (existing?.mode === TableConfigManager.WIDTH_MODE_CUSTOM) {
+        // Reset value ke sensible default saat unit berubah
+        const newUnit  = el.value;
+        const newValue = newUnit === TableConfigManager.WIDTH_UNIT_MM ? 20 : 10;
+        TableConfigManager.updateColumnWidth(templateId, tableId, colKey, {
+          mode:  TableConfigManager.WIDTH_MODE_CUSTOM,
+          unit:  newUnit,
+          value: newValue,
+        });
+        // Update data-unit pada sibling input
+        const row       = el.closest('.tbl-cfg__width-row');
+        const valInput  = row?.querySelector('[data-action="col-width-value"]');
+        if (valInput) {
+          valInput.dataset.unit = newUnit;
+          valInput.value        = newValue;
+          valInput.min          = newUnit === TableConfigManager.WIDTH_UNIT_MM
+            ? TableConfigManager.WIDTH_MM_MIN : TableConfigManager.WIDTH_PCT_MIN;
+          valInput.max          = newUnit === TableConfigManager.WIDTH_UNIT_MM
+            ? TableConfigManager.WIDTH_MM_MAX : TableConfigManager.WIDTH_PCT_MAX;
+          valInput.step         = newUnit === TableConfigManager.WIDTH_UNIT_MM ? '1' : '0.5';
+        }
       }
     }
   }
 
-  /* ────────────────────────────────────────────────
-     Hide accordion
-  ──────────────────────────────────────────────── */
+  function _handleInput(e, templateId) {
+    const el     = e.target;
+    const action = el.dataset.action;
+
+    /* ── Font size ── */
+    if (action === 'font-size') {
+      const tableId = el.dataset.tableId;
+      const section = el.dataset.section;
+      const colIdx  = parseInt(el.dataset.colIdx, 10);
+      if (isNaN(colIdx)) return;
+
+      const rawVal = el.value.trim();
+      if (rawVal === '') {
+        TableConfigManager.updateColumn(templateId, tableId, section, colIdx, { fontSize: null });
+        return;
+      }
+      const num = parseFloat(rawVal);
+      if (isNaN(num)) return;
+      const clamped = Utils.clamp(num, TableConfigManager.FONT_SIZE_MIN, TableConfigManager.FONT_SIZE_MAX);
+      if (num !== clamped) el.value = clamped;
+      TableConfigManager.updateColumn(templateId, tableId, section, colIdx, { fontSize: clamped });
+      return;
+    }
+
+    /* ── Column width value ── */
+    if (action === 'col-width-value') {
+      const tableId = el.dataset.tableId;
+      const colKey  = el.dataset.colKey;
+      if (!tableId || !colKey) return;
+
+      const rawVal = el.value.trim();
+      if (rawVal === '') return; // jangan update saat masih mengetik
+
+      const num  = parseFloat(rawVal);
+      if (isNaN(num) || num <= 0) return;
+
+      const unit    = el.dataset.unit || TableConfigManager.WIDTH_UNIT_PCT;
+      const minV    = unit === TableConfigManager.WIDTH_UNIT_MM ? TableConfigManager.WIDTH_MM_MIN : TableConfigManager.WIDTH_PCT_MIN;
+      const maxV    = unit === TableConfigManager.WIDTH_UNIT_MM ? TableConfigManager.WIDTH_MM_MAX : TableConfigManager.WIDTH_PCT_MAX;
+      const clamped = Utils.clamp(num, minV, maxV);
+      if (num !== clamped) el.value = clamped;
+
+      TableConfigManager.updateColumnWidth(templateId, tableId, colKey, {
+        mode:  TableConfigManager.WIDTH_MODE_CUSTOM,
+        value: clamped,
+        unit,
+      });
+    }
+  }
+
+  /* ════════════════════════════════════════════════
+     TOGGLE SECTION (in-place, no full re-render)
+  ════════════════════════════════════════════════ */
+  function _toggleSection(sectionKey, toggleBtn) {
+    const isNowOpen     = _openSections[sectionKey] !== false;
+    const sectionBodyId = toggleBtn.getAttribute('aria-controls');
+
+    toggleBtn.setAttribute('aria-expanded', isNowOpen ? 'true' : 'false');
+    toggleBtn.classList.toggle('is-open', isNowOpen);
+
+    if (sectionBodyId) {
+      const sectionBody = _mountEl
+        ? _mountEl.querySelector(`#${CSS.escape(sectionBodyId)}`)
+        : document.getElementById(sectionBodyId);
+      sectionBody?.classList.toggle('is-open', isNowOpen);
+    }
+  }
+
+  /* ── Hide ── */
   function _hide() {
     if (!_mountEl) return;
     _mountEl.setAttribute('hidden', '');
     _mountEl.style.display = 'none';
-    _mountEl.innerHTML = '';
+    _mountEl.innerHTML     = '';
   }
 
   /* ── Escape helper ── */
@@ -633,9 +777,6 @@ const TableConfigUI = (() => {
   }
 
   /* ── Public API ── */
-  return {
-    init,
-    render,
-  };
+  return { init, render };
 
 })();
