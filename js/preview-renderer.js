@@ -83,8 +83,9 @@ const PreviewRenderer = (() => {
     // Settings.orientation overrides template default, kecuali jika
     // pengguna belum mengubahnya (maka ikuti template)
     const s         = State.getSettings();
-    const dim       = State.getPaperDimensions(); // sudah memperhitungkan orientasi
+    const dim       = State.getPaperDimensions();
     const margin    = State.getMarginMm();
+    const typo      = State.getTypography();
     const isLandscape = s.orientation === 'landscape';
 
     // Apply class orientasi pada preview paper
@@ -102,7 +103,7 @@ const PreviewRenderer = (() => {
     }
 
     // Render HTML isi dokumen
-    const html = _buildDocumentHtml(tpl, formData, kop, margin);
+    const html = _buildDocumentHtml(tpl, formData, kop, margin, typo);
     _previewEl.innerHTML = html;
 
     // Re-terapkan overlay margin guide / printable area setelah innerHTML diset
@@ -119,11 +120,11 @@ const PreviewRenderer = (() => {
   }
 
   /* ── Build seluruh HTML dokumen ── */
-  function _buildDocumentHtml(tpl, formData, kop, margin) {
+  function _buildDocumentHtml(tpl, formData, kop, margin, typo) {
     const id = tpl.TEMPLATE_ID;
-    if (id === 'dpu')          return _renderDpu(formData, kop, margin);
-    if (id === 'mutasi-masuk') return _renderSiswa(formData, kop, tpl, true,  margin);
-    if (id === 'siswa-baru')   return _renderSiswa(formData, kop, tpl, false, margin);
+    if (id === 'dpu')          return _renderDpu(formData, kop, margin, typo);
+    if (id === 'mutasi-masuk') return _renderSiswa(formData, kop, tpl, true,  margin, typo);
+    if (id === 'siswa-baru')   return _renderSiswa(formData, kop, tpl, false, margin, typo);
     return '<div style="padding:20px;color:#666;">Template tidak dikenali.</div>';
   }
 
@@ -135,10 +136,15 @@ const PreviewRenderer = (() => {
   /* ────────────────────────────────────────────────
      RENDERER: DPU
   ──────────────────────────────────────────────── */
-  function _renderDpu(data, kop, margin) {
+  function _renderDpu(data, kop, margin, typo) {
     const { meta, peserta = [], tandaTangan: ttd = {} } = data;
-    const m = margin || State.getMarginMm();
-    const marginStyle = `padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;`;
+    const m  = margin || State.getMarginMm();
+    const t  = typo   || State.getTypography();
+    // font-family dan font-size isi surat diambil dari settings typography
+    const marginStyle = `padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;`
+      + `font-family:'${t.fontFamily}',serif;`
+      + `font-size:${t.fontSize}pt;`
+      + `line-height:${t.lineHeight};`;
 
     /* ── KOP ── */
     const kopHtml = _buildKopHtml(kop);
@@ -284,10 +290,14 @@ const PreviewRenderer = (() => {
   /* ────────────────────────────────────────────────
      RENDERER: Mutasi Masuk & Siswa Baru (struktur mirip)
   ──────────────────────────────────────────────── */
-  function _renderSiswa(data, kop, tpl, isMutasi, margin) {
+  function _renderSiswa(data, kop, tpl, isMutasi, margin, typo) {
     const { meta, siswa = [], tandaTangan: ttd = {}, catatan } = data;
-    const m = margin || State.getMarginMm();
-    const marginStyle = `padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;`;
+    const m  = margin || State.getMarginMm();
+    const t  = typo   || State.getTypography();
+    const marginStyle = `padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;`
+      + `font-family:'${t.fontFamily}',serif;`
+      + `font-size:${t.fontSize}pt;`
+      + `line-height:${t.lineHeight};`;
 
     /* ── KOP ── */
     const kopHtml = _buildKopHtml(kop);
@@ -347,7 +357,7 @@ const PreviewRenderer = (() => {
         } else {
           val = s[c.key] != null ? String(s[c.key]) : '';
         }
-        return `<td style="text-align:${c.align};font-size:7.5pt;">${_esc(val)}</td>`;
+        return `<td style="text-align:${c.align};font-size:${t.tableSize}pt;">${_esc(val)}</td>`;
       }).join('');
       return `<tr>${cells}</tr>`;
     }).join('');
