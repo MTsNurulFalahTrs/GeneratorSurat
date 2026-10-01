@@ -1980,3 +1980,249 @@
     width: 36px !important;
   }
 }
+
+
+/* =============================================================
+   Lebar Kolom — Section di dalam Accordion Pengaturan Tabel
+   =============================================================
+   Class: tbl-cfg__width-*
+   ============================================================= */
+
+/* ── Toolbar (hint + reset button) ── */
+.tbl-cfg__width-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tbl-cfg__width-hint {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  flex: 1;
+  min-width: 0;
+}
+
+.tbl-cfg__width-reset-btn {
+  font-size: 10px !important;
+  padding: 2px var(--space-2) !important;
+  color: var(--color-text-muted) !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tbl-cfg__width-reset-btn:hover {
+  color: var(--color-danger) !important;
+}
+
+/* ── Total % indicator (di section toggle title) ── */
+.tbl-cfg__width-total {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-success);
+  background: var(--color-success-light);
+  border: 1px solid #86efac;
+  border-radius: var(--radius-full);
+  padding: 1px 6px;
+  margin-left: auto;
+  margin-right: var(--space-1);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.tbl-cfg__width-total--over {
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+  border-color: #fca5a5;
+}
+
+/* ── List baris kolom ── */
+.tbl-cfg__width-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Satu baris kolom ── */
+.tbl-cfg__width-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  min-height: 38px;
+}
+
+.tbl-cfg__width-row:last-child {
+  border-bottom: none;
+}
+
+.tbl-cfg__width-row:nth-child(even) {
+  background: var(--color-surface-2);
+}
+
+/* Nama kolom */
+.tbl-cfg__width-col-label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text);
+  min-width: 60px;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Controls wrapper */
+.tbl-cfg__width-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+/* ── Mode toggle: Auto | Manual ── */
+.tbl-cfg__width-mode-wrap {
+  display: flex;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.tbl-cfg__mode-btn {
+  padding: 3px var(--space-2);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  white-space: nowrap;
+  line-height: 1.4;
+  border-right: 1px solid var(--color-border);
+}
+
+.tbl-cfg__mode-btn:last-child {
+  border-right: none;
+}
+
+.tbl-cfg__mode-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.tbl-cfg__mode-btn.is-active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.tbl-cfg__mode-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* ── Input wrapper (value + unit select) ── */
+.tbl-cfg__width-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface);
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.tbl-cfg__width-input-wrap:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+}
+
+/* Disabled state saat mode = Auto */
+.tbl-cfg__width-input-wrap.is-disabled {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+/* Numeric input */
+.tbl-cfg__width-input {
+  width: 46px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  text-align: center;
+  padding: var(--space-1) var(--space-1) !important;
+  font-size: var(--text-xs) !important;
+  height: 26px;
+  box-shadow: none !important;
+  outline: none !important;
+  /* Sembunyikan spinner browser */
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.tbl-cfg__width-input::-webkit-outer-spin-button,
+.tbl-cfg__width-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Unit select (% / mm) */
+.tbl-cfg__width-unit-select {
+  border: none !important;
+  border-left: 1px solid var(--color-border) !important;
+  border-radius: 0 !important;
+  background: var(--color-surface-2) !important;
+  font-size: 10px !important;
+  color: var(--color-text-secondary) !important;
+  padding: 0 var(--space-1) !important;
+  height: 26px;
+  min-width: 32px;
+  cursor: pointer;
+  box-shadow: none !important;
+  outline: none !important;
+  /* Hapus panah bawaan, tampilkan panah custom */
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 3px center !important;
+  padding-right: 14px !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .tbl-cfg__width-row {
+    flex-wrap: wrap;
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-1);
+  }
+
+  .tbl-cfg__width-col-label {
+    min-width: 50px;
+    max-width: 70px;
+  }
+
+  .tbl-cfg__width-controls {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+}
+
+@media (max-width: 380px) {
+  .tbl-cfg__mode-btn {
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+
+  .tbl-cfg__width-input {
+    width: 38px !important;
+  }
+}
