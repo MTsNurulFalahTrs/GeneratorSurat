@@ -398,6 +398,17 @@
   table-layout: auto;
 }
 
+/*
+ * Fixed layout variant: diaktifkan saat ada custom column width.
+ * table-layout:fixed + width:100% + <colgroup> memungkinkan browser
+ * menghormati nilai width yang ditentukan pengguna per kolom.
+ * Tabel tetap dibatasi oleh .doc-table-wrap (max-width:100%).
+ */
+.doc-table--fixed {
+  table-layout: fixed;
+  width: 100%;
+}
+
 /* ── 11. Doc Rekap (summary counts) ── */
 .doc-rekap {
   margin-top: 6pt;
