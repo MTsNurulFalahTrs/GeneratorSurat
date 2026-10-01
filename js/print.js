@@ -77,6 +77,9 @@ const Print = (() => {
     // Kita gunakan zoom pada .doc-content saat print sebagai pendekatan terbaik.
     const scaleDecimal = scale / 100;
 
+    // Tambahkan font isi surat dari typography settings
+    const typo = State.getTypography();
+
     const css = `
 @page {
   size: ${pageSize};
@@ -84,10 +87,12 @@ const Print = (() => {
 }
 @media print {
   .doc-content {
-    padding: 0 !important;
+    font-family: '${typo.fontFamily}', serif !important;
+    font-size: ${typo.fontSize}pt !important;
+    line-height: ${typo.lineHeight} !important;
+    color: #000 !important;
     transform: scale(${scaleDecimal});
     transform-origin: top left;
-    /* Kompensasi shrink agar konten tidak terpotong */
     width: ${(100 / scaleDecimal).toFixed(4)}%;
   }
   .surat-preview {
