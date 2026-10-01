@@ -189,11 +189,22 @@
     background: white !important;
     overflow-wrap: break-word !important;
     word-break: break-word !important;
+    /*
+     * PENTING: Jangan override text-align, vertical-align, font-weight,
+     * font-style, font-size di sini. Properti tersebut diatur melalui
+     * inline style oleh TableRenderer berdasarkan tableConfig per kolom.
+     * Override di sini akan merusak Pengaturan Tabel pengguna.
+     */
   }
 
   .doc-table th {
     background: white !important;
-    font-weight: bold !important;
+    /*
+     * font-weight diatur per kolom via inline style dari tableConfig.
+     * Header mendapat bold:true secara default dari TableConfigManager,
+     * tetapi pengguna bisa mengubahnya per kolom.
+     * Jangan paksa font-weight:bold di sini.
+     */
   }
 
   /* Meta table (info madrasah): auto sizing */
@@ -248,6 +259,30 @@
   a[href]::after {
     content: none !important;
   }
+
+  /*
+   * ── Jaminan konsistensi Pengaturan Tabel saat cetak ──
+   *
+   * TableRenderer menghasilkan inline styles seperti:
+   *   style="text-align:center;vertical-align:middle;font-weight:bold;
+   *          font-style:italic;font-size:10pt;"
+   *
+   * Inline styles memiliki specificity lebih tinggi daripada class rules,
+   * tetapi !important di class rules dapat mengalahkan inline styles.
+   * Blok ini memastikan tidak ada !important yang merusak per-kolom styling.
+   *
+   * Catatan: Properti padding dan border pada .doc-table th, td
+   * menggunakan !important karena berhubungan dengan layout fisik tabel,
+   * bukan styling konten. Properties styling konten (alignment, font)
+   * TIDAK menggunakan !important agar inline styles dari tableConfig
+   * selalu menang.
+   */
+
+  /* Pastikan vertical-align dan text-align dari inline style tetap berlaku saat cetak —
+     tidak ada override di sini, biarkan inline style bekerja */
+
+  /* Pastikan font properties dari inline style tetap berlaku saat cetak —
+     tidak ada override di sini, biarkan inline style bekerja */
 }
 
 /* ── Print page orientation: portrait/landscape handled via JS window.print() call ── */
