@@ -211,6 +211,7 @@
 .doc-meta table {
   border-collapse: collapse;
   font-size: 9pt;
+  /* Layout dan sizing dikelola oleh aturan di seksi doc-table di bawah */
 }
 
 .doc-meta td {
@@ -252,16 +253,50 @@
 }
 
 /* ── 10. Doc Table (tabel peserta/siswa) ── */
+
+/*
+ * DESAIN LAYOUT TABEL — "Fit to Content, bounded by Window"
+ * ──────────────────────────────────────────────────────────
+ * Prinsip:
+ *   1. Tabel TIDAK dipaksa memenuhi seluruh lebar halaman.
+ *   2. Lebar tabel mengikuti kebutuhan konten (intrinsic sizing).
+ *   3. Tabel TIDAK boleh melebihi lebar content area (.doc-content).
+ *   4. Kolom dengan width eksplisit diperlakukan sebagai min-width,
+ *      sisanya mengikuti konten secara auto.
+ *   5. Zoom preview tidak mengubah ukuran intrinsik tabel.
+ *
+ * Implementasi:
+ *   - .doc-table-wrap: fit-content container dengan max-width: 100%
+ *     → tabel hanya selebar yang dibutuhkan, tidak lebih dari content area
+ *   - .doc-table: table-layout: auto + width: auto
+ *     → browser menghitung lebar kolom berdasarkan konten
+ *   - Kolom dengan width pada <th>/<col>: CSS min-width
+ *     → konten pendek tidak dipaksa melebar, konten panjang bisa wrapping
+ *   - overflow-wrap + word-break pada sel: konten panjang wrapping wajar
+ */
+
 .doc-table-wrap {
+  /* fit-content: tabel hanya selebar kontennya */
+  width: fit-content;
+  /* max-width 100%: tabel tidak boleh melebihi parent (content area) */
+  max-width: 100%;
+  /* Untuk template dengan tabel lebar, scroll lokal (bukan halaman) */
   overflow-x: auto;
-  width: 100%;
+  /* Jangan pecah ke baris baru di dalam surat */
+  display: block;
 }
 
+/* Tabel data utama surat */
 .doc-table {
-  width: 100%;
+  /* Biarkan browser menghitung lebar berdasarkan konten */
+  table-layout: auto;
+  /* width: auto: tabel tidak otomatis memenuhi container */
+  width: auto;
+  /* Batas maksimum = lebar doc-table-wrap (= lebar content area) */
+  max-width: 100%;
   border-collapse: collapse;
+  /* Font default tabel — bisa di-override per-template via inline style */
   font-size: 8pt;
-  table-layout: fixed;
 }
 
 .doc-table th,
@@ -269,8 +304,13 @@
   border: 1px solid #000;
   padding: 2pt 3pt;
   vertical-align: middle;
-  word-wrap: break-word;
+  /* overflow-wrap: wrapping wajar untuk konten panjang */
   overflow-wrap: break-word;
+  /* word-break: break-word lebih lunak dari break-all,
+     hanya memisah jika benar-benar tidak ada pilihan lain */
+  word-break: break-word;
+  /* Batas minimum sel agar tidak terlalu sempit */
+  min-width: 4mm;
 }
 
 .doc-table th {
@@ -278,6 +318,8 @@
   font-weight: bold;
   text-align: center;
   font-size: 7.5pt;
+  /* white-space: nowrap pada header agar label tidak dipotong */
+  white-space: nowrap;
 }
 
 .doc-table td {
@@ -285,13 +327,75 @@
   vertical-align: top;
 }
 
+/* Kolom center alignment */
 .doc-table .col-center {
   text-align: center;
 }
 
+/* Kolom nomor urut: lebar minimal, tengah */
 .doc-table .col-no {
-  width: 7mm;
+  /* min-width bukan width agar tidak paksa ukuran */
+  min-width: 7mm;
+  max-width: 12mm;
   text-align: center;
+  white-space: nowrap;
+}
+
+/* Kolom yang kontennya pendek dan tidak perlu wrapping */
+.doc-table .col-fixed {
+  white-space: nowrap;
+}
+
+/* Kolom yang kontennya fleksibel (nama, keterangan, dll) */
+.doc-table .col-flex {
+  /* min-width memberi ruang minimum, browser bisa lebih lebar */
+  min-width: 20mm;
+}
+
+/* Sel dengan konten sangat panjang (nomor surat, alamat, dll) */
+.doc-table .col-wrap {
+  min-width: 15mm;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Tabel DPU memiliki banyak kolom → perlu penanganan khusus agar
+   tidak terlalu lebar pada kertas A4 landscape */
+.doc-table--dpu {
+  /* DPU selalu landscape, biarkan auto tapi minimal 100% content area */
+  width: 100%;
+  /* table-layout: fixed hanya untuk DPU agar kolom terdistribusi rata */
+  table-layout: fixed;
+}
+
+/* Wrapper untuk tabel full-width (DPU) */
+.doc-table-wrap--full {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+
+/* Override: tabel di dalam .doc-meta (info madrasah) pakai auto sizing.
+   Aturan ini lebih spesifik dari .doc-meta table di atas sehingga menang. */
+.doc-meta table {
+  table-layout: auto;
+  width: auto;
+  max-width: 100%;
+  /* border diwarisi dari aturan di atas */
+}
+
+/* Override: tabel rekap pakai auto sizing */
+.doc-rekap table {
+  table-layout: auto;
+  width: auto;
+}
+
+/* Compact variant: tabel kecil, tidak perlu full-width */
+.doc-table--compact {
+  width: auto;
+  max-width: 100%;
+  table-layout: auto;
 }
 
 /* ── 11. Doc Rekap (summary counts) ── */
