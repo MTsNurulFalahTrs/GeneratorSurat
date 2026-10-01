@@ -226,6 +226,11 @@ const UI = (() => {
     });
 
     State.setActiveTab(tabId);
+
+    // Refresh storage status setiap kali tab Settings dibuka
+    if (tabId === 'settings' && typeof Settings !== 'undefined') {
+      Settings.updateStorageStatus();
+    }
   }
 
   /* ── Panel Resizer (drag to resize editor panel) ── */
