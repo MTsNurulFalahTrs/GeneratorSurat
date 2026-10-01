@@ -1,0 +1,438 @@
+/* =============================================================
+   table-config.js — Business logic untuk konfigurasi tabel
+   =============================================================
+   Bertanggung jawab atas:
+   - Default config per kolom (header & body terpisah)
+   - Normalisasi & migrasi config lama
+   - Merge template default ← user override
+   - Menyediakan config yang sudah resolved ke TableRenderer
+   - Validasi nilai (fontSize range, enum alignment, dll.)
+
+   Tidak mengandung logika UI. Untuk rendering accordion,
+   lihat table-config-ui.js.
+   =============================================================
+*/
+
+const TableConfigManager = (() => {
+
+  /* ── Konstanta ── */
+  const FONT_SIZE_MIN = 7;
+  const FONT_SIZE_MAX = 22;
+
+  const VALID_H_ALIGN   = ['left', 'center', 'right', 'justify'];
+  const VALID_V_ALIGN   = ['top', 'middle', 'bottom'];
+
+  /* ── Default per section (header / body) ── */
+  const DEFAULT_HEADER_COL = () => ({
+    horizontalAlign: 'center',
+    verticalAlign:   'middle',
+    bold:            true,
+    italic:          false,
+    fontSize:        null,   // null = ikuti global tableSize
+  });
+
+  const DEFAULT_BODY_COL = () => ({
+    horizontalAlign: 'left',
+    verticalAlign:   'middle',
+    bold:            false,
+    italic:          false,
+    fontSize:        null,   // null = ikuti global tableSize
+  });
+
+  /* ────────────────────────────────────────────────
+     1. Buat default config untuk satu tabel
+        berdasarkan definisi kolom template.
+  ──────────────────────────────────────────────── */
+  /**
+   * @param  {Array}  columns  — array dari template: [{key, header, align, ...}]
+   * @param  {Object} tplDefault — opsional: tableDefaultConfig dari template
+   * @returns {Object} { header: { columns: {0: {...}, 1: {...}} }, body: { columns: {...} } }
+   */
+  function buildDefaultConfig(columns, tplDefault = null) {
+    const headerCols = {};
+    const bodyCols   = {};
+
+    columns.forEach((col, idx) => {
+      // Seed dari template alignment jika ada
+      const tplAlign = col.align || null;
+
+      headerCols[idx] = Object.assign(DEFAULT_HEADER_COL(), {
+        horizontalAlign: tplAlign || 'center',
+      });
+
+      bodyCols[idx] = Object.assign(DEFAULT_BODY_COL(), {
+        horizontalAlign: tplAlign || 'left',
+      });
+    });
+
+    const base = {
+      header: { columns: headerCols },
+      body:   { columns: bodyCols },
+    };
+
+    // Terapkan template default jika ada
+    if (tplDefault && typeof tplDefault === 'object') {
+      return _deepMergeConfig(base, tplDefault);
+    }
+
+    return base;
+  }
+
+  /* ────────────────────────────────────────────────
+     2. Normalisasi / migrasi config tersimpan
+        agar aman digunakan meski ada perubahan kolom
+  ──────────────────────────────────────────────── */
+  /**
+   * Gabungkan default config (berdasarkan definisi kolom terkini)
+   * dengan config tersimpan (user override). Kolom baru mendapat
+   * default; kolom lama yang hilang diabaikan.
+   *
+   * @param  {Object} defaultCfg  — dari buildDefaultConfig()
+   * @param  {Object} savedCfg    — dari State.getTableConfig()
+   * @returns {Object}
+   */
+  function normalizeConfig(defaultCfg, savedCfg) {
+    if (!savedCfg || typeof savedCfg !== 'object') return defaultCfg;
+
+    const result = {
+      header: { columns: {} },
+      body:   { columns: {} },
+    };
+
+    // Header columns
+    const defaultHeaderCols = defaultCfg.header?.columns || {};
+    const savedHeaderCols   = savedCfg.header?.columns   || {};
+    Object.keys(defaultHeaderCols).forEach(idx => {
+      result.header.columns[idx] = Object.assign(
+        {},
+        DEFAULT_HEADER_COL(),
+        defaultHeaderCols[idx],
+        _sanitizeColConfig(savedHeaderCols[idx] || {})
+      );
+    });
+
+    // Body columns
+    const defaultBodyCols = defaultCfg.body?.columns || {};
+    const savedBodyCols   = savedCfg.body?.columns   || {};
+    Object.keys(defaultBodyCols).forEach(idx => {
+      result.body.columns[idx] = Object.assign(
+        {},
+        DEFAULT_BODY_COL(),
+        defaultBodyCols[idx],
+        _sanitizeColConfig(savedBodyCols[idx] || {})
+      );
+    });
+
+    return result;
+  }
+
+  /* ────────────────────────────────────────────────
+     3. Inisialisasi config untuk satu template
+        (dipanggil saat template dipilih)
+  ──────────────────────────────────────────────── */
+  /**
+   * Pastikan State.tables[templateId] berisi config yang valid
+   * untuk semua tabel di template tsb.
+   * Jika belum ada, buat default. Jika sudah ada, normalisasi.
+   *
+   * @param {string} templateId
+   */
+  function initForTemplate(templateId) {
+    if (!templateId) return;
+    if (!TemplateRegistry.templateHasTables(templateId)) return;
+
+    const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
+    const savedAll  = State.getTableConfig(templateId); // {} jika belum ada
+
+    const initializedAll = {};
+
+    tableDefs.forEach(tableDef => {
+      const defaultCfg = buildDefaultConfig(tableDef.columns, tableDef.tableDefaultConfig);
+      const savedCfg   = savedAll[tableDef.id] || null;
+      initializedAll[tableDef.id] = normalizeConfig(defaultCfg, savedCfg);
+    });
+
+    // Pakai initTableConfig agar tidak overwrite jika sudah ada
+    // Tapi kita perlu normalisasi kolom baru → set langsung per tabel
+    tableDefs.forEach(tableDef => {
+      const defaultCfg  = buildDefaultConfig(tableDef.columns, tableDef.tableDefaultConfig);
+      const savedCfg    = savedAll[tableDef.id] || null;
+      const normalized  = normalizeConfig(defaultCfg, savedCfg);
+
+      // Hanya set jika berbeda dari yang tersimpan (hindari emit berulang)
+      const existing = savedAll[tableDef.id];
+      if (!existing) {
+        // Belum ada → init
+        State.setTableConfig(templateId, tableDef.id, normalized);
+      } else {
+        // Sudah ada → normalisasi (tangani kolom baru/hilang)
+        const reNormalized = normalizeConfig(defaultCfg, existing);
+        State.setTableConfig(templateId, tableDef.id, reNormalized);
+      }
+    });
+  }
+
+  /* ────────────────────────────────────────────────
+     4. Ambil config kolom yang sudah resolved
+        (merge default + user override)
+  ──────────────────────────────────────────────── */
+  /**
+   * @param  {string} templateId
+   * @param  {string} tableId
+   * @returns {Object} { header: { columns: {...} }, body: { columns: {...} } }
+   *   Config yang sudah siap dipakai renderer.
+   */
+  function getResolvedConfig(templateId, tableId) {
+    if (!templateId || !tableId) return { header: { columns: {} }, body: { columns: {} } };
+
+    const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
+    const tableDef  = tableDefs.find(t => t.id === tableId);
+    if (!tableDef) return { header: { columns: {} }, body: { columns: {} } };
+
+    const defaultCfg = buildDefaultConfig(tableDef.columns, tableDef.tableDefaultConfig);
+    const savedAll   = State.getTableConfig(templateId);
+    const savedCfg   = savedAll[tableId] || null;
+
+    return normalizeConfig(defaultCfg, savedCfg);
+  }
+
+  /* ────────────────────────────────────────────────
+     5. Update satu kolom (dipanggil dari UI)
+  ──────────────────────────────────────────────── */
+  /**
+   * @param {string} templateId
+   * @param {string} tableId
+   * @param {string} section    — 'header' | 'body'
+   * @param {number} colIndex   — 0-based index kolom
+   * @param {Object} partial    — { horizontalAlign?, verticalAlign?, bold?, italic?, fontSize? }
+   */
+  function updateColumn(templateId, tableId, section, colIndex, partial) {
+    if (!templateId || !tableId) return;
+    if (section !== 'header' && section !== 'body') return;
+
+    const sanitized = _sanitizeColConfig(partial);
+    if (Object.keys(sanitized).length === 0) return;
+
+    // Baca config terkini untuk tabel ini
+    const currentAll = State.getTableConfig(templateId);
+    const current    = currentAll[tableId] || { header: { columns: {} }, body: { columns: {} } };
+
+    // Deep clone untuk menghindari mutasi
+    const updated = {
+      header: { columns: { ...(current.header?.columns || {}) } },
+      body:   { columns: { ...(current.body?.columns   || {}) } },
+    };
+
+    updated[section].columns[colIndex] = Object.assign(
+      {},
+      updated[section].columns[colIndex] || {},
+      sanitized
+    );
+
+    State.setTableConfig(templateId, tableId, updated);
+  }
+
+  /* ────────────────────────────────────────────────
+     6. Apply to All — terapkan satu atau beberapa
+        properti ke semua kolom di section tertentu
+  ──────────────────────────────────────────────── */
+  /**
+   * @param {string} templateId
+   * @param {string} tableId
+   * @param {string} section   — 'header' | 'body'
+   * @param {Object} partial   — properti yang akan diterapkan ke semua kolom
+   */
+  function applyToAllColumns(templateId, tableId, section, partial) {
+    if (!templateId || !tableId) return;
+    if (section !== 'header' && section !== 'body') return;
+
+    const sanitized = _sanitizeColConfig(partial);
+    if (Object.keys(sanitized).length === 0) return;
+
+    const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
+    const tableDef  = tableDefs.find(t => t.id === tableId);
+    if (!tableDef) return;
+
+    const currentAll = State.getTableConfig(templateId);
+    const current    = currentAll[tableId] || { header: { columns: {} }, body: { columns: {} } };
+
+    const updated = {
+      header: { columns: { ...(current.header?.columns || {}) } },
+      body:   { columns: { ...(current.body?.columns   || {}) } },
+    };
+
+    tableDef.columns.forEach((_, idx) => {
+      updated[section].columns[idx] = Object.assign(
+        {},
+        updated[section].columns[idx] || {},
+        sanitized
+      );
+    });
+
+    State.setTableConfig(templateId, tableId, updated);
+  }
+
+  /* ────────────────────────────────────────────────
+     7. Copy Header → Body
+  ──────────────────────────────────────────────── */
+  function copyHeaderToBody(templateId, tableId) {
+    if (!templateId || !tableId) return;
+
+    const currentAll = State.getTableConfig(templateId);
+    const current    = currentAll[tableId];
+    if (!current) return;
+
+    const headerCols = current.header?.columns || {};
+    // Salin header ke body, tapi reset bold ke false (body default)
+    const newBodyCols = {};
+    Object.keys(headerCols).forEach(idx => {
+      newBodyCols[idx] = Object.assign({}, headerCols[idx], { bold: false });
+    });
+
+    State.setTableConfig(templateId, tableId, {
+      header: current.header,
+      body:   { columns: newBodyCols },
+    });
+  }
+
+  /* ────────────────────────────────────────────────
+     8. Reset satu tabel atau semua tabel ke default template
+  ──────────────────────────────────────────────── */
+  function resetToDefault(templateId, tableId = null) {
+    State.resetTableConfig(templateId, tableId);
+    // Setelah reset, re-init agar state kembali ke default bersih
+    initForTemplate(templateId);
+  }
+
+  /* ────────────────────────────────────────────────
+     9. Build inline style string untuk <th> / <td>
+        berdasarkan config kolom + fallback tableSize
+  ──────────────────────────────────────────────── */
+  /**
+   * @param  {Object} colCfg    — satu entri dari header.columns[i] atau body.columns[i]
+   * @param  {number} tableSize — font size fallback (pt) dari typography settings
+   * @param  {Object} templateColDef — definisi kolom dari template (untuk width, noWrap, dll.)
+   * @returns {string} CSS inline style string
+   */
+  function buildCellStyle(colCfg, tableSize, templateColDef = {}) {
+    if (!colCfg) return '';
+    const parts = [];
+
+    // text-align
+    const hAlign = colCfg.horizontalAlign;
+    if (hAlign && VALID_H_ALIGN.includes(hAlign)) {
+      parts.push(`text-align:${hAlign}`);
+    }
+
+    // vertical-align
+    const vAlign = colCfg.verticalAlign;
+    if (vAlign && VALID_V_ALIGN.includes(vAlign)) {
+      parts.push(`vertical-align:${vAlign}`);
+    }
+
+    // font-weight
+    if (colCfg.bold === true) {
+      parts.push('font-weight:bold');
+    } else if (colCfg.bold === false) {
+      parts.push('font-weight:normal');
+    }
+
+    // font-style
+    if (colCfg.italic === true) {
+      parts.push('font-style:italic');
+    } else if (colCfg.italic === false) {
+      parts.push('font-style:normal');
+    }
+
+    // font-size
+    const fs = colCfg.fontSize != null
+      ? Utils.clamp(Number(colCfg.fontSize), FONT_SIZE_MIN, FONT_SIZE_MAX)
+      : tableSize;
+    if (fs) parts.push(`font-size:${fs}pt`);
+
+    return parts.join(';');
+  }
+
+  /* ────────────────────────────────────────────────
+     Internal helpers
+  ──────────────────────────────────────────────── */
+
+  /** Sanitasi & validasi satu kolom config object */
+  function _sanitizeColConfig(obj) {
+    if (!obj || typeof obj !== 'object') return {};
+    const out = {};
+
+    if ('horizontalAlign' in obj) {
+      const v = obj.horizontalAlign;
+      if (VALID_H_ALIGN.includes(v)) out.horizontalAlign = v;
+    }
+    if ('verticalAlign' in obj) {
+      const v = obj.verticalAlign;
+      if (VALID_V_ALIGN.includes(v)) out.verticalAlign = v;
+    }
+    if ('bold' in obj)   out.bold   = Boolean(obj.bold);
+    if ('italic' in obj) out.italic = Boolean(obj.italic);
+    if ('fontSize' in obj) {
+      const n = parseFloat(obj.fontSize);
+      if (!isNaN(n)) {
+        out.fontSize = Utils.clamp(n, FONT_SIZE_MIN, FONT_SIZE_MAX);
+      } else if (obj.fontSize === null) {
+        out.fontSize = null; // reset ke global
+      }
+    }
+    return out;
+  }
+
+  /** Deep merge khusus config struktur { header: { columns: {...} }, body: { columns: {...} } } */
+  function _deepMergeConfig(base, override) {
+    if (!override || typeof override !== 'object') return base;
+
+    const result = {
+      header: { columns: { ...(base.header?.columns || {}) } },
+      body:   { columns: { ...(base.body?.columns   || {}) } },
+    };
+
+    if (override.header?.columns) {
+      Object.entries(override.header.columns).forEach(([idx, colCfg]) => {
+        result.header.columns[idx] = Object.assign(
+          {},
+          result.header.columns[idx] || DEFAULT_HEADER_COL(),
+          _sanitizeColConfig(colCfg)
+        );
+      });
+    }
+    if (override.body?.columns) {
+      Object.entries(override.body.columns).forEach(([idx, colCfg]) => {
+        result.body.columns[idx] = Object.assign(
+          {},
+          result.body.columns[idx] || DEFAULT_BODY_COL(),
+          _sanitizeColConfig(colCfg)
+        );
+      });
+    }
+
+    return result;
+  }
+
+  /* ── Public API ── */
+  return {
+    buildDefaultConfig,
+    normalizeConfig,
+    initForTemplate,
+    getResolvedConfig,
+    updateColumn,
+    applyToAllColumns,
+    copyHeaderToBody,
+    resetToDefault,
+    buildCellStyle,
+
+    // Konstanta yang berguna untuk UI
+    FONT_SIZE_MIN,
+    FONT_SIZE_MAX,
+    VALID_H_ALIGN,
+    VALID_V_ALIGN,
+    DEFAULT_HEADER_COL,
+    DEFAULT_BODY_COL,
+  };
+
+})();
