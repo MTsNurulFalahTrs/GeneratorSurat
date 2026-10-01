@@ -171,69 +171,8 @@ const PreviewRenderer = (() => {
         <h2 class="doc-subtitle">TAHUN PELAJARAN ${_esc(meta.tahunPelajaran)}</h2>
       </div>`;
 
-    /* ── Tabel Peserta ── */
-    // Header dua baris:
-    // Baris 1: URT | INDK | [NOMOR colspan=2] | NIK | NAMA SISWA | L/P | TEMPAT LAHIR | TGL LAHIR | NAMA OT | ASAL SEKOLAH | NO IJAZAH | [TERDAFTAR DI EMIS colspan=3]
-    // Baris 2: (under NOMOR) NISN | REGISTRASI | (under TERDAFTAR) SUDAH | BELUM | ALASAN
-    // Total kolom data = 15: URT,INDK,NISN,REGISTRASI,NIK,NAMASISWA,LP,TEMPATLAHIR,TGLLAHIR,NAMAOT,ASALSEKOLAH,NOIJAZAH,SUDAH,BELUM,ALASAN
-    const theadHtml = `
-      <thead>
-        <tr>
-          <th rowspan="2" style="width:5mm;">URT</th>
-          <th rowspan="2" style="width:9mm;">INDK</th>
-          <th colspan="2">NOMOR</th>
-          <th rowspan="2" style="width:26mm;">NIK</th>
-          <th rowspan="2" style="width:30mm;">NAMA SISWA</th>
-          <th rowspan="2" style="width:6mm;">L/P</th>
-          <th rowspan="2" style="width:16mm;">TEMPAT LAHIR</th>
-          <th rowspan="2" style="width:14mm;">TANGGAL LAHIR</th>
-          <th rowspan="2" style="width:16mm;">NAMA ORANG TUA</th>
-          <th rowspan="2" style="width:20mm;">ASAL SEKOLAH</th>
-          <th rowspan="2" style="width:22mm;">No. IJAZAH JENJANG SEBELUMNYA</th>
-          <th colspan="3">TERDAFTAR DI EMIS</th>
-        </tr>
-        <tr>
-          <th style="width:20mm;">NISN</th>
-          <th style="width:28mm;">REGISTRASI</th>
-          <th style="width:8mm;">SUDAH</th>
-          <th style="width:8mm;">BELUM</th>
-          <th style="width:18mm;">ALASAN JIKA BELUM</th>
-        </tr>
-      </thead>`;
-
-    const tbodyRows = peserta.map((p, i) => `
-      <tr>
-        <td class="col-center">${_esc(p.urt || i + 1)}</td>
-        <td class="col-center">${_esc(p.indk)}</td>
-        <td class="col-center">${_esc(p.nisn)}</td>
-        <td style="font-size:6.5pt;">${_esc(p.registrasi)}</td>
-        <td class="col-center" style="font-size:7pt;">${_esc(p.nik)}</td>
-        <td>${_esc(p.namaSiswa)}</td>
-        <td class="col-center">${_esc(p.jenisKelamin)}</td>
-        <td>${_esc(p.tempatLahir)}</td>
-        <td class="col-center">${p.tanggalLahir ? Utils.formatDateShort(p.tanggalLahir) : ''}</td>
-        <td>${_esc(p.namaOrangTua)}</td>
-        <td>${_esc(p.asalSekolah)}</td>
-        <td style="font-size:6.5pt;">${_esc(p.noIjazah)}</td>
-        <td class="col-center">${p.terdaftarEmis !== false ? '☑' : ''}</td>
-        <td class="col-center">${p.terdaftarEmis === false ? '☐' : ''}</td>
-        <td style="font-size:6.5pt;">${_esc(p.alasanBelum)}</td>
-      </tr>`).join('');
-
-    // Tambah baris kosong minimal 3 atau sampai total 5 baris
-    const emptyRows = Math.max(0, 5 - peserta.length);
-    const emptyRowsHtml = Array.from({ length: emptyRows }, () => `
-      <tr class="doc-empty-row">
-        ${Array(15).fill('<td>&nbsp;</td>').join('')}
-      </tr>`).join('');
-
-    const tableHtml = `
-      <div class="doc-table-wrap">
-        <table class="doc-table">
-          ${theadHtml}
-          <tbody>${tbodyRows}${emptyRowsHtml}</tbody>
-        </table>
-      </div>`;
+    /* ── Tabel Peserta — pakai TableRenderer (Fit to Content via doc-table--dpu) ── */
+    const tableHtml = TableRenderer.renderDpuTable(peserta, t, 5);
 
     /* ── Tanda Tangan ── */
     const ttdHtml = _buildTtdDpu(ttd);
@@ -330,51 +269,36 @@ const PreviewRenderer = (() => {
         <h1 class="doc-title">${judulText}</h1>
       </div>`;
 
-    /* ── Kolom tabel ── */
+    /* ── Tabel siswa — pakai TableRenderer (Fit to Content) ── */
+    // Preprocess data siswa: resolusi kolom khusus (no, tanggalLahir, kelas)
     const cols = tpl.tableColumns;
-    const theadCells = cols.map(c =>
-      `<th style="width:${c.width};text-align:${c.align};">${_esc(c.header)}</th>`
-    ).join('');
-
-    /* ── Baris siswa ── */
-    const tbodyRows = siswa.map((s, i) => {
-      const cells = cols.map(c => {
-        let val = '';
+    const resolvedRows = siswa.map((s, i) => {
+      const row = {};
+      cols.forEach(c => {
         if (c.key === 'no') {
-          val = String(i + 1);
+          row[c.key] = String(i + 1);
         } else if (c.key === 'tanggalLahir') {
-          // Dokumen asli: "Tempat TanggalLahir" digabung dalam satu sel
-          const tgl = s.tanggalLahir ? Utils.formatDateShort(s.tanggalLahir) : '';
+          const tgl    = s.tanggalLahir ? Utils.formatDateShort(s.tanggalLahir) : '';
           const tempat = s.tempatLahir || '';
-          val = tempat && tgl ? `${tempat} ${tgl}` : (tempat || tgl);
+          row[c.key] = tempat && tgl ? `${tempat} ${tgl}` : (tempat || tgl);
         } else if (c.key === 'tempatLahir') {
-          // Di dokumen asli kolom tempat & tgl kadang digabung;
-          // tampilkan saja tempat lahir di kolomnya sendiri
-          val = s.tempatLahir || '';
+          row[c.key] = s.tempatLahir || '';
         } else if (c.key === 'kelas') {
           const map = { '7': 'VII', '8': 'VIII', '9': 'IX' };
-          val = map[s.kelas] || s.kelas || '';
+          row[c.key] = map[s.kelas] || s.kelas || '';
         } else {
-          val = s[c.key] != null ? String(s[c.key]) : '';
+          row[c.key] = s[c.key] != null ? String(s[c.key]) : '';
         }
-        return `<td style="text-align:${c.align};font-size:${t.tableSize}pt;">${_esc(val)}</td>`;
-      }).join('');
-      return `<tr>${cells}</tr>`;
-    }).join('');
+      });
+      return row;
+    });
 
-    // Baris kosong
-    const emptyCount = Math.max(0, 5 - siswa.length);
-    const emptyRowsHtml = Array.from({ length: emptyCount }, () =>
-      `<tr class="doc-empty-row">${cols.map(() => '<td>&nbsp;</td>').join('')}</tr>`
-    ).join('');
-
-    const tableHtml = `
-      <div class="doc-table-wrap">
-        <table class="doc-table">
-          <thead><tr>${theadCells}</tr></thead>
-          <tbody>${tbodyRows}${emptyRowsHtml}</tbody>
-        </table>
-      </div>`;
+    const tableHtml = TableRenderer.render(
+      cols,
+      resolvedRows,
+      { fitMode: 'auto', minRows: 5 },
+      t.tableSize
+    );
 
     /* ── Rekap ── */
     const laki   = siswa.filter(s => s.jenisKelamin === 'L').length;
