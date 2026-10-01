@@ -215,23 +215,36 @@
     padding: 2pt 3pt !important;
     color: #000 !important;
     background: white !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
+    /*
+     * PENTING: overflow-wrap dan word-break TIDAK menggunakan !important
+     * agar inline style dari TableRenderer (buildCellStyle) dapat menang.
+     *
+     * Inline style "white-space:nowrap" dari wrapText=false HARUS menang
+     * atas rule ini. Jika !important dipakai di sini, overflow-wrap:break-word
+     * akan memaksa wrapping meski user set wrapText=OFF.
+     *
+     * Fallback ini hanya berlaku saat kolom tidak punya inline style wrap:
+     *   - wrapText=true  → inline: white-space:normal; overflow-wrap:break-word → menang
+     *   - wrapText=false → inline: white-space:nowrap → menang atas rule ini
+     *   - tidak ada config → rule ini sebagai fallback aman
+     */
+    overflow-wrap: break-word;
+    word-break: break-word;
+
     /*
      * PENTING: Jangan override text-align, vertical-align, font-weight,
-     * font-style, font-size di sini. Properti tersebut diatur melalui
-     * inline style oleh TableRenderer berdasarkan tableConfig per kolom.
-     * Override di sini akan merusak Pengaturan Tabel pengguna.
+     * font-style, font-size, white-space di sini. Properti tersebut diatur
+     * melalui inline style oleh TableRenderer berdasarkan tableConfig per kolom.
+     * Override dengan !important di sini akan merusak Pengaturan Tabel pengguna.
      */
   }
 
   .doc-table th {
     background: white !important;
     /*
-     * font-weight diatur per kolom via inline style dari tableConfig.
-     * Header mendapat bold:true secara default dari TableConfigManager,
-     * tetapi pengguna bisa mengubahnya per kolom.
-     * Jangan paksa font-weight:bold di sini.
+     * font-weight dan white-space diatur per kolom via inline style dari tableConfig.
+     * Header mendapat bold:true dan wrapText:false secara default.
+     * Jangan paksa font-weight:bold atau white-space:nowrap di sini.
      */
   }
 
