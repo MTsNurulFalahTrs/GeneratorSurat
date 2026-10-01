@@ -144,6 +144,84 @@ const Settings = (() => {
         </div>
       </div>
 
+      <!-- ── TIPOGRAFI ─────────────────────────────── -->
+      <div class="settings-card" id="settings-card-typography">
+        <div class="settings-card__header">
+          <span class="settings-card__icon">🔤</span>
+          <span class="settings-card__title">Tipografi Isi Surat</span>
+        </div>
+        <div class="settings-card__body">
+
+          <!-- Font Family -->
+          <div class="settings-row">
+            <label class="settings-label" for="doc-font-family">Font</label>
+            <select class="form-select settings-select" id="doc-font-family"
+              style="font-family: inherit;">
+              ${(State.DOCUMENT_FONTS || []).map(f =>
+                `<option value="${Utils.escapeHtml(f.value)}"
+                  style="font-family:'${Utils.escapeHtml(f.value)}';">
+                  ${Utils.escapeHtml(f.label)}
+                </option>`
+              ).join('')}
+            </select>
+          </div>
+
+          <!-- Font preview -->
+          <div class="typo-preview" id="typo-preview">
+            <span id="typo-preview-text">KEMENTERIAN AGAMA REPUBLIK INDONESIA</span>
+          </div>
+
+          <!-- Font Size -->
+          <div class="settings-row">
+            <label class="settings-label" for="doc-font-size">Ukuran Font</label>
+            <div class="input-stepper" style="width:120px;">
+              <button type="button" class="input-stepper__btn" id="doc-font-size-dec"
+                aria-label="Kurangi ukuran font">−</button>
+              <input type="number" class="input-stepper__input" id="doc-font-size"
+                value="12" min="7" max="22" step="0.5"
+                aria-label="Ukuran font isi surat (pt)" />
+              <button type="button" class="input-stepper__btn" id="doc-font-size-inc"
+                aria-label="Tambah ukuran font">+</button>
+            </div>
+            <span class="input-unit-badge" style="border-radius:var(--radius-md);
+              border:1px solid var(--color-border);padding:4px 8px;">pt</span>
+          </div>
+
+          <!-- Line Height -->
+          <div class="settings-row">
+            <label class="settings-label" for="doc-line-height">Jarak Baris</label>
+            <select class="form-select settings-select" id="doc-line-height"
+              style="max-width:120px;">
+              ${[1.0, 1.15, 1.2, 1.3, 1.4, 1.5, 1.6, 1.8, 2.0].map(v =>
+                `<option value="${v}">${v}×</option>`
+              ).join('')}
+            </select>
+          </div>
+
+          <!-- Table font size -->
+          <div class="settings-row">
+            <label class="settings-label" for="doc-table-size">Font Tabel</label>
+            <div class="input-stepper" style="width:120px;">
+              <button type="button" class="input-stepper__btn" id="doc-table-size-dec"
+                aria-label="Kurangi ukuran font tabel">−</button>
+              <input type="number" class="input-stepper__input" id="doc-table-size"
+                value="7.5" min="6" max="14" step="0.5"
+                aria-label="Ukuran font tabel (pt)" />
+              <button type="button" class="input-stepper__btn" id="doc-table-size-inc"
+                aria-label="Tambah ukuran font tabel">+</button>
+            </div>
+            <span class="input-unit-badge" style="border-radius:var(--radius-md);
+              border:1px solid var(--color-border);padding:4px 8px;">pt</span>
+          </div>
+
+          <p class="settings-hint">
+            Pengaturan tipografi berlaku untuk seluruh isi surat.
+            Font KOP Surat diatur terpisah di tab <strong>KOP Surat</strong>.
+          </p>
+
+        </div>
+      </div>
+
       <!-- ── MARGIN ─────────────────────────────────── -->
       <div class="settings-card" id="settings-card-margin">
         <div class="settings-card__header">
@@ -379,6 +457,7 @@ const Settings = (() => {
     _bindPaperSize();
     _bindCustomSize();
     _bindOrientation();
+    _bindTypography();    // ← baru
     _bindMarginPreset();
     _bindMarginInputs();
     _bindPrintScale();
@@ -487,6 +566,85 @@ const Settings = (() => {
           _markPresetCustom();
         });
       });
+  }
+
+  /* ── Typography ── */
+  function _bindTypography() {
+    const fontSel    = document.getElementById('doc-font-family');
+    const sizeInput  = document.getElementById('doc-font-size');
+    const sizeDecBtn = document.getElementById('doc-font-size-dec');
+    const sizeIncBtn = document.getElementById('doc-font-size-inc');
+    const lineHSel   = document.getElementById('doc-line-height');
+    const tblInput   = document.getElementById('doc-table-size');
+    const tblDecBtn  = document.getElementById('doc-table-size-dec');
+    const tblIncBtn  = document.getElementById('doc-table-size-inc');
+
+    // Debounced save
+    const debSave = Utils.debounce(() => {
+      const ff  = fontSel?.value || 'Times New Roman';
+      const fs  = Utils.clamp(Utils.safeFloat(sizeInput?.value, 12), 7, 22);
+      const lh  = parseFloat(lineHSel?.value || 1.5);
+      const ts  = Utils.clamp(Utils.safeFloat(tblInput?.value, 7.5), 6, 14);
+      State.setSettings({ typography: { fontFamily: ff, fontSize: fs, lineHeight: lh, tableSize: ts } });
+      _updateTypoPreview(ff, fs);
+    }, 300);
+
+    // Font family
+    fontSel?.addEventListener('change', () => {
+      _updateTypoPreview(fontSel.value, Utils.safeFloat(sizeInput?.value, 12));
+      debSave();
+    });
+
+    // Font size stepper
+    sizeDecBtn?.addEventListener('click', () => {
+      const cur = Utils.safeFloat(sizeInput?.value, 12);
+      const nv  = Utils.clamp(cur - 0.5, 7, 22);
+      if (sizeInput) sizeInput.value = nv;
+      debSave();
+    });
+    sizeIncBtn?.addEventListener('click', () => {
+      const cur = Utils.safeFloat(sizeInput?.value, 12);
+      const nv  = Utils.clamp(cur + 0.5, 7, 22);
+      if (sizeInput) sizeInput.value = nv;
+      debSave();
+    });
+    sizeInput?.addEventListener('input', debSave);
+    sizeInput?.addEventListener('change', () => {
+      const clamped = Utils.clamp(Utils.safeFloat(sizeInput.value, 12), 7, 22);
+      sizeInput.value = clamped;
+      debSave();
+    });
+
+    // Line height
+    lineHSel?.addEventListener('change', debSave);
+
+    // Table size stepper
+    tblDecBtn?.addEventListener('click', () => {
+      const cur = Utils.safeFloat(tblInput?.value, 7.5);
+      const nv  = Utils.clamp(cur - 0.5, 6, 14);
+      if (tblInput) tblInput.value = nv;
+      debSave();
+    });
+    tblIncBtn?.addEventListener('click', () => {
+      const cur = Utils.safeFloat(tblInput?.value, 7.5);
+      const nv  = Utils.clamp(cur + 0.5, 6, 14);
+      if (tblInput) tblInput.value = nv;
+      debSave();
+    });
+    tblInput?.addEventListener('input', debSave);
+    tblInput?.addEventListener('change', () => {
+      const clamped = Utils.clamp(Utils.safeFloat(tblInput.value, 7.5), 6, 14);
+      tblInput.value = clamped;
+      debSave();
+    });
+  }
+
+  /* ── Update preview font di card tipografi ── */
+  function _updateTypoPreview(fontFamily, fontSize) {
+    const el = document.getElementById('typo-preview-text');
+    if (!el) return;
+    el.style.fontFamily = `'${fontFamily}', serif`;
+    el.style.fontSize   = `${Math.round(fontSize)}pt`;
   }
 
   /* ── Margin preset select ── */
@@ -638,6 +796,9 @@ const Settings = (() => {
 
     _updatePaperInfo();
 
+    // Typography
+    _syncTypography(s.typography);
+
     // Margin
     _syncMarginInputs(s.margin);
     _syncMarginPresetSelect(s.margin);
@@ -691,6 +852,22 @@ const Settings = (() => {
 
     document.getElementById('unit-seg')?.querySelectorAll('.seg-btn')
       .forEach(btn => btn.classList.toggle('active', btn.dataset.unit === unit));
+  }
+
+  /* ── Sync helper: typography ── */
+  function _syncTypography(typo) {
+    if (!typo) return;
+    const fontSel   = document.getElementById('doc-font-family');
+    const sizeInput = document.getElementById('doc-font-size');
+    const lineHSel  = document.getElementById('doc-line-height');
+    const tblInput  = document.getElementById('doc-table-size');
+
+    if (fontSel)  fontSel.value   = typo.fontFamily  || 'Times New Roman';
+    if (sizeInput) sizeInput.value = typo.fontSize    || 12;
+    if (lineHSel) lineHSel.value  = typo.lineHeight   || 1.5;
+    if (tblInput) tblInput.value  = typo.tableSize    || 7.5;
+
+    _updateTypoPreview(typo.fontFamily || 'Times New Roman', typo.fontSize || 12);
   }
 
   /* ── Sync helper: margin inputs ── */
