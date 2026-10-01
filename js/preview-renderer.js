@@ -1,6 +1,11 @@
 /* =============================================================
    preview-renderer.js — Render live preview surat
-   ============================================================= */
+   =============================================================
+   Dimensi kertas dan margin diambil dari State.getSettings()
+   agar sinkron dengan tab Pengaturan.
+   Zoom preview TIDAK mempengaruhi ukuran dokumen sebenarnya —
+   hanya mengubah tampilan di layar.
+*/
 
 const PreviewRenderer = (() => {
 
@@ -13,6 +18,7 @@ const PreviewRenderer = (() => {
   const ZOOM_STEP = 0.1;
   const ZOOM_MIN  = 0.3;
   const ZOOM_MAX  = 2.5;
+  const PX_PER_MM = 96 / 25.4;  // 1 mm = ~3.78 px pada 96 dpi
 
   /* ── Init ── */
   function init() {
@@ -27,8 +33,8 @@ const PreviewRenderer = (() => {
     _currentZoom = State.getUi().previewZoom || 1;
     _applyZoom(_currentZoom);
 
-    // Bind zoom buttons
-    document.getElementById('btn-zoom-in')?.addEventListener('click', () => _changeZoom(ZOOM_STEP));
+    // Bind zoom buttons (toolbar preview)
+    document.getElementById('btn-zoom-in')?.addEventListener('click',  () => _changeZoom(ZOOM_STEP));
     document.getElementById('btn-zoom-out')?.addEventListener('click', () => _changeZoom(-ZOOM_STEP));
     document.getElementById('btn-zoom-reset')?.addEventListener('click', () => {
       _currentZoom = 1;
@@ -36,19 +42,20 @@ const PreviewRenderer = (() => {
       _applyZoom(1);
     });
 
-    // Subscribe state
+    // Subscribe state events
     const debouncedRender = Utils.debounce(_renderCurrent, 200);
 
-    State.on('kop:change',       debouncedRender);
-    State.on('form:change',      debouncedRender);
-    State.on('template:change',  debouncedRender);
-    State.on('state:restore',    () => {
+    State.on('kop:change',        debouncedRender);
+    State.on('form:change',       debouncedRender);
+    State.on('template:change',   debouncedRender);
+    State.on('settings:change',   debouncedRender); // ← settings baru
+    State.on('state:restore', () => {
       _currentZoom = State.getUi().previewZoom || 1;
       _applyZoom(_currentZoom);
       _renderCurrent();
     });
-    State.on('state:reset', () => _showPlaceholder());
-    State.on('ui:zoomChange', ({ zoom }) => {
+    State.on('state:reset',    () => _showPlaceholder());
+    State.on('ui:zoomChange',  ({ zoom }) => {
       _currentZoom = zoom;
       _applyZoom(zoom);
     });
@@ -72,29 +79,51 @@ const PreviewRenderer = (() => {
   function render(tpl, formData, kop) {
     if (!_previewEl) return;
 
-    const isLandscape = tpl.meta.orientation === 'landscape';
+    // ── Dimensi kertas dari Settings (bukan dari meta template) ──
+    // Settings.orientation overrides template default, kecuali jika
+    // pengguna belum mengubahnya (maka ikuti template)
+    const s         = State.getSettings();
+    const dim       = State.getPaperDimensions(); // sudah memperhitungkan orientasi
+    const margin    = State.getMarginMm();
+    const isLandscape = s.orientation === 'landscape';
+
+    // Apply class orientasi pada preview paper
     _previewEl.classList.toggle('orientation-landscape', isLandscape);
 
-    // Hitung lebar wrapper agar zoom bekerja dengan benar
-    const paperWidthMm = isLandscape ? 297 : 210;
-    const paperWidthPx = paperWidthMm * (96 / 25.4); // mm to px at 96dpi
+    // Terapkan ukuran kertas via CSS custom properties pada preview paper
+    const paperWidthPx  = dim.widthMm  * PX_PER_MM;
+    const paperHeightPx = dim.heightMm * PX_PER_MM;
+
+    _previewEl.style.width    = `${paperWidthPx}px`;
+    _previewEl.style.minHeight= `${paperHeightPx}px`;
+
     if (_wrapperEl) {
       _wrapperEl.style.width = `${paperWidthPx}px`;
     }
 
-    const html = _buildDocumentHtml(tpl, formData, kop);
+    // Render HTML isi dokumen
+    const html = _buildDocumentHtml(tpl, formData, kop, margin);
     _previewEl.innerHTML = html;
 
-    // Update wrapper height SETELAH konten dirender (bukan sebelum)
-    requestAnimationFrame(() => _updateWrapperHeight(_currentZoom));
+    // Re-terapkan overlay margin guide / printable area setelah innerHTML diset
+    // (innerHTML reset menghapus child elements termasuk overlay)
+    requestAnimationFrame(() => {
+      _updateWrapperHeight(_currentZoom);
+      // Re-apply overlays tanpa memanggil syncFromState (mencegah loop)
+      if (typeof Settings !== 'undefined') {
+        const sv = State.getSettings().preview;
+        if (sv.showMarginGuide)   _reApplyMarginGuide(sv.showMarginGuide);
+        if (sv.showPrintableArea) _reApplyPrintableArea(sv.showPrintableArea);
+      }
+    });
   }
 
   /* ── Build seluruh HTML dokumen ── */
-  function _buildDocumentHtml(tpl, formData, kop) {
+  function _buildDocumentHtml(tpl, formData, kop, margin) {
     const id = tpl.TEMPLATE_ID;
-    if (id === 'dpu')          return _renderDpu(formData, kop);
-    if (id === 'mutasi-masuk') return _renderSiswa(formData, kop, tpl, true);
-    if (id === 'siswa-baru')   return _renderSiswa(formData, kop, tpl, false);
+    if (id === 'dpu')          return _renderDpu(formData, kop, margin);
+    if (id === 'mutasi-masuk') return _renderSiswa(formData, kop, tpl, true,  margin);
+    if (id === 'siswa-baru')   return _renderSiswa(formData, kop, tpl, false, margin);
     return '<div style="padding:20px;color:#666;">Template tidak dikenali.</div>';
   }
 
@@ -106,8 +135,10 @@ const PreviewRenderer = (() => {
   /* ────────────────────────────────────────────────
      RENDERER: DPU
   ──────────────────────────────────────────────── */
-  function _renderDpu(data, kop) {
+  function _renderDpu(data, kop, margin) {
     const { meta, peserta = [], tandaTangan: ttd = {} } = data;
+    const m = margin || State.getMarginMm();
+    const marginStyle = `padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;`;
 
     /* ── KOP ── */
     const kopHtml = _buildKopHtml(kop);
@@ -202,7 +233,7 @@ const PreviewRenderer = (() => {
     const ttdHtml = _buildTtdDpu(ttd);
 
     return `
-      <div class="doc-content">
+      <div class="doc-content" style="${marginStyle}">
         ${kopHtml}
         <hr class="doc-kop-divider" />
         <hr class="doc-kop-divider-thin" />
@@ -253,8 +284,10 @@ const PreviewRenderer = (() => {
   /* ────────────────────────────────────────────────
      RENDERER: Mutasi Masuk & Siswa Baru (struktur mirip)
   ──────────────────────────────────────────────── */
-  function _renderSiswa(data, kop, tpl, isMutasi) {
+  function _renderSiswa(data, kop, tpl, isMutasi, margin) {
     const { meta, siswa = [], tandaTangan: ttd = {}, catatan } = data;
+    const m = margin || State.getMarginMm();
+    const marginStyle = `padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;`;
 
     /* ── KOP ── */
     const kopHtml = _buildKopHtml(kop);
@@ -361,7 +394,7 @@ const PreviewRenderer = (() => {
     }
 
     return `
-      <div class="doc-content">
+      <div class="doc-content" style="${marginStyle}">
         ${kopHtml}
         <hr class="doc-kop-divider" />
         <hr class="doc-kop-divider-thin" />
@@ -447,6 +480,45 @@ const PreviewRenderer = (() => {
           </div>
         </div>
       </div>`;
+  }
+
+  /* ── Re-apply overlay helpers (dipanggil post-render, tidak trigger state) ── */
+  function _reApplyMarginGuide(show) {
+    const preview = _previewEl;
+    if (!preview) return;
+    let guide = preview.querySelector('.margin-guide-overlay');
+    if (!show) { guide?.remove(); return; }
+    if (!guide) {
+      guide = document.createElement('div');
+      guide.className = 'margin-guide-overlay';
+      guide.setAttribute('aria-hidden', 'true');
+      preview.appendChild(guide);
+    }
+    const m = State.getMarginMm();
+    const PX = 96 / 25.4;
+    guide.style.top    = `${m.top    * PX}px`;
+    guide.style.right  = `${m.right  * PX}px`;
+    guide.style.bottom = `${m.bottom * PX}px`;
+    guide.style.left   = `${m.left   * PX}px`;
+  }
+
+  function _reApplyPrintableArea(show) {
+    const preview = _previewEl;
+    if (!preview) return;
+    let area = preview.querySelector('.printable-area-overlay');
+    if (!show) { area?.remove(); return; }
+    if (!area) {
+      area = document.createElement('div');
+      area.className = 'printable-area-overlay';
+      area.setAttribute('aria-hidden', 'true');
+      preview.appendChild(area);
+    }
+    const m = State.getMarginMm();
+    const PX = 96 / 25.4;
+    area.style.top    = `${m.top    * PX}px`;
+    area.style.right  = `${m.right  * PX}px`;
+    area.style.bottom = `${m.bottom * PX}px`;
+    area.style.left   = `${m.left   * PX}px`;
   }
 
   /* ── Zoom ── */
