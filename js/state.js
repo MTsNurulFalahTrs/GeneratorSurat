@@ -200,6 +200,13 @@ const State = (() => {
     /* Data form per-template */
     forms: {},
 
+    /*
+     * Konfigurasi tabel per-template.
+     * Struktur: { [templateId]: { [tableId]: { header: { columns: {...} }, body: { columns: {...} } } } }
+     * Setiap kolom: { horizontalAlign, verticalAlign, bold, italic, fontSize }
+     */
+    tables: {},
+
     /* UI state */
     ui: {
       activeTab: 'template',
@@ -472,6 +479,77 @@ const State = (() => {
     { value: 'Courier New',        label: 'Courier New'        },
   ];
 
+  /* ────────────────────────────────────────────────
+     TABLE CONFIG GETTERS & SETTERS
+  ──────────────────────────────────────────────── */
+
+  /**
+   * Kembalikan konfigurasi tabel untuk satu templateId.
+   * @param {string} templateId
+   * @returns {Object} — { [tableId]: { header: {...}, body: {...} } }
+   */
+  function getTableConfig(templateId) {
+    const id = templateId || _state.activeTemplate;
+    if (!id) return {};
+    return Utils.deepClone(_state.tables[id] || {});
+  }
+
+  /**
+   * Set konfigurasi satu tabel dalam template.
+   * @param {string} templateId
+   * @param {string} tableId     — ID tabel (mis. 'siswa', 'peserta')
+   * @param {Object} config      — { header: { columns: {...} }, body: { columns: {...} } }
+   */
+  function setTableConfig(templateId, tableId, config) {
+    const id = templateId || _state.activeTemplate;
+    if (!id || !tableId) return;
+
+    if (!_state.tables[id]) _state.tables[id] = {};
+    _state.tables[id][tableId] = Utils.deepMerge(
+      _state.tables[id][tableId] || {},
+      config
+    );
+    _state.ui.isDirty = true;
+    emit('table:change', { templateId: id, tableId, config: Utils.deepClone(_state.tables[id][tableId]) });
+    emit('state:change', { field: 'tables' });
+  }
+
+  /**
+   * Reset konfigurasi tabel ke default (hapus override user).
+   * @param {string} templateId
+   * @param {string|null} tableId — null = reset semua tabel template ini
+   */
+  function resetTableConfig(templateId, tableId = null) {
+    const id = templateId || _state.activeTemplate;
+    if (!id) return;
+
+    if (tableId === null) {
+      // Reset seluruh konfigurasi tabel template ini
+      delete _state.tables[id];
+    } else {
+      if (_state.tables[id]) {
+        delete _state.tables[id][tableId];
+      }
+    }
+    _state.ui.isDirty = true;
+    emit('table:reset', { templateId: id, tableId });
+    emit('state:change', { field: 'tables' });
+  }
+
+  /**
+   * Inisialisasi table config untuk template jika belum ada.
+   * Dipakai oleh TableConfigManager saat template pertama kali dipilih.
+   * @param {string} templateId
+   * @param {Object} defaultConfig — { [tableId]: { header: {...}, body: {...} } }
+   */
+  function initTableConfig(templateId, defaultConfig) {
+    if (!templateId) return;
+    if (!_state.tables[templateId]) {
+      _state.tables[templateId] = Utils.deepClone(defaultConfig);
+      emit('table:init', { templateId });
+    }
+  }
+
   /* ── Reset state (setelah data expired atau user reset) ── */
   function reset() {
     _state = {
@@ -479,6 +557,7 @@ const State = (() => {
       kop: DEFAULT_KOP_CONFIG(),
       settings: DEFAULT_SETTINGS(),
       forms: {},
+      tables: {},
       ui: {
         activeTab: 'template',
         previewZoom: 1,
@@ -501,6 +580,7 @@ const State = (() => {
       kop:            _state.kop,
       settings:       _state.settings,
       forms:          _state.forms,
+      tables:         _state.tables,
     });
   }
 
@@ -519,6 +599,9 @@ const State = (() => {
       }
       if (savedData.forms) {
         _state.forms = Utils.deepClone(savedData.forms);
+      }
+      if (savedData.tables && typeof savedData.tables === 'object') {
+        _state.tables = Utils.deepClone(savedData.tables);
       }
       _state.ui.isDirty = false;
       emit('state:restore', { data: savedData });
@@ -556,6 +639,7 @@ const State = (() => {
     getPaperDimensions,
     getMarginMm,
     getTypography: () => Utils.deepClone(_state.settings.typography || DEFAULT_SETTINGS().typography),
+    getTableConfig,
     isDirty,
 
     // Setters
@@ -573,6 +657,9 @@ const State = (() => {
     setSettings,
     applyDocumentPreset,
     resetSettings,
+    setTableConfig,
+    resetTableConfig,
+    initTableConfig,
 
     // State lifecycle
     reset,
