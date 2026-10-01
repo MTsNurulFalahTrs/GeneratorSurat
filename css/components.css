@@ -1425,3 +1425,28 @@
     width: 60px !important;
   }
 }
+
+
+/* ── Typography Card ── */
+.typo-preview {
+  padding: var(--space-3) var(--space-4);
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  overflow: hidden;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#typo-preview-text {
+  /* font-family dan font-size diset via JS */
+  color: #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transition: font-family var(--transition-base), font-size var(--transition-base);
+}
