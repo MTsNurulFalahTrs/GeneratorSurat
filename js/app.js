@@ -71,17 +71,21 @@ const App = (() => {
     /* 8. Init Preview Renderer */
     PreviewRenderer.init();
 
-    /* 9. Bind header action buttons */
+    /* 9. Init Settings */
+    Settings.init();
+
+    /* 10. Bind header action buttons */
     _bindHeaderButtons();
 
-    /* 10. Update storage info display */
+    /* 11. Update storage info display */
     if (wasRestored) {
       const meta = Storage.getMeta();
       UI.updateStorageInfo(meta);
+      Settings.updateStorageStatus();
     }
     UI.startStorageInfoRefresh();
 
-    /* 11. Jika template sudah terpilih (restore), render form dan switch ke tab form */
+    /* 12. Jika template sudah terpilih (restore), render form dan switch ke tab form */
     if (wasRestored && State.getActiveTemplate()) {
       const activeId = State.getActiveTemplate();
 
@@ -100,10 +104,10 @@ const App = (() => {
       UI.toast('Data sebelumnya berhasil dimuat kembali.', 'success');
     }
 
-    /* 12. Subscribe state changes untuk auto-save peringatan */
+    /* 13. Subscribe state changes untuk auto-save peringatan */
     State.on('state:change', _onStateChange);
 
-    /* 13. Warn sebelum user menutup halaman kalau ada data belum disimpan */
+    /* 14. Warn sebelum user menutup halaman kalau ada data belum disimpan */
     window.addEventListener('beforeunload', (e) => {
       if (State.isDirty()) {
         e.preventDefault();
@@ -168,7 +172,9 @@ const App = (() => {
 
     if (result.success) {
       State.markSaved(result);
-      UI.updateStorageInfo(Storage.getMeta());
+      const meta = Storage.getMeta();
+      UI.updateStorageInfo(meta);
+      Settings.updateStorageStatus();
       UI.toast('Data berhasil disimpan.', 'success');
     } else {
       UI.toast(`Gagal menyimpan: ${result.reason}`, 'error');
@@ -193,6 +199,7 @@ const App = (() => {
     // Reset storage info
     UI.updateStorageInfo(null);
     UI.hideExpiredBanner();
+    Settings.updateStorageStatus();
 
     UI.toast('Data berhasil direset.', 'info');
   }
@@ -201,7 +208,6 @@ const App = (() => {
   function _handleDataExpired() {
     State.reset();
 
-    // Re-render template list
     TemplateRegistry.renderTemplateList(
       document.getElementById('template-list'),
       null,
@@ -213,6 +219,7 @@ const App = (() => {
     UI.showExpiredBanner(
       'Data lokal telah kedaluwarsa (lebih dari 2 jam sejak penyimpanan terakhir) dan dihapus otomatis.'
     );
+    Settings.updateStorageStatus();
   }
 
   /* ── On state change (auto-save indicator) ── */
@@ -271,11 +278,10 @@ ${Utils.escapeHtml(err?.stack || err?.message || String(err))}
   return {
     init,
     switchTab,
-    save: _handleSave,
+    save:  _handleSave,
     reset: _handleReset,
   };
-
 })();
 
-// Expose ke window agar bisa dipanggil dari HTML attribute onclick
+// Expose ke window agar bisa dipanggil dari HTML attribute onclick dan modul lain
 window.App = App;
