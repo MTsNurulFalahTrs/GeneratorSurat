@@ -2339,6 +2339,12 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+.excel-import-toolbar__identity > div {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .excel-import-toolbar__icon {
