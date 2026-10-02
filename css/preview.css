@@ -399,12 +399,8 @@
 }
 
 /*
- * Fixed layout variant: diaktifkan saat ada custom column width ATAU
- * saat ada kolom dengan wrapText=true (tanpa custom width).
- * table-layout:fixed + width:100% + <colgroup> memungkinkan browser
- * menghormati nilai width yang ditentukan pengguna per kolom, DAN
- * memaksa wrapping terjadi karena tabel tidak bisa melebar bebas.
- * Tabel tetap dibatasi oleh .doc-table-wrap (max-width:100%).
+ * Fixed layout variant: digunakan saat mode full-width atau custom
+ * column width. <colgroup> menjadi sumber lebar kolom.
  */
 .doc-table--fixed {
   table-layout: fixed;
@@ -412,13 +408,20 @@
 }
 
 /*
- * Forced-wrap wrapper: diaktifkan saat ada wrapText=true tanpa custom width.
- * Berbeda dari fit-content — wrapper ini mengisi 100% lebar content area
- * sehingga tabel punya constraint konkret untuk melakukan wrapping.
- * Tanpa ini, table-layout:auto + fit-content membuat tabel melebar bebas
- * dan overflow-wrap tidak pernah aktif karena tidak ada batas lebar.
+ * Wrap-only: tetap memakai automatic table layout, tetapi wrapper
+ * memberi batas nyata sebesar content area agar teks dapat membungkus.
  */
-.doc-table-wrap--forced {
+.doc-table--wrap {
+  table-layout: auto;
+  width: auto;
+  max-width: 100%;
+}
+
+/*
+ * Wrapper saat Wrap Text aktif tanpa custom width.
+ * Lebarnya dibatasi ke content area; tabel di dalamnya tetap auto-layout.
+ */
+.doc-table-wrap--wrap {
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
