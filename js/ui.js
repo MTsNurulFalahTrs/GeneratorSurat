@@ -56,6 +56,8 @@ const UI = (() => {
 
   /* ── Modal ── */
   let _modalResolve = null;
+  let _modalEscHandler = null;
+  let _modalPreviousFocus = null;
 
   function _getModalEls() {
     return {
@@ -70,6 +72,17 @@ const UI = (() => {
   function showModal({ title, body, footer, onClose }) {
     const { overlay, title: titleEl, body: bodyEl, footer: footerEl, closeBtn } = _getModalEls();
     if (!overlay) return;
+
+    // Simpan fokus sebelum dialog dibuka agar dikembalikan setelah ditutup.
+    _modalPreviousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+
+    // Hapus listener ESC lama jika ada dialog yang digantikan.
+    if (_modalEscHandler) {
+      document.removeEventListener('keydown', _modalEscHandler);
+      _modalEscHandler = null;
+    }
 
     titleEl.textContent  = title || '';
     bodyEl.innerHTML     = typeof body === 'string' ? body : '';
@@ -102,8 +115,9 @@ const UI = (() => {
 
     // ESC key
     const escHandler = (e) => {
-      if (e.key === 'Escape') { handleClose(); document.removeEventListener('keydown', escHandler); }
+      if (e.key === 'Escape') handleClose();
     };
+    _modalEscHandler = escHandler;
     document.addEventListener('keydown', escHandler);
 
     // Focus ke modal
@@ -113,11 +127,24 @@ const UI = (() => {
   function hideModal() {
     const { overlay } = _getModalEls();
     if (!overlay) return;
+
     overlay.classList.add('hidden');
     overlay.setAttribute('aria-hidden', 'true');
+
+    if (_modalEscHandler) {
+      document.removeEventListener('keydown', _modalEscHandler);
+      _modalEscHandler = null;
+    }
+
     if (typeof _modalResolve === 'function') {
       _modalResolve(false);
       _modalResolve = null;
+    }
+
+    const restore = _modalPreviousFocus;
+    _modalPreviousFocus = null;
+    if (restore && document.contains(restore)) {
+      requestAnimationFrame(() => restore.focus());
     }
   }
 
@@ -203,9 +230,29 @@ const UI = (() => {
     const contents = document.querySelectorAll('.editor-tab-content');
 
     tabs.forEach(tab => {
+      tab.tabIndex = tab.classList.contains('active') ? 0 : -1;
       tab.addEventListener('click', () => {
         const target = tab.dataset.tab;
         switchTab(target, tabs, contents);
+      });
+
+      // Navigasi tab berbasis keyboard sesuai pola tablist ARIA.
+      tab.addEventListener('keydown', (e) => {
+        const list = Array.from(tabs);
+        const current = list.indexOf(tab);
+        if (current === -1) return;
+
+        let nextIndex = current;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextIndex = (current + 1) % list.length;
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') nextIndex = (current - 1 + list.length) % list.length;
+        else if (e.key === 'Home') nextIndex = 0;
+        else if (e.key === 'End') nextIndex = list.length - 1;
+        else return;
+
+        e.preventDefault();
+        const next = list[nextIndex];
+        switchTab(next.dataset.tab, tabs, contents);
+        next.focus();
       });
     });
   }
@@ -218,6 +265,7 @@ const UI = (() => {
       const isActive = t.dataset.tab === tabId;
       t.classList.toggle('active', isActive);
       t.setAttribute('aria-selected', String(isActive));
+      t.tabIndex = isActive ? 0 : -1;
     });
 
     allContents.forEach(c => {
