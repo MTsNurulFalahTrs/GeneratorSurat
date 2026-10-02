@@ -752,6 +752,20 @@ const TableConfigManager = (() => {
     return /^#[0-9A-F]{6}$/.test(text) ? text : '';
   }
 
+  function _normalizeBoolean(value, fallback = false) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') {
+      if (value === 1) return true;
+      if (value === 0) return false;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (['true', '1', 'yes', 'ya', 'on'].includes(normalized)) return true;
+      if (['false', '0', 'no', 'tidak', 'off'].includes(normalized)) return false;
+    }
+    return fallback;
+  }
+
   /** Sanitasi & validasi satu kolom config object (untuk header/body) */
   function _sanitizeColConfig(obj) {
     if (!obj || typeof obj !== 'object') return {};
@@ -765,8 +779,8 @@ const TableConfigManager = (() => {
       const v = obj.verticalAlign;
       if (VALID_V_ALIGN.includes(v)) out.verticalAlign = v;
     }
-    if ('bold' in obj)   out.bold   = Boolean(obj.bold);
-    if ('italic' in obj) out.italic = Boolean(obj.italic);
+    if ('bold' in obj)   out.bold   = _normalizeBoolean(obj.bold);
+    if ('italic' in obj) out.italic = _normalizeBoolean(obj.italic);
     if ('fontSize' in obj) {
       const n = parseFloat(obj.fontSize);
       if (!isNaN(n)) {
@@ -780,7 +794,7 @@ const TableConfigManager = (() => {
     // agar DEFAULT_HEADER_COL/DEFAULT_BODY_COL yang berlaku via Object.assign.
     // Hanya simpan Boolean eksplisit (true atau false).
     if ('wrapText' in obj && obj.wrapText !== null && obj.wrapText !== undefined) {
-      out.wrapText = Boolean(obj.wrapText);
+      out.wrapText = _normalizeBoolean(obj.wrapText);
     }
     return out;
   }
