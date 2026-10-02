@@ -150,8 +150,8 @@ const App = (() => {
   /* ── Handle template dipilih ── */
   function _handleTemplateSelect(templateId) {
     if (State.getActiveTemplate() === templateId) {
-      // Sudah aktif, langsung ke tab form
-      UI.switchTab('form');
+      // Template sudah aktif; tetap arahkan ke langkah KOP.
+      UI.switchTab('kop');
       return;
     }
 
@@ -163,8 +163,8 @@ const App = (() => {
       templateId
     );
 
-    // Pindah ke tab form
-    UI.switchTab('form');
+    // Setelah memilih template, pengguna melanjutkan ke konfigurasi KOP.
+    UI.switchTab('kop');
 
     UI.toast(`Template "${TemplateRegistry.get(templateId)?.meta?.name}" dipilih.`, 'info', 2500);
   }
