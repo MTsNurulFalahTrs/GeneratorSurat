@@ -18,7 +18,7 @@
    DPU (special case):
       - Selalu table-layout: fixed + width: 100% (15 kolom landscape)
       - columnWidths body bisa di-override user, diaplikasikan via <colgroup>
-      - Header DPU (colspan/rowspan kompleks) tidak di-override
+      - Header DPU (colspan/rowspan kompleks) tetap memakai table config
 
    API:
      TableRenderer.render(columns, rows, options, tableSize, tableConfig)
@@ -343,25 +343,25 @@ const TableRenderer = (() => {
     const customHeader = `
       <thead>
         <tr>
-          <th rowspan="2" style="min-width:5mm;max-width:9mm;white-space:nowrap;font-size:${tableSize}pt;">URT</th>
-          <th rowspan="2" style="min-width:7mm;max-width:14mm;white-space:nowrap;font-size:${tableSize}pt;">INDK</th>
-          <th colspan="2" style="font-size:${tableSize}pt;">NOMOR</th>
-          <th rowspan="2" style="min-width:18mm;font-size:${tableSize}pt;">NIK</th>
-          <th rowspan="2" style="min-width:20mm;font-size:${tableSize}pt;">NAMA SISWA</th>
-          <th rowspan="2" style="min-width:5mm;max-width:9mm;white-space:nowrap;font-size:${tableSize}pt;">L/P</th>
-          <th rowspan="2" style="min-width:14mm;font-size:${tableSize}pt;">TEMPAT LAHIR</th>
-          <th rowspan="2" style="min-width:12mm;font-size:${tableSize}pt;">TANGGAL LAHIR</th>
-          <th rowspan="2" style="min-width:14mm;font-size:${tableSize}pt;">NAMA ORANG TUA</th>
-          <th rowspan="2" style="min-width:16mm;font-size:${tableSize}pt;">ASAL SEKOLAH</th>
-          <th rowspan="2" style="min-width:18mm;font-size:${tableSize}pt;">No. IJAZAH JENJANG SEBELUMNYA</th>
-          <th colspan="3" style="font-size:${tableSize}pt;">TERDAFTAR DI EMIS</th>
+          ${_buildDpuHeaderCell('URT', 0, tableSize, tableConfig, 'min-width:5mm;max-width:9mm;white-space:nowrap', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('INDK', 1, tableSize, tableConfig, 'min-width:7mm;max-width:14mm;white-space:nowrap', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('NOMOR', 2, tableSize, tableConfig, '', 'colspan="2"')}
+          ${_buildDpuHeaderCell('NIK', 4, tableSize, tableConfig, 'min-width:18mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('NAMA SISWA', 5, tableSize, tableConfig, 'min-width:20mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('L/P', 6, tableSize, tableConfig, 'min-width:5mm;max-width:9mm;white-space:nowrap', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('TEMPAT LAHIR', 7, tableSize, tableConfig, 'min-width:14mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('TANGGAL LAHIR', 8, tableSize, tableConfig, 'min-width:12mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('NAMA ORANG TUA', 9, tableSize, tableConfig, 'min-width:14mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('ASAL SEKOLAH', 10, tableSize, tableConfig, 'min-width:16mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('No. IJAZAH JENJANG SEBELUMNYA', 11, tableSize, tableConfig, 'min-width:18mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('TERDAFTAR DI EMIS', 12, tableSize, tableConfig, '', 'colspan="3"')}
         </tr>
         <tr>
-          <th style="min-width:16mm;font-size:${tableSize}pt;">NISN</th>
-          <th style="min-width:22mm;font-size:${tableSize}pt;">REGISTRASI</th>
-          <th style="min-width:6mm;max-width:12mm;white-space:nowrap;font-size:${tableSize}pt;">SUDAH</th>
-          <th style="min-width:6mm;max-width:12mm;white-space:nowrap;font-size:${tableSize}pt;">BELUM</th>
-          <th style="min-width:14mm;font-size:${tableSize}pt;">ALASAN JIKA BELUM</th>
+          ${_buildDpuHeaderCell('NISN', 2, tableSize, tableConfig, 'min-width:16mm')}
+          ${_buildDpuHeaderCell('REGISTRASI', 3, tableSize, tableConfig, 'min-width:22mm')}
+          ${_buildDpuHeaderCell('SUDAH', 12, tableSize, tableConfig, 'min-width:6mm;max-width:12mm;white-space:nowrap')}
+          ${_buildDpuHeaderCell('BELUM', 13, tableSize, tableConfig, 'min-width:6mm;max-width:12mm;white-space:nowrap')}
+          ${_buildDpuHeaderCell('ALASAN JIKA BELUM', 14, tableSize, tableConfig, 'min-width:14mm')}
         </tr>
       </thead>`;
 
@@ -412,6 +412,31 @@ const TableRenderer = (() => {
    * Jika user set custom width untuk kolom tertentu → gunakan itu.
    * Jika tidak → gunakan default width DPU.
    */
+  /* ── Build satu header DPU dengan style dari header.columns[colIdx] ── */
+  function _buildDpuHeaderCell(label, colIdx, tableSize, tableConfig, baseStyle = '', attrs = '') {
+    const colCfg = tableConfig?.header?.columns?.[colIdx];
+    const cfgStyle = colCfg ? _buildConfigStyle(colCfg, tableSize) : '';
+    const fallback = `font-size:${tableSize}pt;font-weight:bold`;
+    const style = _mergeInlineStyles(baseStyle, cfgStyle || fallback);
+    const attrText = attrs ? ` ${attrs}` : '';
+    return `<th${attrText} style="${style}">${Utils.escapeHtml(label)}</th>`;
+  }
+
+  /* Gabungkan style dasar dengan style config; property dari config menang */
+  function _mergeInlineStyles(baseStyle, overrideStyle) {
+    const baseParts = String(baseStyle || '').split(';').map(s => s.trim()).filter(Boolean);
+    const overrideParts = String(overrideStyle || '').split(';').map(s => s.trim()).filter(Boolean);
+    if (!overrideParts.length) return baseParts.join(';');
+
+    const overrideProps = new Set(
+      overrideParts.map(part => part.split(':')[0].trim()).filter(Boolean)
+    );
+    const filteredBase = baseParts.filter(
+      part => !overrideProps.has(part.split(':')[0].trim())
+    );
+    return [...filteredBase, ...overrideParts].join(';');
+  }
+
   function _buildDpuColgroup(tableConfig) {
     const columnWidths = tableConfig?.columnWidths;
     const byKey        = columnWidths?.byKey || {};
