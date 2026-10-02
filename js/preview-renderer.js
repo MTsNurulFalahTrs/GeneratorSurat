@@ -13,6 +13,7 @@ const PreviewRenderer = (() => {
   let _viewportEl  = null;   // #preview-viewport
   let _wrapperEl   = null;   // #preview-canvas-wrapper
   let _zoomLevelEl = null;   // #zoom-level-text
+  let _pageInfoEl  = null;    // #preview-page-info
   let _currentZoom = 1;
   let _renderToken = 0;       // membatalkan pagination async dari render lama
 
@@ -27,6 +28,7 @@ const PreviewRenderer = (() => {
     _viewportEl  = document.getElementById('preview-viewport');
     _wrapperEl   = document.getElementById('preview-canvas-wrapper');
     _zoomLevelEl = document.getElementById('zoom-level-text');
+    _pageInfoEl  = document.getElementById('preview-page-info');
 
     if (!_previewEl) { console.warn('[PreviewRenderer] Preview element tidak ditemukan.'); return; }
 
@@ -38,9 +40,13 @@ const PreviewRenderer = (() => {
     document.getElementById('btn-zoom-in')?.addEventListener('click',  () => _changeZoom(ZOOM_STEP));
     document.getElementById('btn-zoom-out')?.addEventListener('click', () => _changeZoom(-ZOOM_STEP));
     document.getElementById('btn-zoom-reset')?.addEventListener('click', () => {
-      _currentZoom = 1;
-      State.setZoom(1);
-      _applyZoom(1);
+      _setZoomMode('actual');
+    });
+    document.getElementById('btn-fit-page')?.addEventListener('click', () => {
+      _setZoomMode('fit-page');
+    });
+    document.getElementById('btn-fit-width')?.addEventListener('click', () => {
+      _setZoomMode('fit-width');
     });
 
     // Subscribe state events
@@ -115,6 +121,8 @@ const PreviewRenderer = (() => {
       _schedulePagination(renderToken, paperWidthPx, paperHeightPx);
       return;
     }
+
+    _updatePageInfo(1);
 
     requestAnimationFrame(() => {
       if (renderToken !== _renderToken) return;
@@ -492,6 +500,7 @@ const PreviewRenderer = (() => {
     }
 
     _previewEl.dataset.pageCount = String(pages.length);
+    _updatePageInfo(pages.length);
     _updateWrapperHeight(_currentZoom);
 
     requestAnimationFrame(() => {
@@ -727,6 +736,39 @@ const PreviewRenderer = (() => {
     _applyZoom(newZoom);
   }
 
+  function _setZoomMode(mode) {
+    const viewport = _viewportEl || document.getElementById('preview-viewport');
+    const preview = _previewEl;
+    if (!viewport || !preview) return;
+
+    const vpW = viewport.clientWidth || 800;
+    const vpH = viewport.clientHeight || 600;
+    const dimensions = State.getPaperDimensions();
+    const paperW = (dimensions.widthMm || 210) * PX_PER_MM;
+    const paperH = (dimensions.heightMm || 297) * PX_PER_MM;
+
+    let zoom = 1;
+    if (mode === 'fit-page') {
+      const scaleW = (vpW - 48) / paperW;
+      const scaleH = (vpH - 48) / paperH;
+      zoom = Math.min(scaleW, scaleH, 1);
+    } else if (mode === 'fit-width') {
+      zoom = Math.min((vpW - 48) / paperW, 1.5);
+    }
+
+    zoom = Utils.clamp(zoom, ZOOM_MIN, ZOOM_MAX);
+    State.setSettings({ preview: { zoom: mode } });
+    State.setZoom(zoom);
+  }
+
+  function _updatePageInfo(count) {
+    if (!_pageInfoEl) return;
+    const safeCount = Math.max(0, Number(count) || 0);
+    _pageInfoEl.textContent = safeCount > 0
+      ? (safeCount + ' halaman')
+      : 'Belum ada halaman';
+  }
+
   function _applyZoom(zoom) {
     if (_wrapperEl) {
       _wrapperEl.style.transform = `scale(${zoom})`;
@@ -753,6 +795,8 @@ const PreviewRenderer = (() => {
   function _showPlaceholder() {
     if (!_previewEl) return;
     _previewEl.classList.remove('orientation-landscape');
+    _previewEl.dataset.pageCount = '0';
+    _updatePageInfo(0);
     _previewEl.innerHTML = `
       <div class="preview-placeholder">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
@@ -787,6 +831,7 @@ const PreviewRenderer = (() => {
   return {
     init,
     render,
+    setZoomMode: _setZoomMode,
   };
 
 })();

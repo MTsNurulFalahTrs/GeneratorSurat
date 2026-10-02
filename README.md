@@ -30,7 +30,7 @@ Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesi
 - **Penyimpanan Lokal** otomatis dengan TTL 2 jam — data tidak hilang saat refresh, tetapi terhapus otomatis setelah 2 jam sejak penyimpanan terakhir
 - **100% Client-Side** — tidak ada server, tidak ada database, tidak ada data dikirim ke luar perangkat
 - **Extensible** — template baru dapat ditambahkan tanpa mengubah arsitektur inti
-- **Responsif** — dapat digunakan di desktop, tablet, dan smartphone
+- **Responsif** — editor dan preview beradaptasi pada desktop, tablet, dan smartphone
 
 ---
 
@@ -63,7 +63,8 @@ Tidak menggunakan React, Vue, Angular, Next.js, backend, database server, Fireba
 │   ├── components.css            # Komponen UI reusable (button, form, modal, toast, settings)
 │   ├── kop-editor.css            # Styling khusus editor KOP Surat
 │   ├── preview.css               # Area preview dan rendering dokumen surat
-│   └── print.css                 # @media print — hanya surat yang dicetak
+│   ├── print.css                 # @media print — hanya surat yang dicetak
+│   └── ui-modern.css              # Layer UI/UX modern, responsive, dan accessibility (screen-only)
 │
 ├── js/
 │   ├── utils.js                  # Helper functions (format tanggal, escapeHtml, dll)
@@ -759,7 +760,7 @@ State.resetSettings();                      // → emit 'settings:change' + 'set
 ## Catatan Pengembang
 
 ### Keterbatasan Saat Ini
-- Hanya mendukung ukuran kertas **A4**. Untuk ukuran lain (F4, Letter), perlu menambahkan CSS class baru di `preview.css` dan logika di `print.js`.
+- Engine dokumen menggunakan HTML/CSS browser sehingga detail hasil cetak dapat sedikit berbeda antar-browser/printer.
 - Ukuran gambar logo setelah kompresi diupayakan ≤ 2 MB. Logo dengan resolusi sangat tinggi akan dikompresi otomatis.
 - `localStorage` memiliki batas ~5–10 MB tergantung browser. Jika logo berukuran besar, total data bisa mendekati batas. Gunakan logo berformat PNG/SVG dengan resolusi wajar (maks 300×300 px).
 
@@ -771,13 +772,7 @@ State.resetSettings();                      // → emit 'settings:change' + 'set
 
 ### Menambahkan Ukuran Kertas Lain (F4/Folio)
 
-Di `preview.css`:
-```css
-.surat-preview.orientation-folio {
-  width: 215mm;
-  min-height: 330mm;
-}
-```
+Ukuran kertas A4, A5, F4/Folio, Letter, Legal, dan Custom sudah dihitung terpusat melalui `State.getPaperDimensions()`, sehingga renderer dan print tidak lagi bergantung pada class ukuran kertas khusus.
 
 Di template definition (`meta`):
 ```javascript

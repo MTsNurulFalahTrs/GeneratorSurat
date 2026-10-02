@@ -133,34 +133,12 @@ const App = (() => {
   function _showMobileWarning() {
     if (!_isMobileViewport()) return;
 
-    UI.showModal({
-      title: 'Perhatian: Tampilan Mobile',
-      body: `
-        <div class="mobile-warning">
-          <div class="mobile-warning__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <rect x="3" y="4" width="18" height="12" rx="2"/>
-              <path d="M8 20h8M12 16v4"/>
-            </svg>
-          </div>
-          <div class="mobile-warning__title">Silakan buka aplikasi di desktop</div>
-          <p class="mobile-warning__text">
-            Silakan buka di <strong>desktop (PC/Laptop)</strong> agar tampilan aplikasi lebih optimal.
-            Layar yang lebih besar akan memudahkan pengisian banyak data, pengaturan KOP dan tabel,
-            melihat preview surat, serta menyiapkan dokumen untuk dicetak.
-          </p>
-          <div class="mobile-warning__note">
-            <span aria-hidden="true">ⓘ</span>
-            <span>Anda tetap dapat melanjutkan di perangkat ini, tetapi beberapa bagian mungkin terasa lebih sempit.</span>
-          </div>
-        </div>`,
-      footer: [
-        {
-          label: 'Tetap Lanjutkan',
-          class: 'btn--primary',
-        },
-      ],
-    });
+    // Mobile tetap didukung; berikan konteks tanpa menghalangi pekerjaan pengguna.
+    UI.toast(
+      'Aplikasi tetap dapat digunakan di perangkat mobile. Untuk pengeditan data dan tabel yang sangat padat, layar yang lebih lebar akan lebih nyaman.',
+      'info',
+      5500
+    );
   }
 
   /* ── Handle template dipilih ── */
@@ -270,14 +248,24 @@ const App = (() => {
   /* ── On state change (auto-save indicator) ── */
   let _autoSaveTimer = null;
   function _onStateChange() {
-    // Debounced indicator: tampilkan tanda "belum tersimpan" setelah 1 detik idle
+    // Feedback persistence tetap non-blocking: pengguna diberi tahu bahwa
+    // perubahan belum tersimpan tanpa memicu penyimpanan otomatis.
     clearTimeout(_autoSaveTimer);
     _autoSaveTimer = setTimeout(() => {
-      if (State.isDirty()) {
-        const saveBtn = document.getElementById('btn-save');
-        if (saveBtn) saveBtn.title = 'Ada perubahan yang belum disimpan';
+      const saveBtn = document.getElementById('btn-save');
+      if (saveBtn) {
+        saveBtn.title = State.isDirty()
+          ? 'Ada perubahan yang belum disimpan'
+          : 'Simpan data ke penyimpanan lokal';
       }
-    }, 1000);
+
+      if (State.isDirty()) {
+        UI.markStorageDirty();
+      } else {
+        const meta = Storage.getMeta();
+        UI.updateStorageInfo(meta);
+      }
+    }, 250);
   }
 
   /* ── Fatal error fallback ── */

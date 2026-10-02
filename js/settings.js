@@ -40,6 +40,13 @@ const Settings = (() => {
     State.on('state:restore', () => { if (_initialized) _syncAllFromState(); });
     State.on('state:reset',   () => { if (_initialized) _syncAllFromState(); });
     State.on('settings:reset',() => { if (_initialized) _syncAllFromState(); });
+    State.on('settings:change', ({ settings }) => {
+      if (!_initialized || !settings?.preview) return;
+      const mode = typeof settings.preview.zoom === 'string' ? settings.preview.zoom : 'actual';
+      document.getElementById('zoom-mode-seg')
+        ?.querySelectorAll('.seg-btn')
+        .forEach(btn => btn.classList.toggle('active', btn.dataset.zoom === mode));
+    });
     State.on('settings:presetApplied', () => { if (_initialized) _syncAllFromState(); });
   }
 
@@ -926,10 +933,11 @@ const Settings = (() => {
     const preview  = document.getElementById('surat-preview');
     if (!viewport || !wrapper || !preview) return;
 
-    const vpW = viewport.clientWidth   || 800;
-    const vpH = viewport.clientHeight  || 600;
-    const paperW = preview.offsetWidth  || 794;
-    const paperH = preview.scrollHeight || 1123;
+    const vpW = viewport.clientWidth || 800;
+    const vpH = viewport.clientHeight || 600;
+    const dimensions = State.getPaperDimensions();
+    const paperW = (dimensions.widthMm || 210) * (96 / 25.4);
+    const paperH = (dimensions.heightMm || 297) * (96 / 25.4);
 
     let zoom = 1;
     if (mode === 'auto' || mode === 'fit-page') {
