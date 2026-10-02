@@ -610,7 +610,14 @@ const Settings = (() => {
       ?.querySelectorAll('.orient-btn')
       .forEach(btn => {
         btn.addEventListener('click', () => {
-          State.setSettings({ orientation: btn.dataset.orient, activePreset: 'custom' });
+          const orientation = btn.dataset.orient;
+          State.setSettings({ orientation, activePreset: 'custom' });
+
+          // Sinkronkan active state segera, tanpa menunggu rerender.
+          document.getElementById('orientation-btns')
+            ?.querySelectorAll('.orient-btn')
+            .forEach(b => b.classList.toggle('active', b.dataset.orient === orientation));
+
           _updatePaperInfo();
           _markPresetCustom();
         });
