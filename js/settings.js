@@ -40,6 +40,13 @@ const Settings = (() => {
     State.on('state:restore', () => { if (_initialized) _syncAllFromState(); });
     State.on('state:reset',   () => { if (_initialized) _syncAllFromState(); });
     State.on('settings:reset',() => { if (_initialized) _syncAllFromState(); });
+    State.on('settings:change', ({ settings }) => {
+      if (!_initialized || !settings?.preview) return;
+      const mode = typeof settings.preview.zoom === 'string' ? settings.preview.zoom : 'actual';
+      document.getElementById('zoom-mode-seg')
+        ?.querySelectorAll('.seg-btn')
+        .forEach(btn => btn.classList.toggle('active', btn.dataset.zoom === mode));
+    });
     State.on('settings:presetApplied', () => { if (_initialized) _syncAllFromState(); });
   }
 
