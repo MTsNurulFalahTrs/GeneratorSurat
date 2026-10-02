@@ -630,10 +630,17 @@ const PreviewRenderer = (() => {
             continue;
           }
 
-          // Baris tidak muat: kembalikan row, mulai halaman baru,
-          // kemudian masukkan row tersebut bersama header DPU yang terulang.
+          // Baris tidak muat. Baris-baris yang sudah berada di fragment
+          // tetap dipertahankan pada halaman sekarang; hanya candidate yang
+          // dipindahkan ke halaman baru bersama header DPU yang terulang.
           fragmentBody.removeChild(candidate);
-          current.content.removeChild(fragmentWrap);
+
+          // Jika bahkan baris pertama tidak muat, header tabel jangan dibiarkan
+          // sendirian di halaman sebelumnya. Pindahkan seluruh fragment ke
+          // halaman berikutnya.
+          if (fragmentBody.rows.length === 0) {
+            current.content.removeChild(fragmentWrap);
+          }
 
           current = createPage();
           startTableFragment();
