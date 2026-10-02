@@ -4,8 +4,7 @@
    remain owned by preview.css and print.css.
    ============================================================= */
 
-@media screen {
-  :root {
+:root {
     --color-primary: #2563eb;
     --color-primary-hover: #1d4ed8;
     --color-primary-light: #eff6ff;
@@ -594,7 +593,7 @@
   }
 
   /* Mobile / tablet */
-  @media (max-width: 980px) {
+  @media screen and (max-width: 980px) {
     .app-body {
       flex-direction: column;
     }
@@ -635,7 +634,7 @@
     }
   }
 
-  @media (max-width: 640px) {
+  @media screen and (max-width: 640px) {
     .app-header {
       min-height: 56px;
       height: auto;
@@ -735,7 +734,7 @@
     }
   }
 
-  @media (max-width: 420px) {
+  @media screen and (max-width: 420px) {
     .app-header__logo-icon {
       width: 26px;
       height: 26px;
@@ -763,4 +762,3 @@
       transition-duration: .001ms !important;
     }
   }
-}
