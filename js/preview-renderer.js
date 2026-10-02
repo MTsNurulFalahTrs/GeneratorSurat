@@ -569,17 +569,34 @@ const PreviewRenderer = (() => {
   function _isPageOverflowing(content) {
     if (!content || !content.children.length) return false;
 
-    // Jangan bergantung hanya pada scrollHeight. Pada kombinasi flex container,
-    // transform zoom, dan overflow:visible, nilai scrollHeight dapat tetap sama
-    // dengan clientHeight walaupun child sudah melewati batas halaman fisik.
+    /*
+     * Gunakan dua sinyal layout sekaligus.
+     *
+     * 1. scrollHeight/clientHeight tetap menjadi indikator utama karena
+     *    browser menghitung overflow vertikal aktual pada container.
+     * 2. Perbandingan bounding rect menjadi fallback untuk kasus overflow
+     *    yang terjadi melalui descendant dengan overflow/transform tertentu.
+     *
+     * DPU memiliki .doc-table-wrap dengan overflow-x:auto dan table-layout:fixed,
+     * sehingga bounding rect wrapper saja tidak selalu merepresentasikan tinggi
+     * tabel secara konsisten. Karena itu tabel di dalam wrapper juga diperiksa.
+     */
+    const scrollOverflow = content.scrollHeight > content.clientHeight + 0.5;
+
     const contentRect = content.getBoundingClientRect();
     const styles = getComputedStyle(content);
     const paddingBottom = parseFloat(styles.paddingBottom) || 0;
     const limitBottom = contentRect.bottom - paddingBottom;
     const lastChild = content.lastElementChild;
-    if (!lastChild) return false;
+    if (!lastChild) return scrollOverflow;
 
-    return lastChild.getBoundingClientRect().bottom > limitBottom + 0.5;
+    const measuredNode = lastChild.matches('.doc-table-wrap')
+      ? (lastChild.querySelector(':scope > table') || lastChild)
+      : lastChild;
+
+    const physicalOverflow = measuredNode.getBoundingClientRect().bottom > limitBottom + 0.5;
+
+    return scrollOverflow || physicalOverflow;
   }
 
   async function _appendTableWithPagination(tableWrap, current, pages, paperWidthPx, paperHeightPx, baseStyle, renderToken) {
