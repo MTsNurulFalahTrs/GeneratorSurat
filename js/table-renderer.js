@@ -64,13 +64,30 @@ const TableRenderer = (() => {
     const columnWidths = tableConfig?.columnWidths;
     const hasCustom    = TableConfigManager?.hasAnyCustomWidth(columnWidths) ?? false;
 
-    // <colgroup> hanya ada saat custom mode
-    const colgroupHtml = hasCustom
-      ? (TableConfigManager?.buildColGroupHtml(columns, columnWidths) ?? '')
-      : '';
+    // Tentukan apakah ada kolom (header atau body) dengan wrapText = true.
+    // Ini dibutuhkan untuk menentukan apakah tabel perlu mode "forced-wrap":
+    //   - table-layout: fixed + width: 100%
+    //   → memaksa browser mendistribusikan lebar dan melakukan wrapping.
+    // Tanpa ini, table-layout:auto + width:fit-content membuat tabel melebar
+    // bebas mengikuti konten dan wrapping tidak pernah terjadi.
+    const hasWrap = _hasAnyWrapText(tableConfig);
+
+    // <colgroup>:
+    //  - Ada saat custom width (user set width manual), ATAU
+    //  - Ada saat ada wrapText=true tanpa custom width → colgroup dengan
+    //    semua <col> tanpa width (auto-distribusi rata agar wrap bekerja)
+    let colgroupHtml = '';
+    if (hasCustom) {
+      colgroupHtml = TableConfigManager?.buildColGroupHtml(columns, columnWidths) ?? '';
+    } else if (hasWrap) {
+      // Colgroup tanpa width eksplisit: browser mendistribusikan rata.
+      // Diperlukan agar table-layout:fixed bisa bekerja dengan distribusi wajar.
+      colgroupHtml = `<colgroup>${columns.map(() => '<col>').join('')}</colgroup>`;
+    }
 
     // Table class + layout mode
-    const tableClass = _buildTableClass(opts, hasCustom);
+    // Prioritas: custom width > wrap text > fit-to-content
+    const tableClass = _buildTableClass(opts, hasCustom, hasWrap);
 
     // thead
     const theadHtml = opts.customHeader
@@ -80,9 +97,16 @@ const TableRenderer = (() => {
     const tbodyHtml = _buildBody(columns, rows, tableSize, opts.minRows, tableConfig);
 
     // Wrapper class
-    const wrapClass = opts.fitMode === 'full'
-      ? 'doc-table-wrap doc-table-wrap--full'
-      : 'doc-table-wrap';
+    let wrapClass;
+    if (opts.fitMode === 'full') {
+      wrapClass = 'doc-table-wrap doc-table-wrap--full';
+    } else if (hasWrap && !hasCustom) {
+      // Saat ada wrapText dan tidak ada custom width, wrapper harus full-width
+      // agar tabel punya constraint untuk wrap (tidak melebar bebas).
+      wrapClass = 'doc-table-wrap doc-table-wrap--forced';
+    } else {
+      wrapClass = 'doc-table-wrap';
+    }
 
     return `
       <div class="${wrapClass}">
@@ -237,15 +261,36 @@ const TableRenderer = (() => {
   }
 
   /* ── Build class tabel berdasarkan fitMode dan custom width ── */
-  function _buildTableClass(opts, hasCustomWidth = false) {
+  function _buildTableClass(opts, hasCustomWidth = false, hasWrap = false) {
     const classes = ['doc-table'];
     if (opts.tableClass) classes.push(opts.tableClass);
-    if (opts.fitMode === 'full' || hasCustomWidth) {
-      // Custom width membutuhkan table-layout:fixed + width:100%
+    if (opts.fitMode === 'full' || hasCustomWidth || hasWrap) {
+      // Custom width atau wrap text membutuhkan table-layout:fixed + width:100%
+      // agar browser mendistribusikan lebar dan memaksa wrapping terjadi.
       classes.push('doc-table--fixed');
     }
     if (opts.fitMode === 'compact') classes.push('doc-table--compact');
     return classes.join(' ');
+  }
+
+  /* ── Cek apakah ada kolom (header atau body) dengan wrapText = true ── */
+  function _hasAnyWrapText(tableConfig) {
+    if (!tableConfig) return false;
+    // Cek header columns
+    const headerCols = tableConfig.header?.columns;
+    if (headerCols) {
+      for (const col of Object.values(headerCols)) {
+        if (col.wrapText === true) return true;
+      }
+    }
+    // Cek body columns
+    const bodyCols = tableConfig.body?.columns;
+    if (bodyCols) {
+      for (const col of Object.values(bodyCols)) {
+        if (col.wrapText === true) return true;
+      }
+    }
+    return false;
   }
 
   /* ════════════════════════════════════════════════
