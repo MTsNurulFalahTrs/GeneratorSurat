@@ -92,40 +92,167 @@ const ExcelImport = (() => {
     const toolbar = document.createElement('div');
     toolbar.className = 'excel-import-toolbar';
     toolbar.innerHTML = `
-      <div class="excel-import-toolbar__info">
-        <span class="excel-import-toolbar__icon" aria-hidden="true">📊</span>
-        <div>
-          <div class="excel-import-toolbar__title">Import Data dari Excel</div>
-          <div class="excel-import-toolbar__desc">Isi data siswa secara massal menggunakan file Excel.</div>
+      <div class="excel-import-toolbar__head">
+        <div class="excel-import-toolbar__identity">
+          <span class="excel-import-toolbar__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M7 3h8l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/>
+              <path d="M15 3v5h5M8.5 12h7M8.5 16h7"/>
+            </svg>
+          </span>
+          <div>
+            <div class="excel-import-toolbar__title">Import Data Siswa</div>
+            <div class="excel-import-toolbar__desc">\${Utils.escapeHtml(cfg.title)} · input massal dari Excel</div>
+          </div>
+        </div>
+        <span class="excel-import-toolbar__badge">3 langkah mudah</span>
+      </div>
+
+      <div class="excel-import-toolbar__steps" aria-label="Alur import data">
+        <div class="excel-import-step">
+          <span class="excel-import-step__number">1</span>
+          <span><strong>Unduh template</strong><small>Gunakan format yang tersedia.</small></span>
+        </div>
+        <span class="excel-import-step__line" aria-hidden="true"></span>
+        <div class="excel-import-step">
+          <span class="excel-import-step__number">2</span>
+          <span><strong>Isi data siswa</strong><small>Jangan ubah nama kolom.</small></span>
+        </div>
+        <span class="excel-import-step__line" aria-hidden="true"></span>
+        <div class="excel-import-step">
+          <span class="excel-import-step__number">3</span>
+          <span><strong>Unggah &amp; import</strong><small>Data masuk sekaligus.</small></span>
         </div>
       </div>
+
+      <div class="excel-import-toolbar__dropzone" role="button" tabindex="0" aria-label="Pilih atau seret file Excel ke sini">
+        <span class="excel-import-toolbar__dropzone-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 16V4M8 8l4-4 4 4"/>
+            <path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>
+          </svg>
+        </span>
+        <span class="excel-import-toolbar__dropzone-copy">
+          <strong>Seret file Excel ke sini</strong>
+          <span>atau klik untuk memilih file dari perangkat</span>
+        </span>
+        <span class="excel-import-toolbar__formats">.XLSX · .XLS · .CSV</span>
+      </div>
+
+      <div class="excel-import-toolbar__file hidden" aria-live="polite">
+        <span class="excel-import-toolbar__file-icon" aria-hidden="true">✓</span>
+        <span class="excel-import-toolbar__file-meta">
+          <strong class="excel-import-toolbar__file-name">Belum ada file</strong>
+          <small class="excel-import-toolbar__file-size"></small>
+        </span>
+        <button type="button" class="btn-icon excel-import-clear" title="Ganti file" aria-label="Ganti file">↻</button>
+      </div>
+
       <div class="excel-import-toolbar__actions">
         <button type="button" class="btn btn--sm btn--secondary excel-template-btn">
-          <span aria-hidden="true">⬇️</span> Download Template
+          <span aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>
+            </svg>
+          </span>
+          Download Template
         </button>
         <button type="button" class="btn btn--sm btn--primary excel-import-btn">
-          <span aria-hidden="true">📥</span> Import Excel
+          <span aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12 15V3M8 7l4-4 4 4M5 13v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>
+            </svg>
+          </span>
+          Pilih File Excel
         </button>
         <input type="file" class="excel-file-input" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden />
+      </div>
+
+      <div class="excel-import-toolbar__hint">
+        <span aria-hidden="true">ⓘ</span>
+        <span>Pastikan header kolom tetap sesuai template agar data terbaca dengan benar.</span>
       </div>`;
 
-    toolbar.querySelector('.excel-template-btn').addEventListener('click', () => downloadTemplate(templateId));
-    toolbar.querySelector('.excel-import-btn').addEventListener('click', () => {
+    const fileInput = toolbar.querySelector('.excel-file-input');
+    const dropzone = toolbar.querySelector('.excel-import-toolbar__dropzone');
+    const fileBox = toolbar.querySelector('.excel-import-toolbar__file');
+    const fileName = toolbar.querySelector('.excel-import-toolbar__file-name');
+    const fileSize = toolbar.querySelector('.excel-import-toolbar__file-size');
+
+    const formatSize = (bytes) => {
+      if (!Number.isFinite(bytes) || bytes < 1024) return `\${bytes || 0} B`;
+      if (bytes < 1024 * 1024) return `\${(bytes / 1024).toFixed(1)} KB`;
+      return `\${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const showSelectedFile = (file) => {
+      if (!file) return;
+      fileName.textContent = file.name;
+      fileSize.textContent = formatSize(file.size);
+      fileBox.classList.remove('hidden');
+      dropzone.classList.add('has-file');
+    };
+
+    const selectFile = (file) => {
+      if (!file) return;
+      showSelectedFile(file);
+      importFile(file, templateId, sectionId);
+    };
+
+    dropzone.addEventListener('click', () => {
       if (typeof window.XLSX === 'undefined') {
         UI.toast('Fitur Excel belum siap. Pastikan koneksi internet tersedia lalu muat ulang halaman.', 'error');
         return;
       }
-      toolbar.querySelector('.excel-file-input').click();
+      fileInput.click();
     });
-    toolbar.querySelector('.excel-file-input').addEventListener('change', (e) => {
+
+    dropzone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        dropzone.click();
+      }
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('is-dragging');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('is-dragging');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      const file = e.dataTransfer?.files?.[0];
+      if (file) selectFile(file);
+    });
+
+    toolbar.querySelector('.excel-import-btn').addEventListener('click', () => dropzone.click());
+    toolbar.querySelector('.excel-template-btn').addEventListener('click', () => downloadTemplate(templateId));
+
+    toolbar.querySelector('.excel-import-clear').addEventListener('click', () => {
+      fileInput.value = '';
+      fileBox.classList.add('hidden');
+      dropzone.classList.remove('has-file');
+      dropzone.focus();
+    });
+
+    fileInput.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
-      if (file) importFile(file, templateId, sectionId);
+      if (file) selectFile(file);
       e.target.value = '';
     });
 
     return toolbar;
   }
-
   function downloadTemplate(templateId) {
     const cfg = CONFIGS[templateId];
     if (!cfg) return;
