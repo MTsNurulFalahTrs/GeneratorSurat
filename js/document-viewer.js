@@ -11,7 +11,6 @@ const DocumentViewer = (() => {
   let _viewport = null;
   let _preview = null;
   let _initialized = false;
-  let _observer = null;
   let _scrollRaf = null;
   let _fullscreenFallback = false;
 
@@ -28,11 +27,6 @@ const DocumentViewer = (() => {
     _bindFullscreen();
     _bindKeyboard();
     _bindScrollTracking();
-
-    _observer = new MutationObserver(() => {
-      requestAnimationFrame(_sync);
-    });
-    _observer.observe(_preview, { childList: true, subtree: true });
 
     State.on('template:change', () => requestAnimationFrame(_sync));
     State.on('state:reset', () => requestAnimationFrame(_sync));
@@ -132,6 +126,14 @@ const DocumentViewer = (() => {
 
   function _getPages() {
     const pages = Array.from(_preview.querySelectorAll(':scope > .surat-page'));
+
+    // Pada dokumen multi-halaman, jangan pernah menganggap .doc-content
+    // sementara sebagai satu halaman. Renderer akan memberi sinyal refresh
+    // setelah semua .surat-page selesai dibentuk.
+    if (_preview.classList.contains('surat-preview--document')) {
+      return pages;
+    }
+
     if (pages.length) return pages;
 
     // DPU menggunakan satu halaman langsung di #surat-preview.
@@ -241,6 +243,11 @@ const DocumentViewer = (() => {
     label.title = tpl?.meta?.name || 'Belum ada dokumen';
   }
 
+  function refresh() {
+    if (!_initialized) return;
+    requestAnimationFrame(_sync);
+  }
+
   function _sync() {
     if (!_initialized) return;
     _syncCurrentPage();
@@ -306,6 +313,7 @@ const DocumentViewer = (() => {
 
   return {
     init,
+    refresh,
     goToPage: _goToPage,
   };
 
