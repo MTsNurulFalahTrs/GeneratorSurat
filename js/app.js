@@ -54,6 +54,7 @@ const App = (() => {
     /* 4. Init UI components */
     UI.initTabs();
     UI.initPanelResizer();
+    UI.initMobilePreviewToggle();
 
     // Beri peringatan saat aplikasi dibuka pada viewport mobile.
     _showMobileWarning();
