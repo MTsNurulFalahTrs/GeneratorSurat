@@ -94,11 +94,11 @@ const PreviewRenderer = (() => {
     const margin       = State.getMarginMm();
     const typo         = State.getTypography();
     const isLandscape  = s.orientation === 'landscape';
-    const isMultiPage  = tpl?.TEMPLATE_ID === 'mutasi-masuk' || tpl?.TEMPLATE_ID === 'siswa-baru';
+    const isMultiPage  = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(tpl?.TEMPLATE_ID);
     const renderToken  = ++_renderToken;
 
-    // Pada mode multi-page, orientasi/ukuran fisik dipindahkan ke setiap
-    // .surat-page; outer #surat-preview menjadi container dokumen.
+    // Pada mode multi-page, termasuk DPU, orientasi/ukuran fisik dipindahkan
+    // ke setiap .surat-page; outer #surat-preview menjadi container dokumen.
     _previewEl.classList.toggle('surat-preview--document', isMultiPage);
     _previewEl.classList.toggle('orientation-landscape', isLandscape && !isMultiPage);
 
