@@ -68,6 +68,10 @@ const PreviewRenderer = (() => {
       _currentZoom = zoom;
       _applyZoom(zoom);
     });
+
+    // State restore terjadi sebelum PreviewRenderer diinisialisasi pada boot.
+    // Render awal di sini memastikan data yang sudah direstore langsung tampil.
+    _renderCurrent();
   }
 
   /* ── Render preview sesuai template aktif ── */
@@ -1204,8 +1208,20 @@ const PreviewRenderer = (() => {
   /* ── Placeholder ── */
   function _showPlaceholder() {
     if (!_previewEl) return;
-    _previewEl.classList.remove('orientation-landscape');
+
+    // Batalkan pagination/render async yang masih berjalan sebelum placeholder
+    // dipasang, agar hasil render lama tidak muncul kembali.
+    _renderToken += 1;
+    _previewEl.classList.remove('surat-preview--document', 'orientation-landscape');
     _previewEl.dataset.pageCount = '0';
+    _previewEl.style.width = '';
+    _previewEl.style.minHeight = '';
+    if (_wrapperEl) {
+      _wrapperEl.style.width = '';
+      _wrapperEl.style.height = '';
+      _wrapperEl.style.transform = `scale(${_currentZoom})`;
+    }
+
     _updatePageInfo(0);
     _previewEl.innerHTML = `
       <div class="preview-placeholder">
