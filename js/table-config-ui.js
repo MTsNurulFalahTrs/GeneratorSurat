@@ -45,11 +45,33 @@ const TableConfigUI = (() => {
       render(templateId);
     });
 
-    const debouncedRender = Utils.debounce(() => {
-      if (_templateId) render(_templateId);
-    }, 50);
-    State.on('table:change', debouncedRender);
-    State.on('table:reset',  debouncedRender);
+    /*
+     * PENTING: Accordion TIDAK subscribe ke 'table:change' / 'table:reset'.
+     *
+     * Alasan: setiap kali Apply-to-All atau update kolom dipanggil,
+     * State emit 'table:change' → dulu accordion melakukan full re-render
+     * (innerHTML = ...) → _bindEvents() terpasang ulang di atas listener
+     * yang masih ada → duplicate listener → setiap klik section toggle
+     * dipanggil 2x (buka-tutup-buka) → accordion tampak terkunci.
+     *
+     * PreviewRenderer yang subscribe 'table:change' dan memperbarui preview.
+     * Accordion sudah menampilkan state yang benar karena dirender dari
+     * getResolvedConfig() saat template dipilih — perubahan tabel tidak
+     * perlu memperbarui HTML accordion. Hanya nilai kolom (font size, wrap,
+     * dll.) yang berubah di dalam state, tapi UI toggle sudah merespons
+     * lewat data-action tanpa membutuhkan re-render DOM.
+     *
+     * Untuk sinkronisasi visual setelah Apply-to-All (misal Bold, Wrap, Align
+     * semua kolom berubah sekaligus), kita gunakan _syncControls() yang
+     * memperbarui elemen in-place tanpa menyentuh innerHTML accordion utama.
+     * Ini aman karena tidak mengganti DOM struktur accordion → tidak ada
+     * duplicate listener → tidak ada accordion lock.
+     */
+    const debouncedSync = Utils.debounce(() => {
+      if (_templateId) _syncControls(_templateId);
+    }, 60);
+    State.on('table:change', debouncedSync);
+    State.on('table:reset',  debouncedSync);
 
     State.on('state:restore', () => {
       _templateId = State.getActiveTemplate();
@@ -353,8 +375,11 @@ const TableConfigUI = (() => {
     const isBold    = colCfg.bold   === true;
     const isItalic  = colCfg.italic === true;
     const fontSize  = colCfg.fontSize != null ? colCfg.fontSize : '';
-    // wrapText: null/undefined = mengikuti default, true = wrap, false = nowrap
-    const isWrap    = colCfg.wrapText !== false; // default true (wrap)
+    // isWrap: gunakan nilai eksplisit dari config.
+    // Jika undefined/null (state lama sebelum fitur wrapText), fallback ke
+    // default yang sesuai section: header=false (nowrap), body=true (wrap).
+    const wrapDefault = (section === 'header') ? false : true;
+    const isWrap    = colCfg.wrapText != null ? colCfg.wrapText !== false : wrapDefault;
 
     const dataAttrs = [
       `data-template-id="${_esc(templateId)}"`,
@@ -809,6 +834,131 @@ const TableConfigUI = (() => {
         value: clamped,
         unit,
       });
+    }
+  }
+
+  /* ════════════════════════════════════════════════
+     SYNC CONTROLS — in-place DOM update setelah Apply-to-All
+     Memperbarui visual kontrol (tombol aktif, nilai input) tanpa
+     mengganti innerHTML accordion → tidak ada duplicate listener →
+     accordion tetap bisa expand/collapse.
+  ════════════════════════════════════════════════ */
+  function _syncControls(templateId) {
+    if (!_mountEl || !templateId) return;
+
+    const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
+    tableDefs.forEach(tableDef => {
+      const tableId     = tableDef.id;
+      const resolvedCfg = TableConfigManager.getResolvedConfig(templateId, tableId);
+
+      // ── Sync Header + Body section ──
+      ['header', 'body'].forEach(section => {
+        const colsCfg = resolvedCfg[section]?.columns || {};
+        tableDef.columns.forEach((col, idx) => {
+          const colCfg = colsCfg[idx] || {};
+          _syncColCard(tableId, section, idx, col, colCfg);
+        });
+      });
+
+      // ── Sync total % indicator di Lebar Kolom ──
+      _syncWidthTotal(tableId, resolvedCfg.columnWidths);
+    });
+  }
+
+  /**
+   * Sync satu kolom card secara in-place.
+   * Hanya mengubah properti individual, tidak menyentuh innerHTML parent.
+   */
+  function _syncColCard(tableId, section, colIdx, colDef, colCfg) {
+    if (!_mountEl) return;
+
+    // Query card berdasarkan data attributes.
+    // Gunakan filter manual agar tidak bergantung pada CSS.escape untuk tableId.
+    const allCards = _mountEl.querySelectorAll(
+      `.tbl-cfg__col-card[data-section="${section}"][data-col-idx="${colIdx}"]`
+    );
+    // Filter ke tableId yang tepat secara string exact
+    const card = Array.from(allCards).find(el => el.dataset.tableId === tableId);
+    if (!card) return;
+
+    // ── Horizontal alignment buttons ──
+    const hAlign = colCfg.horizontalAlign || 'center';
+    card.querySelectorAll('[data-action="h-align"]').forEach(btn => {
+      const isActive = btn.dataset.value === hAlign;
+      btn.classList.toggle('is-active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+
+    // ── Bold button ──
+    const boldBtn = card.querySelector('[data-action="bold"]');
+    if (boldBtn) {
+      const isBold = colCfg.bold === true;
+      boldBtn.classList.toggle('active', isBold);
+      boldBtn.setAttribute('aria-pressed', String(isBold));
+      boldBtn.dataset.value = isBold ? 'false' : 'true';
+    }
+
+    // ── Italic button ──
+    const italicBtn = card.querySelector('[data-action="italic"]');
+    if (italicBtn) {
+      const isItalic = colCfg.italic === true;
+      italicBtn.classList.toggle('active', isItalic);
+      italicBtn.setAttribute('aria-pressed', String(isItalic));
+      italicBtn.dataset.value = isItalic ? 'false' : 'true';
+    }
+
+    // ── Wrap Text buttons ──
+    const wrapDefault = (section === 'header') ? false : true;
+    const isWrap      = colCfg.wrapText != null ? colCfg.wrapText !== false : wrapDefault;
+    card.querySelectorAll('[data-action="wrap-text"]').forEach(btn => {
+      const btnIsWrap = btn.dataset.value === 'true';
+      const isActive  = (btnIsWrap === isWrap);
+      btn.classList.toggle('is-active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+
+    // ── Font size input ──
+    const fsInput = card.querySelector('[data-action="font-size"]');
+    if (fsInput) {
+      const fs = colCfg.fontSize != null ? colCfg.fontSize : '';
+      if (fsInput.value !== String(fs)) fsInput.value = fs;
+    }
+
+    // ── Vertical alignment select ──
+    const vAlignSel = card.querySelector('[data-action="v-align"]');
+    if (vAlignSel) {
+      const vAlign = colCfg.verticalAlign || 'middle';
+      if (vAlignSel.value !== vAlign) vAlignSel.value = vAlign;
+    }
+  }
+
+  /**
+   * Sync total % indicator di section Lebar Kolom.
+   */
+  function _syncWidthTotal(tableId, columnWidths) {
+    if (!_mountEl) return;
+    // sectionKey mengikuti format yang sama dengan _buildWidthPanel: `${tableId}-width`
+    const sectionKey = `${tableId}-width`;
+    const toggleBtn  = _mountEl.querySelector(
+      `.tbl-cfg__section-toggle[data-section-key="${sectionKey}"]`
+    );
+    if (!toggleBtn) return;
+
+    const totalPct = TableConfigManager.getTotalWidthPercent(columnWidths);
+    let totalSpan  = toggleBtn.querySelector('.tbl-cfg__width-total');
+
+    if (totalPct !== null) {
+      if (!totalSpan) {
+        totalSpan = document.createElement('span');
+        totalSpan.title = 'Total lebar kolom (mode %)';
+        const chevron = toggleBtn.querySelector('.tbl-cfg__section-chevron');
+        if (chevron) toggleBtn.insertBefore(totalSpan, chevron);
+        else toggleBtn.appendChild(totalSpan);
+      }
+      totalSpan.className   = `tbl-cfg__width-total${totalPct > 100 ? ' tbl-cfg__width-total--over' : ''}`;
+      totalSpan.textContent = `${totalPct}%`;
+    } else {
+      totalSpan?.remove();
     }
   }
 
