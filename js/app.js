@@ -75,22 +75,27 @@ const App = (() => {
     /* 8. Init Preview Renderer */
     PreviewRenderer.init();
 
-    /* 9. Init Settings */
+    /* 9. Init Document Viewer */
+    if (typeof DocumentViewer !== 'undefined') {
+      DocumentViewer.init();
+    }
+
+    /* 10. Init Settings */
     if (typeof Settings !== 'undefined') {
       Settings.init();
     } else {
       console.warn('[App] Settings module tidak tersedia.');
     }
 
-    /* 10. Init UX workflow controller */
+    /* 11. Init UX workflow controller */
     if (typeof Workflow !== "undefined") {
       Workflow.init();
     }
 
-    /* 11. Bind header action buttons */
+    /* 12. Bind header action buttons */
     _bindHeaderButtons();
 
-    /* 11. Update storage info display */
+    /* 13. Update storage info display */
     if (wasRestored) {
       const meta = Storage.getMeta();
       UI.updateStorageInfo(meta);
@@ -98,7 +103,7 @@ const App = (() => {
     }
     UI.startStorageInfoRefresh();
 
-    /* 12. Jika template sudah terpilih (restore), render form dan switch ke tab form */
+    /* 14. Jika template sudah terpilih (restore), render form dan switch ke tab form */
     if (wasRestored && State.getActiveTemplate()) {
       const activeId = State.getActiveTemplate();
 
@@ -117,10 +122,10 @@ const App = (() => {
       UI.toast('Data sebelumnya berhasil dimuat kembali.', 'success');
     }
 
-    /* 13. Subscribe state changes untuk auto-save peringatan */
+    /* 15. Subscribe state changes untuk auto-save peringatan */
     State.on('state:change', _onStateChange);
 
-    /* 14. Warn sebelum user menutup halaman kalau ada data belum disimpan */
+    /* 16. Warn sebelum user menutup halaman kalau ada data belum disimpan */
     window.addEventListener('beforeunload', (e) => {
       if (State.isDirty()) {
         e.preventDefault();
