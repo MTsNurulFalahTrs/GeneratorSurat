@@ -1253,11 +1253,46 @@ const PreviewRenderer = (() => {
     return Utils.escapeHtml(String(v ?? ''));
   }
 
+  async function waitForReady(maxFrames = 90) {
+    if (!_previewEl) return;
+
+    /*
+     * Critical action (mis. Print) harus melihat DOM setelah render terbaru.
+     * Frame-based waiting mengikuti font/image/layout browser, bukan timeout
+     * tetap yang bisa terlalu cepat atau terlalu lama.
+     */
+    let frames = 0;
+    while (frames < maxFrames) {
+      frames += 1;
+
+      const templateId = State.getActiveTemplate();
+      if (!templateId) return;
+
+      const isMultiPage = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(templateId);
+      if (!isMultiPage) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        return;
+      }
+
+      if (
+        _previewEl.classList.contains('surat-preview--document') &&
+        _previewEl.querySelector(':scope > .surat-page') &&
+        Number(_previewEl.dataset.pageCount || 0) > 0
+      ) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        return;
+      }
+
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+  }
+
   /* ── Public API ── */
   return {
     init,
     render,
     setZoomMode: _setZoomMode,
+    waitForReady,
   };
 
 })();
