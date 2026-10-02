@@ -452,8 +452,50 @@ const Settings = (() => {
         </div>
       </div>`;
 
+    _bindSettingsAccordions();
     _bindAll();
     _syncAllFromState();
+  }
+
+
+  /* ── Settings accordion ── */
+  function _bindSettingsAccordions() {
+    if (!_rootEl) return;
+
+    _rootEl.querySelectorAll('.settings-card').forEach((card, index) => {
+      const header = card.querySelector('.settings-card__header');
+      const body   = card.querySelector('.settings-card__body');
+      if (!header || !body) return;
+
+      const bodyId = body.id || `settings-section-[object Object]1-body`;
+      body.id = bodyId;
+
+      header.setAttribute('role', 'button');
+      header.setAttribute('tabindex', '0');
+      header.setAttribute('aria-controls', bodyId);
+
+      if (!header.hasAttribute('aria-expanded')) {
+        header.setAttribute('aria-expanded', 'true');
+      }
+
+      const toggle = () => {
+        const willOpen = header.getAttribute('aria-expanded') !== 'true';
+        header.setAttribute('aria-expanded', String(willOpen));
+        card.classList.toggle('is-collapsed', !willOpen);
+      };
+
+      header.addEventListener('click', toggle);
+      header.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        toggle();
+      });
+
+      card.classList.toggle(
+        'is-collapsed',
+        header.getAttribute('aria-expanded') !== 'true'
+      );
+    });
   }
 
   /* ═══════════════════════════════════════════════════════════
