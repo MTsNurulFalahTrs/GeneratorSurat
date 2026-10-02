@@ -612,6 +612,29 @@ const TableConfigUI = (() => {
               unit:  defUnit,
             });
           }
+          // Immediate visual feedback: jangan tunggu debounce 60ms.
+          // Update tombol dan input langsung dari DOM row yang diklik.
+          const row = btn.closest('.tbl-cfg__width-row');
+          if (row) {
+            const isNowCustom = value === TableConfigManager.WIDTH_MODE_CUSTOM;
+            // Toggle is-active pada semua mode buttons di row ini
+            row.querySelectorAll('[data-action="width-mode"]').forEach(b => {
+              const bIsCustom = b.dataset.value === TableConfigManager.WIDTH_MODE_CUSTOM;
+              b.classList.toggle('is-active', bIsCustom === isNowCustom);
+              b.setAttribute('aria-pressed', String(bIsCustom === isNowCustom));
+            });
+            // Enable/disable input wrap
+            const inputWrap = row.querySelector('.tbl-cfg__width-input-wrap');
+            if (inputWrap) inputWrap.classList.toggle('is-disabled', !isNowCustom);
+            // Enable/disable input dan select
+            const valInput = row.querySelector('[data-action="col-width-value"]');
+            if (valInput) {
+              valInput.disabled = !isNowCustom;
+              if (!isNowCustom) valInput.value = '';
+            }
+            const unitSel = row.querySelector('[data-action="col-width-unit"]');
+            if (unitSel) unitSel.disabled = !isNowCustom;
+          }
         }
         break;
       }
@@ -840,7 +863,7 @@ const TableConfigUI = (() => {
       const tableId     = tableDef.id;
       const resolvedCfg = TableConfigManager.getResolvedConfig(templateId, tableId);
 
-      // ── Sync Header + Body section ──
+      // ── Sync Header + Body section (styling teks per kolom) ──
       ['header', 'body'].forEach(section => {
         const colsCfg = resolvedCfg[section]?.columns || {};
         tableDef.columns.forEach((col, idx) => {
@@ -849,7 +872,10 @@ const TableConfigUI = (() => {
         });
       });
 
-      // ── Sync total % indicator di Lebar Kolom ──
+      // ── Sync Lebar Kolom rows (tombol Auto/Manual + input + unit) ──
+      _syncWidthRows(tableId, resolvedCfg.columnWidths, tableDef.columns);
+
+      // ── Sync total % indicator di header section Lebar Kolom ──
       _syncWidthTotal(tableId, resolvedCfg.columnWidths);
     });
   }
@@ -949,6 +975,69 @@ const TableConfigUI = (() => {
     } else {
       totalSpan?.remove();
     }
+  }
+
+  /**
+   * Sync baris lebar kolom (tombol Auto/Manual, enable/disable input, nilai input).
+   * Dipanggil dari _syncControls saat table:change emit.
+   *
+   * Ini adalah bagian yang sebelumnya hilang: tanpa fungsi ini,
+   * setelah user klik Auto/Manual, tombol tidak berubah visual
+   * meski state sudah berubah — menyebabkan user mengira klik gagal.
+   */
+  function _syncWidthRows(tableId, columnWidths, columns) {
+    if (!_mountEl || !columns) return;
+    const byKey = columnWidths?.byKey || {};
+
+    columns.forEach((col, idx) => {
+      const colKey = col.key || `col-${idx}`;
+      const w      = byKey[colKey] || { mode: TableConfigManager.WIDTH_MODE_AUTO };
+      const isCustom = w.mode === TableConfigManager.WIDTH_MODE_CUSTOM;
+
+      // Cari row berdasarkan data-col-key dan data-table-id
+      const allRows = _mountEl.querySelectorAll(
+        `.tbl-cfg__width-row[data-col-key]`
+      );
+      const row = Array.from(allRows).find(
+        el => el.dataset.colKey === colKey && el.dataset.tableId === tableId
+      );
+      if (!row) return;
+
+      // ── Sync tombol Auto/Manual ──
+      row.querySelectorAll('[data-action="width-mode"]').forEach(btn => {
+        const btnIsCustom = btn.dataset.value === TableConfigManager.WIDTH_MODE_CUSTOM;
+        const isActive    = (btnIsCustom === isCustom);
+        btn.classList.toggle('is-active', isActive);
+        btn.setAttribute('aria-pressed', String(isActive));
+      });
+
+      // ── Sync input wrapper (is-disabled class) ──
+      const inputWrap = row.querySelector('.tbl-cfg__width-input-wrap');
+      if (inputWrap) {
+        inputWrap.classList.toggle('is-disabled', !isCustom);
+      }
+
+      // ── Sync input value dan disabled attr ──
+      const valInput = row.querySelector('[data-action="col-width-value"]');
+      if (valInput) {
+        valInput.disabled = !isCustom;
+        if (isCustom && w.value != null) {
+          // Hanya update jika berbeda untuk menghindari interrupt user saat mengetik
+          const newVal = String(w.value);
+          if (valInput.value !== newVal) valInput.value = newVal;
+        } else if (!isCustom) {
+          valInput.value = '';
+        }
+      }
+
+      // ── Sync unit select dan disabled attr ──
+      const unitSel = row.querySelector('[data-action="col-width-unit"]');
+      if (unitSel) {
+        unitSel.disabled = !isCustom;
+        const curUnit = w.unit || TableConfigManager.WIDTH_UNIT_PCT;
+        if (unitSel.value !== curUnit) unitSel.value = curUnit;
+      }
+    });
   }
 
   /* ════════════════════════════════════════════════
