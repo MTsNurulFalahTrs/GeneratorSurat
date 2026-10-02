@@ -64,29 +64,19 @@ const TableRenderer = (() => {
     const columnWidths = tableConfig?.columnWidths;
     const hasCustom    = TableConfigManager?.hasAnyCustomWidth(columnWidths) ?? false;
 
-    // Tentukan apakah ada kolom (header atau body) dengan wrapText = true.
-    // Ini dibutuhkan untuk menentukan apakah tabel perlu mode "forced-wrap":
-    //   - table-layout: fixed + width: 100%
-    //   → memaksa browser mendistribusikan lebar dan melakukan wrapping.
-    // Tanpa ini, table-layout:auto + width:fit-content membuat tabel melebar
-    // bebas mengikuti konten dan wrapping tidak pernah terjadi.
+    // Wrap Text hanya thay đổi perilaku teks di sel. Layout tabel tetap otomatis
+    // kecuali user memilih lebar manual atau mode full-width.
     const hasWrap = _hasAnyWrapText(tableConfig);
 
-    // <colgroup>:
-    //  - Ada saat custom width (user set width manual), ATAU
-    //  - Ada saat ada wrapText=true tanpa custom width → colgroup dengan
-    //    semua <col> tanpa width (auto-distribusi rata agar wrap bekerja)
+    // <colgroup> hanya diperlukan saat user mengatur lebar kolom manual.
     let colgroupHtml = '';
     if (hasCustom) {
       colgroupHtml = TableConfigManager?.buildColGroupHtml(columns, columnWidths) ?? '';
-    } else if (hasWrap) {
-      // Colgroup tanpa width eksplisit: browser mendistribusikan rata.
-      // Diperlukan agar table-layout:fixed bisa bekerja dengan distribusi wajar.
-      colgroupHtml = `<colgroup>${columns.map(() => '<col>').join('')}</colgroup>`;
     }
 
-    // Table class + layout mode
-    // Prioritas: custom width > wrap text > fit-to-content
+    // Layout:
+    //  - custom width / full → fixed
+    //  - wrap-only / auto → automatic intrinsic layout
     const tableClass = _buildTableClass(opts, hasCustom, hasWrap);
 
     // thead
@@ -101,9 +91,10 @@ const TableRenderer = (() => {
     if (opts.fitMode === 'full') {
       wrapClass = 'doc-table-wrap doc-table-wrap--full';
     } else if (hasWrap && !hasCustom) {
-      // Saat ada wrapText dan tidak ada custom width, wrapper harus full-width
-      // agar tabel punya constraint untuk wrap (tidak melebar bebas).
-      wrapClass = 'doc-table-wrap doc-table-wrap--forced';
+      // Beri constraint lebar pada area konten, tetapi biarkan tabel memakai
+      // automatic layout. Dengan ini Wrap Text tidak mengubah layout menjadi
+      // fixed; browser tetap menghitung lebar berdasarkan konten.
+      wrapClass = 'doc-table-wrap doc-table-wrap--wrap';
     } else {
       wrapClass = 'doc-table-wrap';
     }
@@ -272,10 +263,11 @@ const TableRenderer = (() => {
   function _buildTableClass(opts, hasCustomWidth = false, hasWrap = false) {
     const classes = ['doc-table'];
     if (opts.tableClass) classes.push(opts.tableClass);
-    if (opts.fitMode === 'full' || hasCustomWidth || hasWrap) {
-      // Custom width atau wrap text membutuhkan table-layout:fixed + width:100%
-      // agar browser mendistribusikan lebar dan memaksa wrapping terjadi.
+    if (opts.fitMode === 'full' || hasCustomWidth) {
       classes.push('doc-table--fixed');
+    }
+    if (hasWrap) {
+      classes.push('doc-table--wrap');
     }
     if (opts.fitMode === 'compact') classes.push('doc-table--compact');
     return classes.join(' ');
