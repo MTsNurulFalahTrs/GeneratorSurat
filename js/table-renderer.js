@@ -121,12 +121,15 @@ const TableRenderer = (() => {
 
   /* ── Build tbody ── */
   function _buildBody(columns, rows, tableSize, minRows, tableConfig) {
-    const dataRows = rows.map(row => _buildRow(columns, row, tableSize, tableConfig));
+    const dataRows = rows.map((row, idx) => _buildRow(columns, row, tableSize, tableConfig, idx + 1));
 
     const emptyCount = Math.max(0, minRows - rows.length);
-    const emptyRows  = Array.from({ length: emptyCount }, () => {
-      const emptyBodyStyle = `background-color:${_getSectionBackground(tableConfig, 'body')}`;
-      const cells = columns.map(() => `<td style="${emptyBodyStyle}">&nbsp;</td>`).join('');
+    const emptyRows  = Array.from({ length: emptyCount }, (_, idx) => {
+      const rowNumber = rows.length + idx + 1;
+      const cells = columns.map((_, colIdx) => {
+        const color = _getBodyCellColor(tableConfig, rowNumber, colIdx);
+        return `<td style="background-color:${color}">&nbsp;</td>`;
+      }).join('');
       return `<tr class="doc-empty-row">${cells}</tr>`;
     });
 
@@ -134,14 +137,22 @@ const TableRenderer = (() => {
   }
 
   /* ── Build satu baris data ── */
-  function _buildRow(columns, rowData, tableSize, tableConfig) {
+  function _buildRow(columns, rowData, tableSize, tableConfig, rowNumber) {
     const cells = columns.map((col, idx) => {
       const val   = rowData[col.key] != null ? String(rowData[col.key]) : '';
       const style = _buildTdStyle(col, tableSize, tableConfig, idx);
-      const finalStyle = _mergeStyleProperty(style, 'background-color', _getSectionBackground(tableConfig, 'body'));
+      const color = _getBodyCellColor(tableConfig, rowNumber, idx);
+      const finalStyle = _mergeStyleProperty(style, 'background-color', color);
       return `<td style="${finalStyle}">${Utils.escapeHtml(val)}</td>`;
     }).join('');
     return `<tr>${cells}</tr>`;
+  }
+
+  function _getBodyCellColor(tableConfig, rowNumber, colIndex) {
+    if (typeof TableConfigManager !== 'undefined' && typeof TableConfigManager.getBodyCellColor === 'function') {
+      return TableConfigManager.getBodyCellColor(tableConfig, rowNumber, colIndex);
+    }
+    return _getSectionBackground(tableConfig, 'body');
   }
 
   function _getSectionBackground(tableConfig, section) {
@@ -394,16 +405,21 @@ const TableRenderer = (() => {
       ].map(c => {
         const colCfg = bodyCfg[c.idx];
         const style  = colCfg ? _buildConfigStyle(colCfg, tableSize) : c.defaultStyle;
-        const finalStyle = _mergeInlineStyles(style, `background-color:${_getSectionBackground(tableConfig, 'body')}`);
+        const color = _getBodyCellColor(tableConfig, i + 1, c.idx);
+        const finalStyle = _mergeInlineStyles(style, `background-color:${color}`);
         return `<td style="${finalStyle}">${Utils.escapeHtml(c.val)}</td>`;
       }).join('');
       return `<tr>${cells}</tr>`;
     }).join('');
 
     const emptyCount    = Math.max(0, minRows - peserta.length);
-    const emptyRowsHtml = Array.from({ length: emptyCount }, () =>
-      `<tr class="doc-empty-row">${Array(15).fill(`<td style="background-color:${_getSectionBackground(tableConfig, 'body')}">&nbsp;</td>`).join('')}</tr>`
-    ).join('');
+    const emptyRowsHtml = Array.from({ length: emptyCount }, (_, idx) => {
+      const rowNumber = peserta.length + idx + 1;
+      const cells = Array.from({ length: 15 }, function(_, colIdx) {
+        return `<td style="background-color:${_getBodyCellColor(tableConfig, rowNumber, colIdx)}">&nbsp;</td>`;
+      }).join('');
+      return `<tr class="doc-empty-row">${cells}</tr>`;
+    }).join('');
 
     return `
       <div class="doc-table-wrap doc-table-wrap--full">
