@@ -218,6 +218,9 @@ const Validation = (() => {
 
     checkMeta('namaMadrasah', 'Nama Madrasah');
     checkMeta('status', 'Status');
+    if (meta?.status && !['Swasta', 'Negeri'].includes(String(meta.status))) {
+      errors.push({ field: 'meta.status', message: 'Status harus Swasta atau Negeri.' });
+    }
     checkMeta('tahunPelajaran', 'Tahun Pelajaran');
 
     // Peserta minimal 1
@@ -285,10 +288,17 @@ const Validation = (() => {
 
     checkMeta('namaMadrasah', 'Nama Madrasah');
     checkMeta('status', 'Status');
+    if (meta?.status && !['Swasta', 'Negeri'].includes(String(meta.status))) {
+      errors.push({ field: 'meta.status', message: 'Status harus Swasta atau Negeri.' });
+    }
     checkMeta('tahun', 'Tahun');
 
     if (templateId === 'siswa-baru') {
       checkMeta('kelas', 'Kelas');
+      const allowedKelas = ['VII (Tujuh)', 'VIII (Delapan)', 'IX (Sembilan)'];
+      if (meta?.kelas && !allowedKelas.includes(String(meta.kelas))) {
+        errors.push({ field: 'meta.kelas', message: 'Kelas siswa baru tidak valid.' });
+      }
     }
 
     // Siswa minimal 1
@@ -309,6 +319,12 @@ const Validation = (() => {
         if (s.nisn) {
           const rNisn = nisn(s.nisn);
           if (!rNisn.valid) errors.push({ field: `siswa[${idx}].nisn`, message: `Siswa #${idx + 1}: ${rNisn.message}` });
+        }
+
+        if (templateId === 'mutasi-masuk' && s.kelas && ![
+          'I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'
+        ].includes(String(s.kelas))) {
+          errors.push({ field: `siswa[${idx}].kelas`, message: `Kelas tujuan siswa #${idx + 1} tidak valid.` });
         }
 
         if (s.tanggalLahir) {
