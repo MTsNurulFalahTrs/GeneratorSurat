@@ -97,16 +97,17 @@ const PreviewRenderer = (() => {
     const isMultiPage  = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(tpl?.TEMPLATE_ID);
     const renderToken  = ++_renderToken;
 
-    // Pada mode multi-page, termasuk DPU, orientasi/ukuran fisik dipindahkan
-    // ke setiap .surat-page; outer #surat-preview menjadi container dokumen.
-    _previewEl.classList.toggle('surat-preview--document', isMultiPage);
+    // Pagination harus diukur pada ukuran halaman fisik sebenarnya.
+    // .surat-preview--document memakai width:auto !important untuk mode final,
+    // sehingga kelas tersebut baru diterapkan setelah halaman selesai dibentuk.
+    _previewEl.classList.remove('surat-preview--document');
     _previewEl.classList.toggle('orientation-landscape', isLandscape && !isMultiPage);
 
     const paperWidthPx  = dim.widthMm  * PX_PER_MM;
     const paperHeightPx = dim.heightMm * PX_PER_MM;
 
     _previewEl.style.width = `${paperWidthPx}px`;
-    _previewEl.style.minHeight = isMultiPage ? '' : `${paperHeightPx}px`;
+    _previewEl.style.minHeight = isMultiPage ? '0' : `${paperHeightPx}px`;
 
     if (_wrapperEl) {
       _wrapperEl.style.width = `${paperWidthPx}px`;
@@ -508,6 +509,11 @@ const PreviewRenderer = (() => {
     }
 
     _previewEl.dataset.pageCount = String(pages.length);
+
+    // Aktifkan mode dokumen setelah seluruh halaman selesai dipaginasi.
+    // Dengan demikian pengukuran source berlangsung pada lebar/tinggi halaman
+    // fisik yang sama dengan .surat-page.
+    _previewEl.classList.add('surat-preview--document');
     _updatePageInfo(pages.length);
     _updateWrapperHeight(_currentZoom);
 
