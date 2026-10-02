@@ -102,7 +102,7 @@ const ExcelImport = (() => {
           </span>
           <div>
             <div class="excel-import-toolbar__title">Import Data Siswa</div>
-            <div class="excel-import-toolbar__desc">\${Utils.escapeHtml(cfg.title)} · input massal dari Excel</div>
+            <div class="excel-import-toolbar__desc">${Utils.escapeHtml(cfg.title)} · input massal dari Excel</div>
           </div>
         </div>
         <span class="excel-import-toolbar__badge">3 langkah mudah</span>
@@ -180,9 +180,9 @@ const ExcelImport = (() => {
     const fileSize = toolbar.querySelector('.excel-import-toolbar__file-size');
 
     const formatSize = (bytes) => {
-      if (!Number.isFinite(bytes) || bytes < 1024) return `\${bytes || 0} B`;
-      if (bytes < 1024 * 1024) return `\${(bytes / 1024).toFixed(1)} KB`;
-      return `\${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      if (!Number.isFinite(bytes) || bytes < 1024) return `${bytes || 0} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
     const showSelectedFile = (file) => {
