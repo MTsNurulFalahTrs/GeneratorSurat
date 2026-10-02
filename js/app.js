@@ -163,8 +163,8 @@ const App = (() => {
       templateId
     );
 
-    // Pindah ke tab form
-    UI.switchTab('form');
+    // Setelah memilih template, pengguna melanjutkan ke konfigurasi KOP.
+    UI.switchTab('kop');
 
     UI.toast(`Template "${TemplateRegistry.get(templateId)?.meta?.name}" dipilih.`, 'info', 2500);
   }
