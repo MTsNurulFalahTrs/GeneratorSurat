@@ -113,7 +113,8 @@ const TableRenderer = (() => {
   function _buildAutoHeader(columns, headerFontSize, tableConfig) {
     const cells = columns.map((col, idx) => {
       const style = _buildThStyle(col, headerFontSize, tableConfig, idx);
-      return `<th style="${style}">${Utils.escapeHtml(col.header || '')}</th>`;
+      const finalStyle = _mergeStyleProperty(style, 'background-color', _getSectionBackground(tableConfig, 'header'));
+      return `<th style="${finalStyle}">${Utils.escapeHtml(col.header || '')}</th>`;
     }).join('');
     return `<thead><tr>${cells}</tr></thead>`;
   }
@@ -136,9 +137,22 @@ const TableRenderer = (() => {
     const cells = columns.map((col, idx) => {
       const val   = rowData[col.key] != null ? String(rowData[col.key]) : '';
       const style = _buildTdStyle(col, tableSize, tableConfig, idx);
-      return `<td style="${style}">${Utils.escapeHtml(val)}</td>`;
+      const finalStyle = _mergeStyleProperty(style, 'background-color', _getSectionBackground(tableConfig, 'body'));
+      return `<td style="${finalStyle}">${Utils.escapeHtml(val)}</td>`;
     }).join('');
     return `<tr>${cells}</tr>`;
+  }
+
+  function _getSectionBackground(tableConfig, section) {
+    const color = tableConfig?.colors?.[section];
+    return /^#[0-9A-Fa-f]{6}$/.test(String(color || '')) ? color : '#FFFFFF';
+  }
+
+  function _mergeStyleProperty(style, property, value) {
+    const parts = String(style || '').split(';').filter(Boolean);
+    const filtered = parts.filter(part => part.split(':')[0].trim().toLowerCase() !== property.toLowerCase());
+    filtered.push(property + ':' + value);
+    return filtered.join(';');
   }
 
   /* ── Build style string untuk <th> ──
@@ -379,7 +393,8 @@ const TableRenderer = (() => {
       ].map(c => {
         const colCfg = bodyCfg[c.idx];
         const style  = colCfg ? _buildConfigStyle(colCfg, tableSize) : c.defaultStyle;
-        return `<td style="${style}">${Utils.escapeHtml(c.val)}</td>`;
+        const finalStyle = _mergeInlineStyles(style, `background-color:${_getSectionBackground(tableConfig, 'body')}`);
+        return `<td style="${finalStyle}">${Utils.escapeHtml(c.val)}</td>`;
       }).join('');
       return `<tr>${cells}</tr>`;
     }).join('');
@@ -409,7 +424,10 @@ const TableRenderer = (() => {
     const colCfg = tableConfig?.header?.columns?.[colIdx];
     const cfgStyle = colCfg ? _buildConfigStyle(colCfg, tableSize) : '';
     const fallback = `font-size:${tableSize}pt;font-weight:bold`;
-    const style = _mergeInlineStyles(baseStyle, cfgStyle || fallback);
+    const style = _mergeInlineStyles(
+      _mergeInlineStyles(baseStyle, cfgStyle || fallback),
+      `background-color:${_getSectionBackground(tableConfig, 'header')}`
+    );
     const attrText = attrs ? ` ${attrs}` : '';
     return `<th${attrText} style="${style}">${Utils.escapeHtml(label)}</th>`;
   }
