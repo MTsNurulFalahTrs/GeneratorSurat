@@ -10,9 +10,6 @@
   --tablet-control-size: 42px;
 }
 
-html,
-body { min-width: var(--app-min-inline); }
-
 @media screen and (min-width: 1200px) {
   .editor-panel { width: clamp(380px, 31vw, var(--editor-panel-max)); }
   .preview-viewport { padding: clamp(20px, 2.4vw, 36px); }
@@ -77,7 +74,7 @@ body { min-width: var(--app-min-inline); }
   html,
   body {
     width: 100%;
-    min-width: 320px;
+    min-width: 0;
     overflow-x: hidden;
   }
 
@@ -434,4 +431,49 @@ body { min-width: var(--app-min-inline); }
 
 @media (prefers-reduced-motion: reduce) {
   .editor-tabs { scroll-behavior: auto; }
+}
+
+/* ── Extra narrow screens (older/small devices) ── */
+@media screen and (max-width: 319px) {
+  .app-header {
+    padding-inline: 7px;
+  }
+
+  .app-header__brand {
+    max-width: 40%;
+  }
+
+  .app-header__actions {
+    gap: 2px;
+  }
+
+  .app-header__actions .btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding-inline: 5px;
+  }
+
+  .editor-tab {
+    flex-basis: 96px;
+    width: 96px;
+    min-width: 96px;
+  }
+
+  .settings-card__header,
+  .mobile-preview-toggle,
+  .form-input,
+  .form-select,
+  .form-textarea {
+    min-height: 40px;
+  }
+
+  .margin-middle {
+    grid-template-columns: minmax(0, 1fr) 52px minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .margin-page-preview {
+    max-width: 52px;
+    min-height: 58px;
+  }
 }
