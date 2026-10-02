@@ -290,9 +290,10 @@ const PreviewRenderer = (() => {
         if (c.key === 'no') {
           row[c.key] = String(i + 1);
         } else if (c.key === 'tanggalLahir') {
-          const tgl    = s.tanggalLahir ? Utils.formatDateShort(s.tanggalLahir) : '';
-          const tempat = s.tempatLahir || '';
-          row[c.key] = tempat && tgl ? `${tempat} ${tgl}` : (tempat || tgl);
+          // Tanggal Lahir hanya boleh berasal dari field tanggalLahir.
+          // Tempat Lahir memiliki kolom tersendiri dan tidak boleh ikut dirender
+          // ke dalam kolom Tanggal Lahir.
+          row[c.key] = s.tanggalLahir ? Utils.formatDateShort(s.tanggalLahir) : '';
         } else if (c.key === 'tempatLahir') {
           row[c.key] = s.tempatLahir || '';
         } else if (c.key === 'kelas') {
