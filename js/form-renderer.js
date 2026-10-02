@@ -298,7 +298,7 @@ const FormRenderer = (() => {
     // make label/autofill/DOM targeting point to another field instance.
     const fieldDomId = `field-${fieldDef.key.replace(/\./g, '-')}${itemId ? `-${itemId}` : ''}`;
     const labelHtml = `
-      <label class="form-label" for="field-${fieldDef.key.replace(/\./g, '-')}">
+      <label class="form-label" for="${fieldDomId}">
         ${Utils.escapeHtml(fieldDef.label)}
         ${fieldDef.required ? '<span class="required-mark" aria-label="wajib">*</span>' : '<span class="optional-mark">(opsional)</span>'}
       </label>`;
