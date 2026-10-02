@@ -107,6 +107,7 @@ const TableConfigManager = (() => {
         header: '#FFFFFF',
         body: '#FFFFFF',
       },
+      bodyColorRules: [],
       header: { columns: headerCols },
       body:   { columns: bodyCols },
     };
@@ -173,6 +174,7 @@ const TableConfigManager = (() => {
         header: _sanitizeColor(savedCfg?.colors?.header) || '#FFFFFF',
         body:   _sanitizeColor(savedCfg?.colors?.body)   || '#FFFFFF',
       },
+      bodyColorRules: _sanitizeBodyColorRules(savedCfg?.bodyColorRules),
       header: { columns: {} },
       body:   { columns: {} },
     };
@@ -286,6 +288,31 @@ const TableConfigManager = (() => {
    * @returns {Object} { header: { columns: {...} }, body: { columns: {...} } }
    *   Config yang sudah siap dipakai renderer.
    */
+  function getBodyCellColor(tableConfig, rowNumber, colIndex) {
+    const rules = Array.isArray(tableConfig?.bodyColorRules) ? tableConfig.bodyColorRules : [];
+    let color = _sanitizeColor(tableConfig?.colors?.body) || '#FFFFFF';
+    const row = Number(rowNumber);
+    const col = Number(colIndex);
+    rules.forEach(rule => {
+      if (!rule || !_bodyColorRuleMatches(rule, row, col)) return;
+      const next = _sanitizeColor(rule.color);
+      if (next) color = next;
+    });
+    return color;
+  }
+
+  function _bodyColorRuleMatches(rule, row, col) {
+    let rowMatch = true;
+    let colMatch = true;
+    if (rule.rowMode === 'odd') rowMatch = row % 2 === 1;
+    else if (rule.rowMode === 'even') rowMatch = row % 2 === 0;
+    else if (rule.rowMode === 'selected') rowMatch = rule.rows?.includes(row) === true;
+    if (rule.colMode === 'odd') colMatch = (col + 1) % 2 === 1;
+    else if (rule.colMode === 'even') colMatch = (col + 1) % 2 === 0;
+    else if (rule.colMode === 'selected') colMatch = rule.cols?.includes(col) === true;
+    return rowMatch && colMatch;
+  }
+
   function updateTableColors(templateId, tableId, partial) {
     if (!templateId || !tableId || !partial || typeof partial !== 'object') return;
 
@@ -312,6 +339,39 @@ const TableConfigManager = (() => {
         ...colors,
       },
     });
+  }
+
+  function updateBodyColorRules(templateId, tableId, rules) {
+    if (!templateId || !tableId || !Array.isArray(rules)) return;
+    const sanitized = _sanitizeBodyColorRules(rules);
+    const currentAll = State.getTableConfig(templateId);
+    const tableDef = TemplateRegistry.getTableDefinitions(templateId).find(t => t.id === tableId);
+    const current = currentAll[tableId] || buildDefaultConfig(tableDef?.columns || []);
+    State.setTableConfig(templateId, tableId, {
+      ...current,
+      bodyColorRules: sanitized,
+    });
+  }
+
+  function addBodyColorRule(templateId, tableId, rule) {
+    if (!templateId || !tableId || !rule) return;
+    const currentAll = State.getTableConfig(templateId);
+    const current = currentAll[tableId] || {};
+    const rules = Array.isArray(current.bodyColorRules) ? current.bodyColorRules : [];
+    updateBodyColorRules(templateId, tableId, [...rules, rule]);
+  }
+
+  function removeBodyColorRule(templateId, tableId, index) {
+    if (!templateId || !tableId || !Number.isInteger(index)) return;
+    const currentAll = State.getTableConfig(templateId);
+    const current = currentAll[tableId] || {};
+    const rules = Array.isArray(current.bodyColorRules) ? current.bodyColorRules : [];
+    if (index < 0 || index >= rules.length) return;
+    updateBodyColorRules(templateId, tableId, rules.filter((_, i) => i !== index));
+  }
+
+  function clearBodyColorRules(templateId, tableId) {
+    updateBodyColorRules(templateId, tableId, []);
   }
 
   function resetTableColors(templateId, tableId) {
@@ -670,6 +730,22 @@ const TableConfigManager = (() => {
      Internal helpers
   ──────────────────────────────────────────────── */
 
+  const VALID_BODY_COLOR_ROW_MODES = ['all', 'odd', 'even', 'selected'];
+  const VALID_BODY_COLOR_COL_MODES = ['all', 'odd', 'even', 'selected'];
+
+  function _sanitizeBodyColorRules(rules) {
+    if (!Array.isArray(rules)) return [];
+    return rules.slice(0, 50).map(rule => {
+      if (!rule || typeof rule !== 'object') return null;
+      const rowMode = VALID_BODY_COLOR_ROW_MODES.includes(rule.rowMode) ? rule.rowMode : 'all';
+      const colMode = VALID_BODY_COLOR_COL_MODES.includes(rule.colMode) ? rule.colMode : 'all';
+      const color = _sanitizeColor(rule.color) || '#FFFFFF';
+      const rows = Array.from(new Set((Array.isArray(rule.rows) ? rule.rows : []).map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= 9999)));
+      const cols = Array.from(new Set((Array.isArray(rule.cols) ? rule.cols : []).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 999)));
+      return { preset: String(rule.preset || 'manual'), color, rowMode, colMode, rows, cols };
+    }).filter(Boolean);
+  }
+
   function _sanitizeColor(value) {
     const text = String(value ?? '').trim().toUpperCase();
     return /^#[0-9A-F]{6}$/.test(text) ? text : '';
@@ -758,6 +834,7 @@ const TableConfigManager = (() => {
         header: base.colors?.header || '#FFFFFF',
         body:   base.colors?.body   || '#FFFFFF',
       },
+      bodyColorRules: _sanitizeBodyColorRules(base.bodyColorRules),
       header: { columns: { ...(base.header?.columns || {}) } },
       body:   { columns: { ...(base.body?.columns   || {}) } },
     };
@@ -774,6 +851,10 @@ const TableConfigManager = (() => {
           );
         }
       });
+    }
+
+    if (Array.isArray(override.bodyColorRules)) {
+      result.bodyColorRules = _sanitizeBodyColorRules(override.bodyColorRules);
     }
 
     if (override.colors && typeof override.colors === 'object') {
@@ -821,6 +902,11 @@ const TableConfigManager = (() => {
     updateTableColors,
     resetTableColors,
     getTableColors,
+    updateBodyColorRules,
+    addBodyColorRule,
+    removeBodyColorRule,
+    clearBodyColorRules,
+    getBodyCellColor,
     // Column width API
     updateColumnWidth,
     resetColumnWidths,
