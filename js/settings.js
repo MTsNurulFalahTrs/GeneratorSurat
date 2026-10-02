@@ -467,7 +467,7 @@ const Settings = (() => {
       const body   = card.querySelector('.settings-card__body');
       if (!header || !body) return;
 
-      const bodyId = body.id || `settings-section-[object Object]1-body`;
+      const bodyId = body.id || 'settings-section-' + (index + 1) + '-body';
       body.id = bodyId;
 
       header.setAttribute('role', 'button');
