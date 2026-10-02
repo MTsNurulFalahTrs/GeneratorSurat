@@ -63,7 +63,8 @@ Tidak menggunakan React, Vue, Angular, Next.js, backend, database server, Fireba
 │   ├── components.css            # Komponen UI reusable (button, form, modal, toast, settings)
 │   ├── kop-editor.css            # Styling khusus editor KOP Surat
 │   ├── preview.css               # Area preview dan rendering dokumen surat
-│   └── print.css                 # @media print — hanya surat yang dicetak
+│   ├── print.css                 # @media print — hanya surat yang dicetak
+│   └── ui-modern.css              # Layer UI/UX modern, responsive, dan accessibility (screen-only)
 │
 ├── js/
 │   ├── utils.js                  # Helper functions (format tanggal, escapeHtml, dll)
@@ -771,13 +772,7 @@ State.resetSettings();                      // → emit 'settings:change' + 'set
 
 ### Menambahkan Ukuran Kertas Lain (F4/Folio)
 
-Di `preview.css`:
-```css
-.surat-preview.orientation-folio {
-  width: 215mm;
-  min-height: 330mm;
-}
-```
+Ukuran kertas A4, A5, F4/Folio, Letter, Legal, dan Custom sudah dihitung terpusat melalui `State.getPaperDimensions()`, sehingga renderer dan print tidak lagi bergantung pada class ukuran kertas khusus.
 
 Di template definition (`meta`):
 ```javascript
