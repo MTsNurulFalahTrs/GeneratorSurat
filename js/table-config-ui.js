@@ -740,7 +740,64 @@ const TableConfigUI = (() => {
 
       /* ── Preset warna tabel ── */
       case 'color-preset': {
-        if (tableId && color) TableConfigManager.updateTableColors(templateId, tableId, { header: color });
+        if (tableId && color) {
+          const form = btn.closest('.tbl-cfg__body-rule-form');
+          if (form) {
+            const picker = form.querySelector('[data-action="body-rule-color"]');
+            const hex = form.querySelector('[data-action="body-rule-color-hex"]');
+            if (picker) picker.value = color;
+            if (hex) hex.value = color;
+          } else {
+            TableConfigManager.updateTableColors(templateId, tableId, { header: color });
+          }
+        }
+        break;
+      }
+
+      /* ── Tambah aturan warna Isi ── */
+      case 'add-body-color-rule': {
+        const presetEl = _mountEl?.querySelector('[data-action="body-rule-preset"][data-table-id="' + tableId + '"]');
+        const rowsEl = _mountEl?.querySelector('[data-action="body-rule-rows"][data-table-id="' + tableId + '"]');
+        const colsEl = _mountEl?.querySelector('[data-action="body-rule-cols"][data-table-id="' + tableId + '"]');
+        const colorEl = _mountEl?.querySelector('[data-action="body-rule-color"][data-table-id="' + tableId + '"]');
+        const preset = presetEl?.value || 'manual';
+        const rule = _getBodyRulePresetConfig(preset, rowsEl?.value, colsEl?.value);
+        rule.color = colorEl?.value?.toUpperCase() || '#FFFFFF';
+
+        const tableDef = TemplateRegistry.getTableDefinitions(templateId).find(function(t) { return t.id === tableId; });
+        const maxCol = tableDef?.columns?.length || 0;
+
+        if (rule.rowMode === 'selected' && !rule.rows.length) {
+          UI.toast('Pilih nomor baris terlebih dahulu.', 'warning', 2200);
+          break;
+        }
+        if (rule.colMode === 'selected' && !rule.cols.length) {
+          UI.toast('Pilih nomor kolom terlebih dahulu.', 'warning', 2200);
+          break;
+        }
+        if (rule.cols.some(function(i) { return i >= maxCol; })) {
+          UI.toast('Nomor kolom melebihi jumlah kolom tabel.', 'warning', 2200);
+          break;
+        }
+
+        TableConfigManager.addBodyColorRule(templateId, tableId, rule);
+        if (presetEl) presetEl.value = 'manual';
+        if (rowsEl) rowsEl.value = '';
+        if (colsEl) colsEl.value = '';
+        break;
+      }
+
+      /* ── Hapus satu aturan warna Isi ── */
+      case 'remove-body-color-rule': {
+        const index = parseInt(btn.dataset.ruleIndex, 10);
+        if (Number.isInteger(index)) TableConfigManager.removeBodyColorRule(templateId, tableId, index);
+        break;
+      }
+
+      /* ── Hapus semua aturan warna Isi ── */
+      case 'clear-body-color-rules': {
+        TableConfigManager.clearBodyColorRules(templateId, tableId);
+        UI.toast('Semua aturan pewarnaan Isi dihapus.', 'info', 1800);
         break;
       }
 
@@ -924,6 +981,18 @@ const TableConfigUI = (() => {
     const colKey  = el.dataset.colKey;
     const colorSection = el.dataset.colorSection;
 
+    /* ── Preset aturan body ── */
+    if (action === 'body-rule-preset') {
+      return;
+    }
+
+    /* ── Warna picker aturan body ── */
+    if (action === 'body-rule-color') {
+      const hex = _mountEl?.querySelector('[data-action="body-rule-color-hex"][data-table-id="' + tableId + '"]');
+      if (hex) hex.value = el.value.toUpperCase();
+      return;
+    }
+
     /* ── Warna picker ── */
     if (action === 'table-color' && colorSection) {
       TableConfigManager.updateTableColors(templateId, tableId, { [colorSection]: el.value.toUpperCase() });
@@ -972,6 +1041,15 @@ const TableConfigUI = (() => {
     const action = el.dataset.action;
     const tableId = el.dataset.tableId;
     const colorSection = el.dataset.colorSection;
+
+    /* ── Kode HEX warna aturan body ── */
+    if (action === 'body-rule-color-hex') {
+      const value = el.value.trim().toUpperCase();
+      if (!/^#[0-9A-F]{6}$/.test(value)) return;
+      const picker = _mountEl?.querySelector('[data-action="body-rule-color"][data-table-id="' + tableId + '"]');
+      if (picker) picker.value = value;
+      return;
+    }
 
     /* ── Kode HEX warna ── */
     if (action === 'table-color-hex' && colorSection) {
@@ -1041,8 +1119,9 @@ const TableConfigUI = (() => {
       const tableId     = tableDef.id;
       const resolvedCfg = TableConfigManager.getResolvedConfig(templateId, tableId);
 
-      // ── Sync warna tabel ──
+      // ── Sync warna tabel + aturan Isi ──
       _syncTableColors(tableId, resolvedCfg.colors);
+      _syncBodyColorRules(templateId, tableId, resolvedCfg.bodyColorRules || []);
 
       // ── Sync Header + Body section (styling teks per kolom) ──
       ['header', 'body'].forEach(section => {
@@ -1059,6 +1138,13 @@ const TableConfigUI = (() => {
       // ── Sync total % indicator di header section Lebar Kolom ──
       _syncWidthTotal(tableId, resolvedCfg.columnWidths);
     });
+  }
+
+  function _syncBodyColorRules(templateId, tableId, rules) {
+    if (!_mountEl) return;
+    const container = _mountEl.querySelector('.tbl-cfg__body-rules[data-table-id="' + tableId + '"]');
+    if (!container) return;
+    container.innerHTML = _buildBodyColorRulesHtml(rules, tableId);
   }
 
   function _syncTableColors(tableId, colors) {
