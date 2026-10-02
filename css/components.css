@@ -2782,3 +2782,170 @@
   .tbl-cfg__color-row { align-items:flex-start; flex-direction:column; }
   .tbl-cfg__color-input-wrap { width:100%; justify-content:flex-start; }
 }
+/* =============================================================
+   Aturan Pewarnaan Isi Tabel — baris/kolom/preset
+   ============================================================= */
+.tbl-cfg__body-rule-editor {
+  margin: 0;
+  border-top: 1px solid var(--color-border);
+  background: #fbfdff;
+}
+
+.tbl-cfg__body-rule-editor-head {
+  padding: 11px var(--space-4) 8px;
+}
+
+.tbl-cfg__body-rule-title,
+.tbl-cfg__body-rule-description {
+  display: block;
+}
+
+.tbl-cfg__body-rule-title {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.tbl-cfg__body-rule-description {
+  margin-top: 3px;
+  font-size: 9px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+.tbl-cfg__body-rule-form {
+  margin: 0 var(--space-4) 10px;
+  padding: 10px;
+  border: 1px solid #e2eaf2;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.tbl-cfg__body-rule-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tbl-cfg__body-rule-field small {
+  font-size: 9px;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+}
+
+.tbl-cfg__body-rule-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 9px;
+}
+
+.tbl-cfg__body-rule-field .form-input:disabled {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.tbl-cfg__body-rule-field.is-muted {
+  opacity: .55;
+}
+
+.tbl-cfg__rule-color-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tbl-cfg__rule-color-wrap .tbl-cfg__color-preset-list {
+  flex: 1 1 100%;
+  margin-top: 2px;
+}
+
+.tbl-cfg__body-rule-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.tbl-cfg__body-rule-actions .btn {
+  flex: 1;
+  justify-content: center;
+  min-height: 32px;
+}
+
+.tbl-cfg__body-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 var(--space-4) 10px;
+}
+
+.tbl-cfg__body-rules-empty {
+  padding: 9px 10px;
+  border: 1px dashed #cbd8e6;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--color-text-muted);
+  font-size: 9px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.tbl-cfg__body-rule-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid #e2eaf2;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tbl-cfg__body-rule-swatch {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.tbl-cfg__body-rule-card-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.tbl-cfg__body-rule-card-copy strong,
+.tbl-cfg__body-rule-card-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tbl-cfg__body-rule-card-copy strong {
+  font-size: 9px;
+  color: var(--color-text);
+}
+
+.tbl-cfg__body-rule-card-copy small {
+  margin-top: 2px;
+  font-size: 8px;
+  color: var(--color-text-muted);
+}
+
+.tbl-cfg__body-rule-card .btn-icon {
+  width: 26px;
+  height: 26px;
+  font-size: 15px;
+}
+
+@media (max-width: 600px) {
+  .tbl-cfg__body-rule-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tbl-cfg__body-rule-actions {
+    flex-direction: column;
+  }
+}
