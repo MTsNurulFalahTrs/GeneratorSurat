@@ -856,7 +856,9 @@
       scroll-snap-type: x proximity;
       scrollbar-width: thin;
       scrollbar-color: #cbd5e1 transparent;
-      touch-action: pan-x;
+      /* Biarkan browser menangani gesture vertikal (termasuk pull-to-refresh),
+         sementara overflow-x tetap menangani swipe antar-tab. */
+      touch-action: auto;
     }
 
     .editor-tabs::-webkit-scrollbar {
@@ -882,9 +884,23 @@
       display: block;
     }
 
+    .editor-panel {
+      min-height: 0;
+    }
+
+    .editor-tab-content.active {
+      min-height: 0;
+    }
+
+    .mobile-preview-toggle-wrap {
+      position: relative;
+      z-index: 2;
+      flex: 0 0 auto;
+    }
+
     .app-body.is-mobile-preview-hidden .editor-panel {
-      flex: 1 1 auto;
-      height: 100%;
+      flex: 1 1 0;
+      height: auto;
       max-height: none;
       min-height: 0;
       border-bottom: 0;
@@ -892,6 +908,97 @@
 
     .app-body.is-mobile-preview-hidden .preview-panel {
       display: none;
+    }
+  }
+
+  /* Mobile root scrolling: jangan mengunci pull-to-refresh browser. */
+  @media screen and (max-width: 767px) {
+    html,
+    body {
+      overscroll-behavior-y: auto;
+    }
+
+    body {
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .app-container {
+      min-height: 100dvh;
+      height: auto;
+      overflow: visible;
+    }
+
+    .app-body {
+      min-height: calc(100dvh - var(--header-height));
+      overflow: hidden;
+    }
+
+    /* Semua header accordion menggunakan treatment visual yang sama. */
+    .settings-card__header {
+      min-height: 48px;
+      background: var(--color-surface-2);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .settings-card__header[aria-expanded="true"] {
+      background: var(--color-surface);
+    }
+
+    .settings-card__body {
+      background: var(--color-surface);
+      border-top: 0;
+    }
+
+    #settings-card-preset .settings-card__body {
+      padding-top: 14px;
+      padding-bottom: 14px;
+    }
+
+    #settings-card-preset .settings-hint {
+      margin-bottom: 0;
+    }
+
+    /* Margin diagram: tiga kolom tetap terisolasi pada layar sempit. */
+    .margin-diagram-wrap {
+      width: 100%;
+      overflow: visible;
+      padding-inline: 0;
+    }
+
+    .margin-diagram {
+      width: 100%;
+      max-width: none;
+      min-width: 0;
+    }
+
+    .margin-middle {
+      grid-template-columns: minmax(0, 1fr) minmax(76px, .85fr) minmax(0, 1fr);
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .margin-field--left,
+    .margin-field--right {
+      width: auto;
+      min-width: 0;
+    }
+
+    .margin-field .input-with-unit {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .margin-input {
+      width: 100% !important;
+      min-width: 0;
+    }
+
+    .margin-page-preview {
+      width: 100%;
+      max-width: 96px;
+      min-width: 0;
+      justify-self: center;
     }
   }
 
