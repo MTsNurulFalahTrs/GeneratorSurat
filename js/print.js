@@ -51,34 +51,15 @@ const Print = (() => {
 
     const s    = State.getSettings();
     const dim  = State.getPaperDimensions(); // sudah memperhitungkan orientasi
-    const m    = State.getMarginMm();
-    const ori  = s.orientation;
-    const scale = Utils.clamp(s.print.scale || 100, 50, 150);
 
-    // Tentukan @page size
-    let pageSize;
-    if (s.paper.size === 'Custom') {
-      // Untuk custom, gunakan dimensi aktual (sudah dirotasi jika landscape)
-      pageSize = `${dim.widthMm}mm ${dim.heightMm}mm`;
-    } else {
-      // Gunakan nama standar jika tersedia di CSS, fallback ke dimensi mm
-      const cssNames = {
-        A4:     'A4',
-        A5:     'A5',
-        Letter: 'letter',
-        Legal:  'legal',
-        F4:     '215mm 330mm',   // F4/Folio tidak punya nama CSS standar
-      };
-      const cssName = cssNames[s.paper.size] || `${dim.widthMm}mm ${dim.heightMm}mm`;
-      pageSize = ori === 'landscape' ? `${cssName} landscape` : `${cssName} portrait`;
-    }
+    // Gunakan dimensi fisik aktual dari State, setelah orientasi diterapkan.
+    // Ini menghindari perbedaan antara nama ukuran CSS (mis. F4/Legal) dan
+    // dimensi halaman yang dipakai PreviewRenderer.
+    const pageSize = `${dim.widthMm}mm ${dim.heightMm}mm`;
 
-    // Skala cetak: browser mendukung transform pada @page terbatas.
-    // Kita gunakan zoom pada .doc-content saat print sebagai pendekatan terbaik.
-    const scaleDecimal = scale / 100;
-
-    // Tambahkan font isi surat dari typography settings
-    const typo = State.getTypography();
+    // Skala cetak bukan bagian dari layout Preview. Jangan menerapkan transform
+    // di sini karena transform dapat mengubah clipping, tinggi efektif, dan
+    // pagination. Browser print dialog tetap menjadi kontrol akhir skala fisik.
 
     const css = `
 @page {
@@ -86,15 +67,8 @@ const Print = (() => {
   margin: 0;
 }
 @media print {
-  .doc-content {
-    font-family: '${typo.fontFamily}', serif !important;
-    font-size: ${typo.fontSize}pt !important;
-    line-height: ${typo.lineHeight} !important;
-    color: #000 !important;
-    transform: scale(${scaleDecimal});
-    transform-origin: top left;
-    width: ${(100 / scaleDecimal).toFixed(4)}%;
-  }
+  /* Typography, margin, table style, KOP, dan seluruh style isi
+     dipertahankan dari DOM Preview/current State. */
   .surat-preview {
     box-shadow: none !important;
   }
