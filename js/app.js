@@ -162,6 +162,23 @@ const App = (() => {
 
     State.setActiveTemplate(templateId);
 
+    // Terapkan orientasi/ukuran bawaan template sebagai titik awal dokumen.
+    // DPU secara spesifik mendefinisikan A4 Landscape, sehingga pagination
+    // tidak lagi dihitung pada layout portrait default aplikasi.
+    const selectedTemplate = TemplateRegistry.get(templateId);
+    const templateOrientation = selectedTemplate?.meta?.orientation;
+    const templatePaperSize = selectedTemplate?.meta?.paperSize;
+    const settingsPatch = {};
+    if (templateOrientation === 'portrait' || templateOrientation === 'landscape') {
+      settingsPatch.orientation = templateOrientation;
+    }
+    if (typeof templatePaperSize === 'string' && templatePaperSize.trim()) {
+      settingsPatch.paper = { size: templatePaperSize, unit: 'mm' };
+    }
+    if (Object.keys(settingsPatch).length) {
+      State.setSettings(settingsPatch);
+    }
+
     // Update kartu aktif
     TemplateRegistry.updateActiveCard(
       document.getElementById('template-list'),
