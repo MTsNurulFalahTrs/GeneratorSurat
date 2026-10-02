@@ -597,7 +597,8 @@ const PreviewRenderer = (() => {
     if (!templateId || !tableId) return null;
     if (typeof TableConfigManager === 'undefined') return null;
     try {
-      return TableConfigManager.getResolvedConfig(templateId, tableId);
+      const cfg = TableConfigManager.getResolvedConfig(templateId, tableId);
+      return cfg || null;
     } catch (e) {
       console.warn('[PreviewRenderer] Gagal mengambil tableConfig:', e);
       return null;
