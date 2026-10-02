@@ -484,7 +484,7 @@ const TableConfigUI = (() => {
 
   /* ── Build Apply-to-all bar ── */
   function _buildApplyAllBar(templateId, tableId, section) {
-    const sectionLabel = section === 'header' ? 'Header' : 'Isi';
+    const sectionLabel = section === 'header' ? 'Header Tabel' : 'Isi Tabel';
     const da = `data-template-id="${_esc(templateId)}" data-table-id="${_esc(tableId)}" data-section="${section}"`;
 
     return `
