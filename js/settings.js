@@ -933,10 +933,11 @@ const Settings = (() => {
     const preview  = document.getElementById('surat-preview');
     if (!viewport || !wrapper || !preview) return;
 
-    const vpW = viewport.clientWidth   || 800;
-    const vpH = viewport.clientHeight  || 600;
-    const paperW = preview.offsetWidth  || 794;
-    const paperH = preview.scrollHeight || 1123;
+    const vpW = viewport.clientWidth || 800;
+    const vpH = viewport.clientHeight || 600;
+    const dimensions = State.getPaperDimensions();
+    const paperW = (dimensions.widthMm || 210) * (96 / 25.4);
+    const paperH = (dimensions.heightMm || 297) * (96 / 25.4);
 
     let zoom = 1;
     if (mode === 'auto' || mode === 'fit-page') {
