@@ -983,6 +983,7 @@ const TableConfigUI = (() => {
 
     /* ── Preset aturan body ── */
     if (action === 'body-rule-preset') {
+      _syncBodyRulePresetFields(tableId, el.value);
       return;
     }
 
@@ -1138,6 +1139,20 @@ const TableConfigUI = (() => {
       // ── Sync total % indicator di header section Lebar Kolom ──
       _syncWidthTotal(tableId, resolvedCfg.columnWidths);
     });
+  }
+
+  function _syncBodyRulePresetFields(tableId, preset) {
+    if (!_mountEl) return;
+    const rowsEl = _mountEl.querySelector('[data-action="body-rule-rows"][data-table-id="' + tableId + '"]');
+    const colsEl = _mountEl.querySelector('[data-action="body-rule-cols"][data-table-id="' + tableId + '"]');
+    if (!rowsEl || !colsEl) return;
+
+    const usesRows = ['selected-row', 'selected-cell', 'manual'].includes(preset);
+    const usesCols = ['selected-column', 'selected-cell', 'manual'].includes(preset);
+    rowsEl.disabled = !usesRows;
+    colsEl.disabled = !usesCols;
+    rowsEl.closest('.tbl-cfg__body-rule-field')?.classList.toggle('is-muted', !usesRows);
+    colsEl.closest('.tbl-cfg__body-rule-field')?.classList.toggle('is-muted', !usesCols);
   }
 
   function _syncBodyColorRules(templateId, tableId, rules) {
