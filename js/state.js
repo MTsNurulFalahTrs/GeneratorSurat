@@ -428,7 +428,7 @@ const State = (() => {
     settings.paper.customHeight = _toFiniteNumber(
       settings.paper.customHeight,
       DEFAULT_SETTINGS().paper.customHeight,
-      CUSTOM_WIDTH_MIN_MM, CUSTOM_WIDTH_MAX_MM
+      CUSTOM_HEIGHT_MIN_MM, CUSTOM_HEIGHT_MAX_MM
     );
 
     settings.orientation = settings.orientation === 'landscape' ? 'landscape' : 'portrait';
