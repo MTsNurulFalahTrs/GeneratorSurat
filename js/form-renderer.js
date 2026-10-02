@@ -294,8 +294,11 @@ const FormRenderer = (() => {
     group.dataset.fieldKey = fieldDef.key;
 
     const value = _getNestedValue(formData, fieldDef.key);
+    // Repeatable fields need unique DOM IDs per student item. Duplicate IDs can
+    // make label/autofill/DOM targeting point to another field instance.
+    const fieldDomId = `field-${fieldDef.key.replace(/\./g, '-')}${itemId ? `-${itemId}` : ''}`;
     const labelHtml = `
-      <label class="form-label" for="field-${fieldDef.key.replace(/\./g, '-')}">
+      <label class="form-label" for="${fieldDomId}">
         ${Utils.escapeHtml(fieldDef.label)}
         ${fieldDef.required ? '<span class="required-mark" aria-label="wajib">*</span>' : '<span class="optional-mark">(opsional)</span>'}
       </label>`;
@@ -304,7 +307,7 @@ const FormRenderer = (() => {
       case 'text':
         group.innerHTML = labelHtml + `
           <input type="text" class="form-input"
-            id="field-${fieldDef.key.replace(/\./g, '-')}"
+            id="${fieldDomId}"
             value="${Utils.escapeHtml(String(value ?? ''))}"
             placeholder="${Utils.escapeHtml(fieldDef.placeholder || '')}"
             maxlength="${fieldDef.maxLength || 255}"
@@ -315,7 +318,7 @@ const FormRenderer = (() => {
       case 'number':
         group.innerHTML = labelHtml + `
           <input type="number" class="form-input"
-            id="field-${fieldDef.key.replace(/\./g, '-')}"
+            id="${fieldDomId}"
             value="${value ?? ''}"
             min="${fieldDef.min ?? 0}"
             max="${fieldDef.max ?? 9999}"
@@ -326,7 +329,7 @@ const FormRenderer = (() => {
       case 'date':
         group.innerHTML = labelHtml + `
           <input type="date" class="form-input"
-            id="field-${fieldDef.key.replace(/\./g, '-')}"
+            id="${fieldDomId}"
             value="${Utils.escapeHtml(String(value ?? ''))}"
             ${fieldDef.required ? 'required' : ''} />`;
         _bindInput(group.querySelector('input'), fieldDef, templateId, itemId, sectionId);
@@ -340,7 +343,7 @@ const FormRenderer = (() => {
           return `<option value="${Utils.escapeHtml(opt.value)}" ${value === opt.value ? 'selected' : ''}>${Utils.escapeHtml(opt.label)}</option>`;
         }).join('');
         group.innerHTML = labelHtml + `
-          <select class="form-select" id="field-${fieldDef.key.replace(/\./g, '-')}"
+          <select class="form-select" id="${fieldDomId}"
             ${fieldDef.required ? 'required' : ''}>${opts}</select>`;
         _bindInput(group.querySelector('select'), fieldDef, templateId, itemId, sectionId);
         break;
@@ -349,7 +352,7 @@ const FormRenderer = (() => {
       case 'textarea':
         group.innerHTML = labelHtml + `
           <textarea class="form-textarea"
-            id="field-${fieldDef.key.replace(/\./g, '-')}"
+            id="${fieldDomId}"
             placeholder="${Utils.escapeHtml(fieldDef.placeholder || '')}"
             rows="${fieldDef.rows || 3}"
             ${fieldDef.required ? 'required' : ''}>${Utils.escapeHtml(String(value ?? ''))}</textarea>`;
@@ -361,7 +364,7 @@ const FormRenderer = (() => {
         group.innerHTML = `
           <label class="form-label">${Utils.escapeHtml(fieldDef.label)}</label>
           <label class="form-check">
-            <input type="checkbox" id="field-${fieldDef.key.replace(/\./g, '-')}"
+            <input type="checkbox" id="${fieldDomId}"
               ${checked ? 'checked' : ''} />
             <span>${checked ? (fieldDef.labelTrue || 'Ya') : (fieldDef.labelFalse || 'Tidak')}</span>
           </label>`;
