@@ -945,24 +945,14 @@ const PreviewRenderer = (() => {
   function _isPageOverflowing(content) {
     if (!content || !content.children.length) return false;
 
+    _forceLayout(content);
+
     /*
-     * Gunakan dua sinyal layout sekaligus.
-     *
-     * 1. scrollHeight/clientHeight tetap menjadi indikator utama karena
-     *    browser menghitung overflow vertikal aktual pada container.
-     * 2. Perbandingan bounding rect menjadi fallback untuk kasus overflow
-     *    yang terjadi melalui descendant dengan overflow/transform tertentu.
-     *
-     * DPU memiliki .doc-table-wrap dengan overflow-x:auto dan table-layout:fixed,
-     * sehingga bounding rect wrapper saja tidak selalu merepresentasikan tinggi
-     * tabel secara konsisten. Karena itu tabel di dalam wrapper juga diperiksa.
+     * scrollHeight/clientHeight adalah indikator layout CSS pixel yang tidak
+     * terpengaruh transform zoom. Physical bounds menjadi fallback ketika
+     * descendant overflow tidak tercermin sempurna pada scrollHeight.
      */
     const scrollOverflow = content.scrollHeight > content.clientHeight + 0.5;
-
-    const contentRect = content.getBoundingClientRect();
-    const styles = getComputedStyle(content);
-    const paddingBottom = parseFloat(styles.paddingBottom) || 0;
-    const limitBottom = contentRect.bottom - paddingBottom;
     const lastChild = content.lastElementChild;
     if (!lastChild) return scrollOverflow;
 
@@ -970,9 +960,7 @@ const PreviewRenderer = (() => {
       ? (lastChild.querySelector(':scope > table') || lastChild)
       : lastChild;
 
-    const physicalOverflow = measuredNode.getBoundingClientRect().bottom > limitBottom + 0.5;
-
-    return scrollOverflow || physicalOverflow;
+    return scrollOverflow || !_fitsOnPage(content, measuredNode);
   }
 
   async function _appendTableWithPagination(tableWrap, current, pages, paperWidthPx, paperHeightPx, baseStyle, renderToken) {
@@ -1008,6 +996,10 @@ const PreviewRenderer = (() => {
       fragmentWrap.appendChild(fragmentTable);
       current.content.appendChild(fragmentWrap);
     };
+
+    if (rows.length === 0) {
+      beginFragment();
+    }
 
     for (const row of rows) {
       if (renderToken !== _renderToken) return;
