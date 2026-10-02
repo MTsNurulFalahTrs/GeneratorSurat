@@ -386,6 +386,105 @@ const State = (() => {
   /* ────────────────────────────────────────────────
      SETTINGS GETTERS & SETTERS
   ──────────────────────────────────────────────── */
+  const VALID_PAPER_UNITS = ['mm', 'cm', 'in'];
+  const CUSTOM_WIDTH_MIN_MM  = 50;
+  const CUSTOM_WIDTH_MAX_MM  = 600;
+  const CUSTOM_HEIGHT_MIN_MM = 50;
+  const CUSTOM_HEIGHT_MAX_MM = 900;
+
+  function _normalizePaperSize(value) {
+    const raw = String(value ?? '').trim();
+    const exact = Object.prototype.hasOwnProperty.call(PAPER_SIZES, raw) ? raw : null;
+    if (exact) return exact;
+
+    const match = Object.keys(PAPER_SIZES).find(key => key.toLowerCase() === raw.toLowerCase());
+    return match || 'A4';
+  }
+
+  function _toFiniteNumber(value, fallback, min = -Infinity, max = Infinity) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Utils.clamp(n, min, max);
+  }
+
+  function _normalizeSettings(input) {
+    const settings = Utils.deepMerge(DEFAULT_SETTINGS(), input || {});
+
+    settings.paper = settings.paper || {};
+    settings.paper.size = _normalizePaperSize(settings.paper.size);
+    settings.paper.unit = VALID_PAPER_UNITS.includes(settings.paper.unit)
+      ? settings.paper.unit
+      : 'mm';
+
+    /*
+     * customWidth/customHeight adalah nilai internal dalam mm.
+     * paper.unit hanya menentukan satuan yang ditampilkan di Settings.
+     */
+    settings.paper.customWidth = _toFiniteNumber(
+      settings.paper.customWidth,
+      DEFAULT_SETTINGS().paper.customWidth,
+      CUSTOM_WIDTH_MIN_MM, CUSTOM_WIDTH_MAX_MM
+    );
+    settings.paper.customHeight = _toFiniteNumber(
+      settings.paper.customHeight,
+      DEFAULT_SETTINGS().paper.customHeight,
+      CUSTOM_HEIGHT_MIN_MM, CUSTOM_HEIGHT_MAX_MM
+    );
+
+    settings.orientation = settings.orientation === 'landscape' ? 'landscape' : 'portrait';
+
+    settings.margin = settings.margin || {};
+    ['top', 'right', 'bottom', 'left'].forEach(side => {
+      settings.margin[side] = _toFiniteNumber(
+        settings.margin[side],
+        DEFAULT_SETTINGS().margin[side],
+        0,
+        60
+      );
+    });
+
+    settings.typography = settings.typography || {};
+    settings.typography.fontFamily = String(
+      settings.typography.fontFamily || DEFAULT_SETTINGS().typography.fontFamily
+    );
+    settings.typography.fontSize = _toFiniteNumber(
+      settings.typography.fontSize,
+      DEFAULT_SETTINGS().typography.fontSize,
+      7,
+      22
+    );
+    settings.typography.lineHeight = _toFiniteNumber(
+      settings.typography.lineHeight,
+      DEFAULT_SETTINGS().typography.lineHeight,
+      0.5,
+      3
+    );
+    settings.typography.tableSize = _toFiniteNumber(
+      settings.typography.tableSize,
+      DEFAULT_SETTINGS().typography.tableSize,
+      6,
+      14
+    );
+
+    settings.print = settings.print || {};
+    settings.print.scale = _toFiniteNumber(
+      settings.print.scale,
+      DEFAULT_SETTINGS().print.scale,
+      50,
+      150
+    );
+
+    settings.preview = settings.preview || {};
+    const previewZoom = settings.preview.zoom;
+    const validZoomModes = ['auto', 'fit-page', 'fit-width', 'actual'];
+    if (!validZoomModes.includes(previewZoom)) {
+      settings.preview.zoom = 'actual';
+    }
+
+    return settings;
+  }
+
+
 
   /** Kembalikan seluruh settings (deep clone) */
   function getSettings() {
@@ -394,7 +493,7 @@ const State = (() => {
 
   /** Update settings secara partial, lalu emit event */
   function setSettings(partial) {
-    _state.settings = Utils.deepMerge(_state.settings, partial);
+    _state.settings = _normalizeSettings(Utils.deepMerge(_state.settings, partial));
     _state.ui.isDirty = true;
     emit('settings:change', { settings: Utils.deepClone(_state.settings) });
     emit('state:change', { field: 'settings' });
@@ -410,8 +509,9 @@ const State = (() => {
     let w, h;
 
     if (size === 'Custom') {
-      w = _toMm(s.paper.customWidth,  s.paper.unit);
-      h = _toMm(s.paper.customHeight, s.paper.unit);
+      // customWidth/customHeight selalu disimpan internal dalam mm.
+      w = Number(s.paper.customWidth);
+      h = Number(s.paper.customHeight);
     } else {
       const def = PAPER_SIZES[size] || PAPER_SIZES.A4;
       w = def.width;
@@ -595,7 +695,7 @@ const State = (() => {
         _state.kop = Utils.deepMerge(DEFAULT_KOP_CONFIG(), savedData.kop);
       }
       if (savedData.settings) {
-        _state.settings = Utils.deepMerge(DEFAULT_SETTINGS(), savedData.settings);
+        _state.settings = _normalizeSettings(savedData.settings);
       }
       if (savedData.forms) {
         _state.forms = Utils.deepClone(savedData.forms);

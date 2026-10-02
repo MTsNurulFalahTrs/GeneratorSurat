@@ -283,6 +283,12 @@ const Workflow = (() => {
   }
 
   function preparePrint() {
+    // Pastikan perubahan input/settings yang masih dalam debounce sudah masuk
+    // ke State sebelum preflight validation membaca data.
+    if (typeof Utils.flushDebounces === 'function') {
+      Utils.flushDebounces();
+    }
+
     const errors = _collectPrintChecks();
 
     if (errors.length === 0) {
@@ -373,8 +379,27 @@ const Workflow = (() => {
       const index = Number(repeatMatch[2]);
       const key = repeatMatch[3];
       const list = document.getElementById(`repeatable-list-${sectionId}`);
-      const entry = list?.querySelectorAll('.row-entry')?.[index];
-      return entry?.querySelector(`[data-field-key="${CSS.escape(key)}"] input, [data-field-key="${CSS.escape(key)}"] select, [data-field-key="${CSS.escape(key)}"] textarea`) || null;
+      const entries = list?.querySelectorAll('.row-entry') || [];
+      const entry = entries[index];
+
+      if (entry) {
+        return entry.querySelector(
+          `[data-field-key="${CSS.escape(key)}"] input, [data-field-key="${CSS.escape(key)}"] select, [data-field-key="${CSS.escape(key)}"] textarea`
+        ) || null;
+      }
+
+      // Error level section (mis. "peserta" tanpa index): fokuskan field
+      // pertama yang tersedia agar pengguna tahu bagian yang harus diperbaiki.
+      return list?.querySelector('.row-entry input, .row-entry select, .row-entry textarea')
+        || document.querySelector(`[data-section="${sectionId}"] input, [data-section="${sectionId}"] select, [data-section="${sectionId}"] textarea`)
+        || null;
+    }
+
+    if (fieldPath === 'peserta' || fieldPath === 'siswa') {
+      return document.querySelector(
+        `#repeatable-list-${fieldPath} .row-entry input, #repeatable-list-${fieldPath} .row-entry select, #repeatable-list-${fieldPath} .row-entry textarea`
+      ) || document.querySelector(`#repeatable-list-${fieldPath}`)?.closest('.form-section')
+        ?.querySelector('.add-row-btn');
     }
 
     const directId = `field-${fieldPath.replace(/\./g, '-')}`;

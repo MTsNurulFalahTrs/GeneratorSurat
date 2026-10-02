@@ -68,6 +68,10 @@ const PreviewRenderer = (() => {
       _currentZoom = zoom;
       _applyZoom(zoom);
     });
+
+    // State restore terjadi sebelum PreviewRenderer diinisialisasi pada boot.
+    // Render awal di sini memastikan data yang sudah direstore langsung tampil.
+    _renderCurrent();
   }
 
   /* ── Render preview sesuai template aktif ── */
@@ -1204,8 +1208,20 @@ const PreviewRenderer = (() => {
   /* ── Placeholder ── */
   function _showPlaceholder() {
     if (!_previewEl) return;
-    _previewEl.classList.remove('orientation-landscape');
+
+    // Batalkan pagination/render async yang masih berjalan sebelum placeholder
+    // dipasang, agar hasil render lama tidak muncul kembali.
+    _renderToken += 1;
+    _previewEl.classList.remove('surat-preview--document', 'orientation-landscape');
     _previewEl.dataset.pageCount = '0';
+    _previewEl.style.width = '';
+    _previewEl.style.minHeight = '';
+    if (_wrapperEl) {
+      _wrapperEl.style.width = '';
+      _wrapperEl.style.height = '';
+      _wrapperEl.style.transform = `scale(${_currentZoom})`;
+    }
+
     _updatePageInfo(0);
     _previewEl.innerHTML = `
       <div class="preview-placeholder">
@@ -1237,11 +1253,46 @@ const PreviewRenderer = (() => {
     return Utils.escapeHtml(String(v ?? ''));
   }
 
+  async function waitForReady(maxFrames = 90) {
+    if (!_previewEl) return;
+
+    /*
+     * Critical action (mis. Print) harus melihat DOM setelah render terbaru.
+     * Frame-based waiting mengikuti font/image/layout browser, bukan timeout
+     * tetap yang bisa terlalu cepat atau terlalu lama.
+     */
+    let frames = 0;
+    while (frames < maxFrames) {
+      frames += 1;
+
+      const templateId = State.getActiveTemplate();
+      if (!templateId) return;
+
+      const isMultiPage = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(templateId);
+      if (!isMultiPage) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        return;
+      }
+
+      if (
+        _previewEl.classList.contains('surat-preview--document') &&
+        _previewEl.querySelector(':scope > .surat-page') &&
+        Number(_previewEl.dataset.pageCount || 0) > 0
+      ) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        return;
+      }
+
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+  }
+
   /* ── Public API ── */
   return {
     init,
     render,
     setZoomMode: _setZoomMode,
+    waitForReady,
   };
 
 })();
