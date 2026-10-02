@@ -66,19 +66,55 @@
     width: auto !important;
   }
 
-  /* ── Surat Preview (paper) ── */
+  /* ── Surat Preview / Multi-page document ── */
   .surat-preview {
     box-shadow: none !important;
+    background: white !important;
     width: auto !important;
     min-height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: white !important;
-    page-break-after: always;
   }
 
-  .surat-preview:last-child {
+  .surat-preview--document {
+    display: block !important;
+    width: auto !important;
+    min-height: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .surat-page {
+    position: relative !important;
+    box-sizing: border-box !important;
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    /* width/height berasal dari inline style PreviewRenderer
+       agar ukuran fisik Preview dan Print identik. */
+    margin: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+    overflow: visible !important;
+  }
+
+  .surat-page:last-child {
+    break-after: auto;
     page-break-after: auto;
+  }
+
+  .surat-page > .doc-content {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .doc-ttd-section,
+  .doc-pengesahan-row {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   /* ── Page setup ── */
@@ -91,29 +127,12 @@
     margin: 0;
   }
 
-  /* A4 Portrait */
-  .surat-preview:not(.orientation-landscape) {
-    width: 210mm !important;
-  }
-
-  /* A4 Landscape */
-  .surat-preview.orientation-landscape {
-    width: 297mm !important;
-  }
-
-  /* ── Landscape page orientation ── */
-  /* .print-landscape orientation is applied via JS to body/html before print */
-
-  /* ── Doc content padding ── */
-  /* Margin/padding ditangani oleh @page rule yang diinjeksi oleh print.js
-     dari State.getSettings().margin. Jangan override di sini. */
+  /* ── Doc content ── */
+  /* Margin, font-family, font-size, line-height, dan style konten
+     berasal dari inline style PreviewRenderer/current State. */
   .doc-content {
-    font-family: 'Times New Roman', Times, serif !important;
-    /* Padding inline style dari preview-renderer dibiarkan bekerja,
-       @page margin sudah mengatur margin halaman fisik */
+    box-sizing: border-box;
     color: #000 !important;
-    font-size: 12pt !important;
-    /* Scale dari print.js: transform diatur per-print via injected style */
   }
 
   /* ── KOP ── */

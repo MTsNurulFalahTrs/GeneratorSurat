@@ -14,6 +14,7 @@ const PreviewRenderer = (() => {
   let _wrapperEl   = null;   // #preview-canvas-wrapper
   let _zoomLevelEl = null;   // #zoom-level-text
   let _currentZoom = 1;
+  let _renderToken = 0;       // membatalkan pagination async dari render lama
 
   const ZOOM_STEP = 0.1;
   const ZOOM_MIN  = 0.3;
@@ -82,37 +83,42 @@ const PreviewRenderer = (() => {
     if (!_previewEl) return;
 
     // ── Dimensi kertas dari Settings (bukan dari meta template) ──
-    // Settings.orientation overrides template default, kecuali jika
-    // pengguna belum mengubahnya (maka ikuti template)
-    const s         = State.getSettings();
-    const dim       = State.getPaperDimensions();
-    const margin    = State.getMarginMm();
-    const typo      = State.getTypography();
-    const isLandscape = s.orientation === 'landscape';
+    const s            = State.getSettings();
+    const dim          = State.getPaperDimensions();
+    const margin       = State.getMarginMm();
+    const typo         = State.getTypography();
+    const isLandscape  = s.orientation === 'landscape';
+    const isMultiPage  = tpl?.TEMPLATE_ID === 'mutasi-masuk' || tpl?.TEMPLATE_ID === 'siswa-baru';
+    const renderToken  = ++_renderToken;
 
-    // Apply class orientasi pada preview paper
-    _previewEl.classList.toggle('orientation-landscape', isLandscape);
+    // Pada mode multi-page, orientasi/ukuran fisik dipindahkan ke setiap
+    // .surat-page; outer #surat-preview menjadi container dokumen.
+    _previewEl.classList.toggle('surat-preview--document', isMultiPage);
+    _previewEl.classList.toggle('orientation-landscape', isLandscape && !isMultiPage);
 
-    // Terapkan ukuran kertas via CSS custom properties pada preview paper
     const paperWidthPx  = dim.widthMm  * PX_PER_MM;
     const paperHeightPx = dim.heightMm * PX_PER_MM;
 
-    _previewEl.style.width    = `${paperWidthPx}px`;
-    _previewEl.style.minHeight= `${paperHeightPx}px`;
+    _previewEl.style.width = `${paperWidthPx}px`;
+    _previewEl.style.minHeight = isMultiPage ? '' : `${paperHeightPx}px`;
 
     if (_wrapperEl) {
       _wrapperEl.style.width = `${paperWidthPx}px`;
     }
 
-    // Render HTML isi dokumen
+    // Render HTML isi dokumen sebagai satu flow terlebih dahulu.
     const html = _buildDocumentHtml(tpl, formData, kop, margin, typo);
     _previewEl.innerHTML = html;
 
-    // Re-terapkan overlay margin guide / printable area setelah innerHTML diset
-    // (innerHTML reset menghapus child elements termasuk overlay)
+    if (isMultiPage) {
+      // Pagination dilakukan setelah font/image/layout stabil.
+      _schedulePagination(renderToken, paperWidthPx, paperHeightPx);
+      return;
+    }
+
     requestAnimationFrame(() => {
+      if (renderToken !== _renderToken) return;
       _updateWrapperHeight(_currentZoom);
-      // Re-apply overlays tanpa memanggil syncFromState (mencegah loop)
       if (typeof Settings !== 'undefined') {
         const sv = State.getSettings().preview;
         if (sv.showMarginGuide)   _reApplyMarginGuide(sv.showMarginGuide);
@@ -120,7 +126,6 @@ const PreviewRenderer = (() => {
       }
     });
   }
-
   /* ── Build seluruh HTML dokumen ── */
   function _buildDocumentHtml(tpl, formData, kop, margin, typo) {
     const id = tpl.TEMPLATE_ID;
@@ -328,18 +333,7 @@ const PreviewRenderer = (() => {
       </div>`;
 
     /* ── Tanda Tangan ── */
-    const ttdHtml = _buildTtdSiswa(ttd, meta);
-
-    /* ── Catatan ── */
-    let catatanHtml = '';
-    if (catatan && catatan.tampilkan && catatan.items && catatan.items.length) {
-      const items = catatan.items.map(it => `<li>${_esc(it)}</li>`).join('');
-      catatanHtml = `
-        <div class="doc-catatan">
-          <p class="doc-catatan__title">Catatan:</p>
-          <ol class="doc-catatan__list">${items}</ol>
-        </div>`;
-    }
+    const ttdHtml = _buildTtdSiswa(ttd, meta, catatan);
 
     return `
       <div class="doc-content" style="${marginStyle}">
@@ -351,11 +345,10 @@ const PreviewRenderer = (() => {
         ${tableHtml}
         ${rekapHtml}
         ${ttdHtml}
-        ${catatanHtml}
       </div>`;
   }
 
-  function _buildTtdSiswa(ttd, meta) {
+  function _buildTtdSiswa(ttd, meta, catatan) {
     const kota  = ttd.kotaMadrasah || 'Musi Rawas';
     const tahun = ttd.tahun || meta.tahun || '';
     const kp    = ttd.kasiPenmad     || {};
@@ -402,8 +395,8 @@ const PreviewRenderer = (() => {
         <!-- Pengesahan Palembang -->
         <div class="doc-pengesahan-extra">
           <div class="doc-pengesahan-row">
-            <div class="doc-pengesahan-col" style="text-align:left;">
-              <!-- Catatan akan muncul di sini via catatanHtml -->
+            <div class="doc-pengesahan-col doc-pengesahan-col--catatan">
+              ${_buildCatatanHtml(catatan)}
             </div>
             <div class="doc-pengesahan-col" style="text-align:center;">
               <p>Mengesahkan,</p>
@@ -428,6 +421,185 @@ const PreviewRenderer = (() => {
           </div>
         </div>
       </div>`;
+  }
+
+  /* ────────────────────────────────────────────────
+     CATATAN + PAGINATION PREVIEW
+  ──────────────────────────────────────────────── */
+
+  function _buildCatatanHtml(catatan) {
+    if (!catatan?.tampilkan || !Array.isArray(catatan.items) || !catatan.items.length) {
+      return '';
+    }
+    const items = catatan.items.map(it => `<li>${_esc(it)}</li>`).join('');
+    return `
+      <div class="doc-catatan">
+        <p class="doc-catatan__title">Catatan:</p>
+        <ol class="doc-catatan__list">${items}</ol>
+      </div>`;
+  }
+
+  function _schedulePagination(renderToken, paperWidthPx, paperHeightPx) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        _paginatePreview(renderToken, paperWidthPx, paperHeightPx).catch(err => {
+          console.warn('[PreviewRenderer] Pagination gagal:', err);
+          if (renderToken === _renderToken) _updateWrapperHeight(_currentZoom);
+        });
+      });
+    });
+  }
+
+  async function _paginatePreview(renderToken, paperWidthPx, paperHeightPx) {
+    if (renderToken !== _renderToken || !_previewEl) return;
+
+    const source = _previewEl.querySelector(':scope > .doc-content');
+    if (!source) return;
+
+    await _waitForLayoutAssets(source);
+    if (renderToken !== _renderToken) return;
+
+    const baseStyle = source.getAttribute('style') || '';
+    const children = Array.from(source.children);
+    const pages = [];
+
+    _previewEl.innerHTML = '';
+
+    let current = _createPreviewPage(
+      pages.length + 1, paperWidthPx, paperHeightPx, baseStyle, children.length === 0
+    );
+    _previewEl.appendChild(current.page);
+    pages.push(current);
+
+    for (const child of children) {
+      if (renderToken !== _renderToken) return;
+
+      if (child.matches('.doc-table-wrap')) {
+        await _appendTableWithPagination(
+          child, current, pages, paperWidthPx, paperHeightPx, baseStyle, renderToken
+        );
+        current = pages[pages.length - 1];
+        continue;
+      }
+
+      current.content.appendChild(child);
+      if (_isPageOverflowing(current.content) && current.content.children.length > 1) {
+        current.content.removeChild(child);
+        current = _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle);
+        current.content.appendChild(child);
+      }
+    }
+
+    _previewEl.dataset.pageCount = String(pages.length);
+    _updateWrapperHeight(_currentZoom);
+
+    requestAnimationFrame(() => {
+      if (renderToken !== _renderToken || typeof Settings === 'undefined') return;
+      const sv = State.getSettings().preview;
+      if (sv.showMarginGuide)   _reApplyMarginGuide(sv.showMarginGuide);
+      if (sv.showPrintableArea) _reApplyPrintableArea(sv.showPrintableArea);
+    });
+  }
+
+  async function _waitForLayoutAssets(root) {
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    const images = Array.from(root.querySelectorAll('img'));
+    if (images.length) {
+      await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          const done = () => resolve();
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        });
+      }));
+    }
+
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }
+
+  function _createPreviewPage(pageNumber, paperWidthPx, paperHeightPx, baseStyle, empty = false) {
+    const page = document.createElement('section');
+    page.className = 'surat-page';
+    page.dataset.pageNumber = String(pageNumber);
+    page.setAttribute('aria-label', `Halaman ${pageNumber}`);
+    page.style.width = `${paperWidthPx}px`;
+    page.style.height = `${paperHeightPx}px`;
+
+    const content = document.createElement('div');
+    content.className = 'doc-content';
+    if (baseStyle) content.setAttribute('style', baseStyle);
+    page.appendChild(content);
+
+    if (empty) content.innerHTML = '&nbsp;';
+    return { page, content };
+  }
+
+  function _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle) {
+    const current = _createPreviewPage(pages.length + 1, paperWidthPx, paperHeightPx, baseStyle);
+    _previewEl.appendChild(current.page);
+    pages.push(current);
+    return current;
+  }
+
+  function _isPageOverflowing(content) {
+    return content.scrollHeight > content.clientHeight + 0.5;
+  }
+
+  async function _appendTableWithPagination(tableWrap, current, pages, paperWidthPx, paperHeightPx, baseStyle, renderToken) {
+    const table = tableWrap.querySelector(':scope > table');
+    const tbody = table?.querySelector(':scope > tbody');
+
+    if (!table || !tbody) {
+      current.content.appendChild(tableWrap);
+      if (_isPageOverflowing(current.content) && current.content.children.length > 1) {
+        current.content.removeChild(tableWrap);
+        current = _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle);
+        current.content.appendChild(tableWrap);
+      }
+      return;
+    }
+
+    const rows = Array.from(tbody.rows);
+    const templateTable = table.cloneNode(true);
+    const templateBody = templateTable.querySelector(':scope > tbody');
+    if (!templateBody) {
+      current.content.appendChild(tableWrap);
+      return;
+    }
+    templateBody.innerHTML = '';
+
+    let fragmentWrap = null;
+    let fragmentBody = null;
+
+    const beginFragment = () => {
+      fragmentWrap = tableWrap.cloneNode(false);
+      const fragmentTable = templateTable.cloneNode(true);
+      fragmentBody = fragmentTable.querySelector(':scope > tbody');
+      fragmentWrap.appendChild(fragmentTable);
+      current.content.appendChild(fragmentWrap);
+    };
+
+    for (const row of rows) {
+      if (renderToken !== _renderToken) return;
+      if (!fragmentWrap) beginFragment();
+
+      const rowClone = row.cloneNode(true);
+      fragmentBody.appendChild(rowClone);
+
+      if (_isPageOverflowing(current.content) && fragmentBody.rows.length > 1) {
+        fragmentBody.removeChild(rowClone);
+        current = _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle);
+        beginFragment();
+        fragmentBody.appendChild(rowClone);
+      } else if (_isPageOverflowing(current.content) && fragmentBody.rows.length === 1 && current.content.children.length > 1) {
+        current.content.removeChild(fragmentWrap);
+        current = _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle);
+        beginFragment();
+        fragmentBody.appendChild(rowClone);
+      }
+    }
   }
 
   /* ────────────────────────────────────────────────
