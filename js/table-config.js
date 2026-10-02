@@ -636,13 +636,12 @@ const TableConfigManager = (() => {
         out.fontSize = null; // reset ke global
       }
     }
-    // wrapText: true = wrap, false = nowrap, null = ikuti default CSS
-    if ('wrapText' in obj) {
-      if (obj.wrapText === null || obj.wrapText === undefined) {
-        out.wrapText = null;
-      } else {
-        out.wrapText = Boolean(obj.wrapText);
-      }
+    // wrapText: true = wrap, false = nowrap.
+    // null/undefined di input = tidak ada preferensi user → JANGAN simpan ke output
+    // agar DEFAULT_HEADER_COL/DEFAULT_BODY_COL yang berlaku via Object.assign.
+    // Hanya simpan Boolean eksplisit (true atau false).
+    if ('wrapText' in obj && obj.wrapText !== null && obj.wrapText !== undefined) {
+      out.wrapText = Boolean(obj.wrapText);
     }
     return out;
   }
