@@ -303,6 +303,69 @@ const UI = (() => {
     }
   }
 
+
+  /* ── Mobile: tampil/sembunyikan preview ── */
+  let _mobilePreviewVisible = true;
+
+  function initMobilePreviewToggle() {
+    const btn      = document.getElementById('mobile-preview-toggle');
+    const appBody  = document.querySelector('.app-body');
+    const preview  = document.getElementById('preview-panel');
+    if (!btn || !appBody || !preview) return;
+
+    const media = window.matchMedia?.('(max-width: 767px)');
+    const isMobile = () => media?.matches === true;
+
+    const setVisible = (visible) => {
+      _mobilePreviewVisible = !!visible;
+
+      // Di luar viewport mobile, preview selalu tampil.
+      if (!isMobile()) {
+        appBody.classList.remove('is-mobile-preview-hidden');
+        preview.removeAttribute('aria-hidden');
+        preview.inert = false;
+        btn.setAttribute('aria-expanded', 'true');
+        btn.title = 'Sembunyikan preview surat';
+        btn.querySelector('.mobile-preview-toggle__label')?.replaceChildren(
+          document.createTextNode('Sembunyikan Preview')
+        );
+        return;
+      }
+
+      appBody.classList.toggle('is-mobile-preview-hidden', !visible);
+      preview.setAttribute('aria-hidden', String(!visible));
+      preview.inert = !visible;
+      btn.setAttribute('aria-expanded', String(visible));
+      btn.title = visible ? 'Sembunyikan preview surat' : 'Tampilkan preview surat';
+
+      const label = btn.querySelector('.mobile-preview-toggle__label');
+      if (label) {
+        label.textContent = visible ? 'Sembunyikan Preview' : 'Tampilkan Preview';
+      }
+    };
+
+    btn.addEventListener('click', () => setVisible(!_mobilePreviewVisible));
+
+    if (media) {
+      const handleViewportChange = (e) => {
+        if (!e.matches) {
+          // Saat kembali ke desktop/tablet, preview wajib terlihat kembali.
+          setVisible(true);
+        } else {
+          setVisible(_mobilePreviewVisible);
+        }
+      };
+
+      if (typeof media.addEventListener === 'function') {
+        media.addEventListener('change', handleViewportChange);
+      } else if (typeof media.addListener === 'function') {
+        media.addListener(handleViewportChange);
+      }
+    }
+
+    setVisible(true);
+  }
+
   /* ── Panel Resizer (drag to resize editor panel) ── */
   function initPanelResizer() {
     const resizer   = document.getElementById('panel-resizer');
@@ -392,6 +455,7 @@ const UI = (() => {
     initTabs,
     switchTab,
     initPanelResizer,
+    initMobilePreviewToggle,
   };
 
 })();
