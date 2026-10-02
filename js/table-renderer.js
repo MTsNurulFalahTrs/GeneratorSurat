@@ -306,7 +306,7 @@ const TableRenderer = (() => {
      DPU: 15 kolom, header 2 baris (colspan/rowspan kompleks)
      - Selalu menggunakan table-layout:fixed (doc-table--dpu)
      - columnWidths body dapat di-override user via tableConfig
-     - Header DPU tidak di-override (terlalu kompleks)
+     - Header DPU tetap memakai header.columns untuk styling per kolom
 
      Kolom index map DPU:
        0:urt, 1:indk, 2:nisn, 3:registrasi, 4:nik, 5:namaSiswa,
