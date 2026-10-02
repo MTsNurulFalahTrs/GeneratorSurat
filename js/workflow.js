@@ -8,7 +8,7 @@
 const Workflow = (() => {
 
   const STEPS = [
-    { id: 'template', label: 'Template', shortLabel: 'Template', step: 1, next: 'form' },
+    { id: 'template', label: 'Template', shortLabel: 'Template', step: 1, next: 'kop' },
     { id: 'kop', label: 'KOP Surat', shortLabel: 'KOP', step: 2, next: 'form', previous: 'template' },
     { id: 'form', label: 'Isi Surat', shortLabel: 'Isi Surat', step: 3, next: 'settings', previous: 'kop' },
     { id: 'settings', label: 'Finalisasi', shortLabel: 'Finalisasi', step: 4, previous: 'form' },
@@ -35,6 +35,7 @@ const Workflow = (() => {
     State.on('kop:change', update);
     State.on('form:change', update);
     State.on('settings:change', update);
+    State.on('ui:tabChange', update);
   }
 
   function _renderShell() {
@@ -223,7 +224,7 @@ const Workflow = (() => {
       if (current.id === 'settings') {
         nextLabel.textContent = 'Periksa & Cetak';
       } else if (current.id === 'template') {
-        nextLabel.textContent = 'Ke Isi Surat';
+        nextLabel.textContent = 'Ke KOP Surat';
       } else if (current.id === 'kop') {
         nextLabel.textContent = 'Ke Isi Surat';
       } else {
