@@ -192,35 +192,91 @@ const TableConfigUI = (() => {
     const sectionId = 'tbl-sec-' + _esc(tableId) + '-colors';
     const headerColor = colors?.header || '#FFFFFF';
     const bodyColor = colors?.body || '#FFFFFF';
+    const resolvedCfg = TableConfigManager.getResolvedConfig(templateId, tableId);
+    const rules = Array.isArray(resolvedCfg?.bodyColorRules) ? resolvedCfg.bodyColorRules : [];
+
     const presetColors = [
       ['#FFFFFF', 'Putih'], ['#F1F5F9', 'Abu muda'], ['#DBEAFE', 'Biru muda'],
       ['#E0F2FE', 'Biru lembut'], ['#DCFCE7', 'Hijau muda'], ['#FEF3C7', 'Kuning muda']
     ];
     const presets = presetColors.map(function(preset) {
-      return '<button type=\'button\' class=\'tbl-cfg__color-preset\' data-action=\'color-preset\' data-color=\'' + preset[0] + '\' data-table-id=\'' + _esc(tableId) + '\' title=\'' + _esc(preset[1]) + '\' aria-label=\'Pilih warna ' + _esc(preset[1]) + '\'>'+
-        '<span class=\'tbl-cfg__color-dot\' style=\'background:' + preset[0] + ';\'></span></button>';
+      return '<button type="button" class="tbl-cfg__color-preset" data-action="color-preset" data-color="' + preset[0] +
+        '" data-table-id="' + _esc(tableId) + '" title="' + _esc(preset[1]) + '" aria-label="Pilih warna ' + _esc(preset[1]) + '">' +
+        '<span class="tbl-cfg__color-dot" style="background:' + preset[0] + ';"></span></button>';
     }).join('');
-    return '<div class=\'tbl-cfg__section tbl-cfg__color-section\'>'+
-      '<button type=\'button\' class=\'tbl-cfg__section-toggle' + (isOpen ? ' is-open' : '') + '\' aria-expanded=\'' + isOpen + '\' aria-controls=\'' + sectionId + '\' data-section-key=\'' + _esc(sectionKey) + '\'>'+
-        '<span class=\'tbl-cfg__section-icon\' aria-hidden=\'true\'>🎨</span>'+
-        '<span class=\'tbl-cfg__section-title\'>Warna Tabel</span>'+
-        '<span class=\'tbl-cfg__section-chevron\' aria-hidden=\'true\'><svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' width=\'13\' height=\'13\'><polyline points=\'6 9 12 15 18 9\'/></svg></span>'+
-      '</button>'+
-      '<div class=\'tbl-cfg__section-body' + (isOpen ? ' is-open' : '') + '\' id=\'' + sectionId + '\' role=\'region\'>'+
-        '<div class=\'tbl-cfg__color-hint\'>Atur warna latar <strong>Header</strong> dan <strong>Isi</strong> tabel secara terpisah.</div>'+
-        '<div class=\'tbl-cfg__color-row\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'header\'>'+
-          '<div class=\'tbl-cfg__color-label-wrap\'><span class=\'tbl-cfg__color-preview\' style=\'background:' + headerColor + ';\'></span><div><span class=\'tbl-cfg__color-label\'>Header Tabel</span><span class=\'tbl-cfg__color-description\'>Warna latar baris judul kolom</span></div></div>'+
-          '<div class=\'tbl-cfg__color-input-wrap\'><input type=\'color\' class=\'tbl-cfg__color-picker\' data-action=\'table-color\' data-template-id=\'' + _esc(templateId) + '\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'header\' value=\'' + headerColor + '\' aria-label=\'Header Tabel\'/><input type=\'text\' class=\'form-input tbl-cfg__color-hex\' data-action=\'table-color-hex\' data-template-id=\'' + _esc(templateId) + '\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'header\' value=\'' + headerColor + '\' maxlength=\'7\' spellcheck=\'false\' aria-label=\'Kode warna Header Tabel\' placeholder=\'#FFFFFF\'/></div>'+
-        '</div>'+
-        '<div class=\'tbl-cfg__color-row\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'body\'>'+
-          '<div class=\'tbl-cfg__color-label-wrap\'><span class=\'tbl-cfg__color-preview\' style=\'background:' + bodyColor + ';\'></span><div><span class=\'tbl-cfg__color-label\'>Isi Tabel</span><span class=\'tbl-cfg__color-description\'>Warna latar seluruh baris data</span></div></div>'+
-          '<div class=\'tbl-cfg__color-input-wrap\'><input type=\'color\' class=\'tbl-cfg__color-picker\' data-action=\'table-color\' data-template-id=\'' + _esc(templateId) + '\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'body\' value=\'' + bodyColor + '\' aria-label=\'Isi Tabel\'/><input type=\'text\' class=\'form-input tbl-cfg__color-hex\' data-action=\'table-color-hex\' data-template-id=\'' + _esc(templateId) + '\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'body\' value=\'' + bodyColor + '\' maxlength=\'7\' spellcheck=\'false\' aria-label=\'Kode warna Isi Tabel\' placeholder=\'#FFFFFF\'/></div>'+
-        '</div>'+
-        '<div class=\'tbl-cfg__color-presets\'><span class=\'tbl-cfg__color-presets-label\'>Pilihan cepat · diterapkan ke Header</span><div class=\'tbl-cfg__color-preset-list\'>'+presets+'</div></div>'+
-        '<div class=\'tbl-cfg__color-reset-row\'><span>Reset kedua warna ke putih</span><button type=\'button\' class=\'btn btn--sm btn--ghost\' data-action=\'reset-table-colors\' data-table-id=\'' + _esc(tableId) + '\'>Reset Warna</button></div>'+
-      '</div>'+
+
+    return '<div class="tbl-cfg__section tbl-cfg__color-section">' +
+      '<button type="button" class="tbl-cfg__section-toggle' + (isOpen ? ' is-open' : '') +
+        '" aria-expanded="' + isOpen + '" aria-controls="' + sectionId + '" data-section-key="' + _esc(sectionKey) + '">' +
+        '<span class="tbl-cfg__section-icon" aria-hidden="true">🎨</span>' +
+        '<span class="tbl-cfg__section-title">Warna Tabel</span>' +
+        '<span class="tbl-cfg__section-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="6 9 12 15 18 9"/></svg></span>' +
+      '</button>' +
+      '<div class="tbl-cfg__section-body' + (isOpen ? ' is-open' : '') + '" id="' + sectionId + '" role="region">' +
+        '<div class="tbl-cfg__color-hint">Atur warna dasar <strong>Header</strong> dan <strong>Isi</strong> tabel. Untuk Isi, buat aturan berdasarkan baris dan/atau kolom.</div>' +
+        '<div class="tbl-cfg__color-row" data-table-id="' + _esc(tableId) + '" data-color-section="header">' +
+          '<div class="tbl-cfg__color-label-wrap"><span class="tbl-cfg__color-preview" style="background:' + headerColor + ';"></span><div><span class="tbl-cfg__color-label">Header Tabel</span><span class="tbl-cfg__color-description">Warna latar seluruh header</span></div></div>' +
+          '<div class="tbl-cfg__color-input-wrap"><input type="color" class="tbl-cfg__color-picker" data-action="table-color" data-template-id="' + _esc(templateId) + '" data-table-id="' + _esc(tableId) + '" data-color-section="header" value="' + headerColor + '" aria-label="Header Tabel"/>' +
+            '<input type="text" class="form-input tbl-cfg__color-hex" data-action="table-color-hex" data-template-id="' + _esc(templateId) + '" data-table-id="' + _esc(tableId) + '" data-color-section="header" value="' + headerColor + '" maxlength="7" spellcheck="false" aria-label="Kode warna Header Tabel" placeholder="#FFFFFF"/></div>' +
+        '</div>' +
+        '<div class="tbl-cfg__color-row" data-table-id="' + _esc(tableId) + '" data-color-section="body">' +
+          '<div class="tbl-cfg__color-label-wrap"><span class="tbl-cfg__color-preview" style="background:' + bodyColor + ';"></span><div><span class="tbl-cfg__color-label">Isi Tabel</span><span class="tbl-cfg__color-description">Warna dasar sebelum aturan khusus</span></div></div>' +
+          '<div class="tbl-cfg__color-input-wrap"><input type="color" class="tbl-cfg__color-picker" data-action="table-color" data-template-id="' + _esc(templateId) + '" data-table-id="' + _esc(tableId) + '" data-color-section="body" value="' + bodyColor + '" aria-label="Isi Tabel"/>' +
+            '<input type="text" class="form-input tbl-cfg__color-hex" data-action="table-color-hex" data-template-id="' + _esc(templateId) + '" data-table-id="' + _esc(tableId) + '" data-color-section="body" value="' + bodyColor + '" maxlength="7" spellcheck="false" aria-label="Kode warna Isi Tabel" placeholder="#FFFFFF"/></div>' +
+        '</div>' +
+        '<div class="tbl-cfg__body-rule-editor">' +
+          '<div class="tbl-cfg__body-rule-editor-head"><div><span class="tbl-cfg__body-rule-title">Pewarnaan Isi Tabel</span><span class="tbl-cfg__body-rule-description">Tambahkan satu atau beberapa aturan. Aturan terakhir yang ditambahkan menjadi prioritas.</span></div></div>' +
+          '<div class="tbl-cfg__body-rule-form">' +
+            '<div class="tbl-cfg__body-rule-field"><label class="tbl-cfg__control-label" for="body-rule-preset-' + _esc(tableId) + '">Preset Pewarnaan</label>' +
+              '<select id="body-rule-preset-' + _esc(tableId) + '" class="form-select" data-action="body-rule-preset" data-table-id="' + _esc(tableId) + '">' +
+                '<option value="manual">Pilih manual</option><option value="all-body">Semua Isi Tabel</option>' +
+                '<option value="odd-row">Warna Setiap Baris Ganjil</option><option value="even-row">Warna Setiap Baris Genap</option>' +
+                '<option value="odd-column">Warna Setiap Kolom Ganjil</option><option value="even-column">Warna Setiap Kolom Genap</option>' +
+                '<option value="selected-row">Warnai Baris Tertentu</option><option value="selected-column">Warnai Kolom Tertentu</option>' +
+                '<option value="selected-cell">Warnai Baris &amp; Kolom Tertentu</option>' +
+              '</select></div>' +
+            '<div class="tbl-cfg__body-rule-grid">' +
+              '<div class="tbl-cfg__body-rule-field"><label class="tbl-cfg__control-label" for="body-rule-rows-' + _esc(tableId) + '">Baris</label>' +
+                '<input type="text" class="form-input" id="body-rule-rows-' + _esc(tableId) + '" data-action="body-rule-rows" data-table-id="' + _esc(tableId) + '" placeholder="1, 3, 5-7" autocomplete="off"/>' +
+                '<small>Contoh rentang: 1, 3, 5-7.</small></div>' +
+              '<div class="tbl-cfg__body-rule-field"><label class="tbl-cfg__control-label" for="body-rule-cols-' + _esc(tableId) + '">Kolom</label>' +
+                '<input type="text" class="form-input" id="body-rule-cols-' + _esc(tableId) + '" data-action="body-rule-cols" data-table-id="' + _esc(tableId) + '" placeholder="1, 3, 5-7" autocomplete="off"/>' +
+                '<small>Nomor kolom dari kiri ke kanan.</small></div>' +
+            '</div>' +
+            '<div class="tbl-cfg__body-rule-field"><label class="tbl-cfg__control-label">Warna Aturan</label>' +
+              '<div class="tbl-cfg__rule-color-wrap"><input type="color" class="tbl-cfg__color-picker" data-action="body-rule-color" data-table-id="' + _esc(tableId) + '" value="' + bodyColor + '" aria-label="Warna aturan"/>' +
+                '<input type="text" class="form-input tbl-cfg__color-hex" data-action="body-rule-color-hex" data-table-id="' + _esc(tableId) + '" value="' + bodyColor + '" maxlength="7" spellcheck="false" placeholder="#FFFFFF" aria-label="Kode warna aturan"/>' +
+                '<div class="tbl-cfg__color-preset-list">' + presets + '</div></div></div>' +
+            '<div class="tbl-cfg__body-rule-actions"><button type="button" class="btn btn--sm btn--primary" data-action="add-body-color-rule" data-table-id="' + _esc(tableId) + '">＋ Tambahkan Aturan</button>' +
+              '<button type="button" class="btn btn--sm btn--ghost" data-action="clear-body-color-rules" data-table-id="' + _esc(tableId) + '">Hapus Semua Aturan</button></div>' +
+          '</div>' +
+          '<div class="tbl-cfg__body-rules" data-table-id="' + _esc(tableId) + '">' + _buildBodyColorRulesHtml(rules, tableId) + '</div>' +
+        '</div>' +
+        '<div class="tbl-cfg__color-reset-row"><span>Reset semua warna tabel dan aturan Isi</span>' +
+          '<button type="button" class="btn btn--sm btn--ghost" data-action="reset-table-colors" data-table-id="' + _esc(tableId) + '">Reset Warna</button></div>' +
+      '</div>' +
     '</div>';
   }
+
+  function _buildBodyColorRulesHtml(rules, tableId) {
+    if (!Array.isArray(rules) || !rules.length) {
+      return '<div class="tbl-cfg__body-rules-empty">Belum ada aturan khusus. Isi tabel menggunakan warna dasar.</div>';
+    }
+    return rules.map(function(rule, index) {
+      return '<div class="tbl-cfg__body-rule-card">' +
+        '<span class="tbl-cfg__body-rule-swatch" style="background:' + _esc(rule.color || '#FFFFFF') + '"></span>' +
+        '<div class="tbl-cfg__body-rule-card-copy"><strong>' + _esc(_describeBodyColorRule(rule)) + '</strong><small>Aturan #' + (index + 1) + '</small></div>' +
+        '<button type="button" class="btn-icon" data-action="remove-body-color-rule" data-table-id="' + _esc(tableId) + '" data-rule-index="' + index + '" title="Hapus aturan" aria-label="Hapus aturan #' + (index + 1) + '">×</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function _describeBodyColorRule(rule) {
+    const rowLabel = rule.rowMode === 'odd' ? 'Baris ganjil' : rule.rowMode === 'even' ? 'Baris genap' : rule.rowMode === 'selected' ? 'Baris ' + (rule.rows || []).join(', ') : 'Semua baris';
+    const colLabel = rule.colMode === 'odd' ? 'kolom ganjil' : rule.colMode === 'even' ? 'kolom genap' : rule.colMode === 'selected' ? 'kolom ' + (rule.cols || []).map(function(i){ return i + 1; }).join(', ') : 'semua kolom';
+    return rowLabel + ' · ' + colLabel;
+  }
+
 
   /* ════════════════════════════════════════════════
      PANEL LEBAR KOLOM (structural — berlaku untuk seluruh kolom)
@@ -603,6 +659,44 @@ const TableConfigUI = (() => {
     root.addEventListener('click',  _boundClickHandler);
     root.addEventListener('change', _boundChangeHandler);
     root.addEventListener('input',  _boundInputHandler);
+  }
+
+  function _getBodyRulePresetConfig(preset, rowsText, colsText) {
+    const rows = _parseIndexList(rowsText, 1);
+    const cols = _parseIndexList(colsText, 1).map(function(n) { return n - 1; });
+    const config = { preset: preset || 'manual', color: '#FFFFFF', rowMode: 'all', colMode: 'all', rows: rows, cols: cols };
+    if (preset === 'odd-row') config.rowMode = 'odd';
+    else if (preset === 'even-row') config.rowMode = 'even';
+    else if (preset === 'odd-column') config.colMode = 'odd';
+    else if (preset === 'even-column') config.colMode = 'even';
+    else if (preset === 'selected-row') config.rowMode = 'selected';
+    else if (preset === 'selected-column') config.colMode = 'selected';
+    else if (preset === 'selected-cell') { config.rowMode = 'selected'; config.colMode = 'selected'; }
+    else if (preset === 'manual') {
+      config.rowMode = rows.length ? 'selected' : 'all';
+      config.colMode = cols.length ? 'selected' : 'all';
+    }
+    return config;
+  }
+
+  function _parseIndexList(text, min) {
+    const value = String(text || '').trim();
+    if (!value) return [];
+    const out = new Set();
+    value.split(',').forEach(function(part) {
+      const token = part.trim();
+      if (!token) return;
+      const range = token.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (range) {
+        let a = parseInt(range[1], 10), b = parseInt(range[2], 10);
+        if (a > b) { const tmp = a; a = b; b = tmp; }
+        for (let i = a; i <= Math.min(b, 9999); i++) if (i >= min) out.add(i);
+        return;
+      }
+      const n = parseInt(token, 10);
+      if (Number.isInteger(n) && n >= min) out.add(n);
+    });
+    return Array.from(out).sort(function(a,b) { return a-b; });
   }
 
   function _handleClick(e, templateId) {
