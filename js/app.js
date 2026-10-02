@@ -82,7 +82,12 @@ const App = (() => {
       console.warn('[App] Settings module tidak tersedia.');
     }
 
-    /* 10. Bind header action buttons */
+    /* 10. Init UX workflow controller */
+    if (typeof Workflow !== "undefined") {
+      Workflow.init();
+    }
+
+    /* 11. Bind header action buttons */
     _bindHeaderButtons();
 
     /* 11. Update storage info display */
@@ -171,7 +176,11 @@ const App = (() => {
 
     // Cetak
     document.getElementById('btn-print')?.addEventListener('click', () => {
-      Print.printDocument();
+      if (typeof Workflow !== "undefined" && typeof Workflow.preparePrint === "function") {
+        Workflow.preparePrint();
+      } else {
+        Print.printDocument();
+      }
     });
 
     // Reset
