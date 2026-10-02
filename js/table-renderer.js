@@ -125,7 +125,8 @@ const TableRenderer = (() => {
 
     const emptyCount = Math.max(0, minRows - rows.length);
     const emptyRows  = Array.from({ length: emptyCount }, () => {
-      const cells = columns.map(() => '<td>&nbsp;</td>').join('');
+      const emptyBodyStyle = `background-color:${_getSectionBackground(tableConfig, 'body')}`;
+      const cells = columns.map(() => `<td style="${emptyBodyStyle}">&nbsp;</td>`).join('');
       return `<tr class="doc-empty-row">${cells}</tr>`;
     });
 
@@ -401,7 +402,7 @@ const TableRenderer = (() => {
 
     const emptyCount    = Math.max(0, minRows - peserta.length);
     const emptyRowsHtml = Array.from({ length: emptyCount }, () =>
-      `<tr class="doc-empty-row">${Array(15).fill('<td>&nbsp;</td>').join('')}</tr>`
+      `<tr class="doc-empty-row">${Array(15).fill(`<td style="background-color:${_getSectionBackground(tableConfig, 'body')}">&nbsp;</td>`).join('')}</tr>`
     ).join('');
 
     return `
