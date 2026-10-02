@@ -16,7 +16,10 @@ const TableConfigUI = (() => {
   /* ── State UI lokal ── */
   let _mountEl      = null;
   let _templateId   = null;
-  let _openSections = {};   // { 'tableId-width': bool, 'tableId-header': bool, ... }
+  let _openSections = {};
+  let _boundClickHandler  = null;
+  let _boundChangeHandler = null;
+  let _boundInputHandler  = null;   // { 'tableId-width': bool, 'tableId-header': bool, ... }
 
   /* ── Label dan ikon ── */
   const H_ALIGN_OPTIONS = [
@@ -94,7 +97,7 @@ const TableConfigUI = (() => {
     _mountEl.removeAttribute('hidden');
     _mountEl.style.display = '';
 
-    _bindEvents(_mountEl, templateId);
+    _bindEvents(_mountEl);
   }
 
   /* ────────────────────────────────────────────────
@@ -549,10 +552,19 @@ const TableConfigUI = (() => {
   /* ════════════════════════════════════════════════
      EVENT BINDING
   ════════════════════════════════════════════════ */
-  function _bindEvents(root, templateId) {
-    root.addEventListener('click',  e => _handleClick(e, templateId));
-    root.addEventListener('change', e => _handleChange(e, templateId));
-    root.addEventListener('input',  e => _handleInput(e, templateId));
+  function _bindEvents(root) {
+    if (!root || _boundClickHandler) return;
+
+    // Event delegation cukup dipasang satu kali. Handler selalu membaca
+    // _templateId terbaru sehingga perpindahan template tidak membuat
+    // listener lama menulis ke template sebelumnya.
+    _boundClickHandler  = e => _handleClick(e, _templateId);
+    _boundChangeHandler = e => _handleChange(e, _templateId);
+    _boundInputHandler  = e => _handleInput(e, _templateId);
+
+    root.addEventListener('click',  _boundClickHandler);
+    root.addEventListener('change', _boundChangeHandler);
+    root.addEventListener('input',  _boundInputHandler);
   }
 
   function _handleClick(e, templateId) {

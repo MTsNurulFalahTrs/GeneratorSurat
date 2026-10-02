@@ -18,7 +18,7 @@
    DPU (special case):
       - Selalu table-layout: fixed + width: 100% (15 kolom landscape)
       - columnWidths body bisa di-override user, diaplikasikan via <colgroup>
-      - Header DPU (colspan/rowspan kompleks) tidak di-override
+      - Header DPU (colspan/rowspan kompleks) tetap memakai table config
 
    API:
      TableRenderer.render(columns, rows, options, tableSize, tableConfig)
@@ -64,29 +64,19 @@ const TableRenderer = (() => {
     const columnWidths = tableConfig?.columnWidths;
     const hasCustom    = TableConfigManager?.hasAnyCustomWidth(columnWidths) ?? false;
 
-    // Tentukan apakah ada kolom (header atau body) dengan wrapText = true.
-    // Ini dibutuhkan untuk menentukan apakah tabel perlu mode "forced-wrap":
-    //   - table-layout: fixed + width: 100%
-    //   → memaksa browser mendistribusikan lebar dan melakukan wrapping.
-    // Tanpa ini, table-layout:auto + width:fit-content membuat tabel melebar
-    // bebas mengikuti konten dan wrapping tidak pernah terjadi.
+    // Wrap Text hanya thay đổi perilaku teks di sel. Layout tabel tetap otomatis
+    // kecuali user memilih lebar manual atau mode full-width.
     const hasWrap = _hasAnyWrapText(tableConfig);
 
-    // <colgroup>:
-    //  - Ada saat custom width (user set width manual), ATAU
-    //  - Ada saat ada wrapText=true tanpa custom width → colgroup dengan
-    //    semua <col> tanpa width (auto-distribusi rata agar wrap bekerja)
+    // <colgroup> hanya diperlukan saat user mengatur lebar kolom manual.
     let colgroupHtml = '';
     if (hasCustom) {
       colgroupHtml = TableConfigManager?.buildColGroupHtml(columns, columnWidths) ?? '';
-    } else if (hasWrap) {
-      // Colgroup tanpa width eksplisit: browser mendistribusikan rata.
-      // Diperlukan agar table-layout:fixed bisa bekerja dengan distribusi wajar.
-      colgroupHtml = `<colgroup>${columns.map(() => '<col>').join('')}</colgroup>`;
     }
 
-    // Table class + layout mode
-    // Prioritas: custom width > wrap text > fit-to-content
+    // Layout:
+    //  - custom width / full → fixed
+    //  - wrap-only / auto → automatic intrinsic layout
     const tableClass = _buildTableClass(opts, hasCustom, hasWrap);
 
     // thead
@@ -101,9 +91,10 @@ const TableRenderer = (() => {
     if (opts.fitMode === 'full') {
       wrapClass = 'doc-table-wrap doc-table-wrap--full';
     } else if (hasWrap && !hasCustom) {
-      // Saat ada wrapText dan tidak ada custom width, wrapper harus full-width
-      // agar tabel punya constraint untuk wrap (tidak melebar bebas).
-      wrapClass = 'doc-table-wrap doc-table-wrap--forced';
+      // Beri constraint lebar pada area konten, tetapi biarkan tabel memakai
+      // automatic layout. Dengan ini Wrap Text tidak mengubah layout menjadi
+      // fixed; browser tetap menghitung lebar berdasarkan konten.
+      wrapClass = 'doc-table-wrap doc-table-wrap--wrap';
     } else {
       wrapClass = 'doc-table-wrap';
     }
@@ -272,10 +263,11 @@ const TableRenderer = (() => {
   function _buildTableClass(opts, hasCustomWidth = false, hasWrap = false) {
     const classes = ['doc-table'];
     if (opts.tableClass) classes.push(opts.tableClass);
-    if (opts.fitMode === 'full' || hasCustomWidth || hasWrap) {
-      // Custom width atau wrap text membutuhkan table-layout:fixed + width:100%
-      // agar browser mendistribusikan lebar dan memaksa wrapping terjadi.
+    if (opts.fitMode === 'full' || hasCustomWidth) {
       classes.push('doc-table--fixed');
+    }
+    if (hasWrap) {
+      classes.push('doc-table--wrap');
     }
     if (opts.fitMode === 'compact') classes.push('doc-table--compact');
     return classes.join(' ');
@@ -306,7 +298,7 @@ const TableRenderer = (() => {
      DPU: 15 kolom, header 2 baris (colspan/rowspan kompleks)
      - Selalu menggunakan table-layout:fixed (doc-table--dpu)
      - columnWidths body dapat di-override user via tableConfig
-     - Header DPU tidak di-override (terlalu kompleks)
+     - Header DPU tetap memakai header.columns untuk styling per kolom
 
      Kolom index map DPU:
        0:urt, 1:indk, 2:nisn, 3:registrasi, 4:nik, 5:namaSiswa,
@@ -343,25 +335,25 @@ const TableRenderer = (() => {
     const customHeader = `
       <thead>
         <tr>
-          <th rowspan="2" style="min-width:5mm;max-width:9mm;white-space:nowrap;font-size:${tableSize}pt;">URT</th>
-          <th rowspan="2" style="min-width:7mm;max-width:14mm;white-space:nowrap;font-size:${tableSize}pt;">INDK</th>
-          <th colspan="2" style="font-size:${tableSize}pt;">NOMOR</th>
-          <th rowspan="2" style="min-width:18mm;font-size:${tableSize}pt;">NIK</th>
-          <th rowspan="2" style="min-width:20mm;font-size:${tableSize}pt;">NAMA SISWA</th>
-          <th rowspan="2" style="min-width:5mm;max-width:9mm;white-space:nowrap;font-size:${tableSize}pt;">L/P</th>
-          <th rowspan="2" style="min-width:14mm;font-size:${tableSize}pt;">TEMPAT LAHIR</th>
-          <th rowspan="2" style="min-width:12mm;font-size:${tableSize}pt;">TANGGAL LAHIR</th>
-          <th rowspan="2" style="min-width:14mm;font-size:${tableSize}pt;">NAMA ORANG TUA</th>
-          <th rowspan="2" style="min-width:16mm;font-size:${tableSize}pt;">ASAL SEKOLAH</th>
-          <th rowspan="2" style="min-width:18mm;font-size:${tableSize}pt;">No. IJAZAH JENJANG SEBELUMNYA</th>
-          <th colspan="3" style="font-size:${tableSize}pt;">TERDAFTAR DI EMIS</th>
+          ${_buildDpuHeaderCell('URT', 0, tableSize, tableConfig, 'min-width:5mm;max-width:9mm;white-space:nowrap', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('INDK', 1, tableSize, tableConfig, 'min-width:7mm;max-width:14mm;white-space:nowrap', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('NOMOR', 2, tableSize, tableConfig, '', 'colspan="2"')}
+          ${_buildDpuHeaderCell('NIK', 4, tableSize, tableConfig, 'min-width:18mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('NAMA SISWA', 5, tableSize, tableConfig, 'min-width:20mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('L/P', 6, tableSize, tableConfig, 'min-width:5mm;max-width:9mm;white-space:nowrap', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('TEMPAT LAHIR', 7, tableSize, tableConfig, 'min-width:14mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('TANGGAL LAHIR', 8, tableSize, tableConfig, 'min-width:12mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('NAMA ORANG TUA', 9, tableSize, tableConfig, 'min-width:14mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('ASAL SEKOLAH', 10, tableSize, tableConfig, 'min-width:16mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('No. IJAZAH JENJANG SEBELUMNYA', 11, tableSize, tableConfig, 'min-width:18mm', 'rowspan="2"')}
+          ${_buildDpuHeaderCell('TERDAFTAR DI EMIS', 12, tableSize, tableConfig, '', 'colspan="3"')}
         </tr>
         <tr>
-          <th style="min-width:16mm;font-size:${tableSize}pt;">NISN</th>
-          <th style="min-width:22mm;font-size:${tableSize}pt;">REGISTRASI</th>
-          <th style="min-width:6mm;max-width:12mm;white-space:nowrap;font-size:${tableSize}pt;">SUDAH</th>
-          <th style="min-width:6mm;max-width:12mm;white-space:nowrap;font-size:${tableSize}pt;">BELUM</th>
-          <th style="min-width:14mm;font-size:${tableSize}pt;">ALASAN JIKA BELUM</th>
+          ${_buildDpuHeaderCell('NISN', 2, tableSize, tableConfig, 'min-width:16mm')}
+          ${_buildDpuHeaderCell('REGISTRASI', 3, tableSize, tableConfig, 'min-width:22mm')}
+          ${_buildDpuHeaderCell('SUDAH', 12, tableSize, tableConfig, 'min-width:6mm;max-width:12mm;white-space:nowrap')}
+          ${_buildDpuHeaderCell('BELUM', 13, tableSize, tableConfig, 'min-width:6mm;max-width:12mm;white-space:nowrap')}
+          ${_buildDpuHeaderCell('ALASAN JIKA BELUM', 14, tableSize, tableConfig, 'min-width:14mm')}
         </tr>
       </thead>`;
 
@@ -412,6 +404,31 @@ const TableRenderer = (() => {
    * Jika user set custom width untuk kolom tertentu → gunakan itu.
    * Jika tidak → gunakan default width DPU.
    */
+  /* ── Build satu header DPU dengan style dari header.columns[colIdx] ── */
+  function _buildDpuHeaderCell(label, colIdx, tableSize, tableConfig, baseStyle = '', attrs = '') {
+    const colCfg = tableConfig?.header?.columns?.[colIdx];
+    const cfgStyle = colCfg ? _buildConfigStyle(colCfg, tableSize) : '';
+    const fallback = `font-size:${tableSize}pt;font-weight:bold`;
+    const style = _mergeInlineStyles(baseStyle, cfgStyle || fallback);
+    const attrText = attrs ? ` ${attrs}` : '';
+    return `<th${attrText} style="${style}">${Utils.escapeHtml(label)}</th>`;
+  }
+
+  /* Gabungkan style dasar dengan style config; property dari config menang */
+  function _mergeInlineStyles(baseStyle, overrideStyle) {
+    const baseParts = String(baseStyle || '').split(';').map(s => s.trim()).filter(Boolean);
+    const overrideParts = String(overrideStyle || '').split(';').map(s => s.trim()).filter(Boolean);
+    if (!overrideParts.length) return baseParts.join(';');
+
+    const overrideProps = new Set(
+      overrideParts.map(part => part.split(':')[0].trim()).filter(Boolean)
+    );
+    const filteredBase = baseParts.filter(
+      part => !overrideProps.has(part.split(':')[0].trim())
+    );
+    return [...filteredBase, ...overrideParts].join(';');
+  }
+
   function _buildDpuColgroup(tableConfig) {
     const columnWidths = tableConfig?.columnWidths;
     const byKey        = columnWidths?.byKey || {};

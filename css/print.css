@@ -168,8 +168,8 @@
     display: block !important;
   }
 
-  /* Wrapper forced (saat ada wrapText=true): full-width agar wrap bekerja saat cetak */
-  .doc-table-wrap--forced {
+  /* Wrapper Wrap Text: full content area, tabel tetap automatic layout */
+  .doc-table-wrap--wrap {
     width: 100% !important;
     max-width: 100% !important;
     overflow-x: visible !important;
@@ -198,6 +198,13 @@
        tidak perlu override apapun di sini */
   }
 
+
+  /* Wrap-only tetap automatic layout saat cetak */
+  .doc-table--wrap {
+    width: auto !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+  }
   /* DPU: banyak kolom landscape → full width, fixed layout */
   .doc-table--dpu {
     width: 100% !important;
