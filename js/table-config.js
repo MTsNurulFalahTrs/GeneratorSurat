@@ -376,6 +376,7 @@ const TableConfigManager = (() => {
 
   function resetTableColors(templateId, tableId) {
     updateTableColors(templateId, tableId, { header: '#FFFFFF', body: '#FFFFFF' });
+    clearBodyColorRules(templateId, tableId);
   }
 
   function getTableColors(templateId, tableId) {
