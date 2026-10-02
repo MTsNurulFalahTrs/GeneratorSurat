@@ -404,7 +404,7 @@ const FormRenderer = (() => {
               ?.find(item => item.id === itemId);
             const body = group.parentElement;
             if (section && updated && body) {
-              _syncConditionalFields(section.fields, updated, templateId, itemId, body);
+              _syncConditionalFields(section.fields, updated, templateId, itemId, sectionId, body);
             }
           }
         });
@@ -418,7 +418,7 @@ const FormRenderer = (() => {
     return group;
   }
 
-  function _syncConditionalFields(fields, formData, templateId, itemId, containerEl) {
+  function _syncConditionalFields(fields, formData, templateId, itemId, sectionId, containerEl) {
     if (!Array.isArray(fields) || !containerEl || !itemId) return;
 
     fields.forEach((fieldDef, index) => {
@@ -441,7 +441,7 @@ const FormRenderer = (() => {
 
       if (existing) return;
 
-      const group = _buildField(fieldDef, formData, templateId, itemId, fields?.[index]?.sectionId);
+      const group = _buildField(fieldDef, formData, templateId, itemId, sectionId);
 
       if (!group) return;
 
