@@ -83,7 +83,7 @@ const Print = (() => {
     const css = `
 @page {
   size: ${pageSize};
-  margin: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;
+  margin: 0;
 }
 @media print {
   .doc-content {
