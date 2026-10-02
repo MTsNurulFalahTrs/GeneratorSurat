@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="css/ui-modern.css" />
   <link rel="stylesheet" href="css/responsive.css" />
   <link rel="stylesheet" href="css/workflow.css" />
+  <link rel="stylesheet" href="css/document-viewer.css" />
   <link rel="stylesheet" href="css/print.css" />
 </head>
 <body>
@@ -183,6 +184,29 @@
         <div class="preview-toolbar">
           <div class="preview-toolbar__identity">
             <span class="preview-toolbar__label">Preview Surat</span>
+            <span id="viewer-template-label" class="viewer-template-label">Belum ada dokumen</span>
+
+            <div class="viewer-page-nav" role="group" aria-label="Navigasi halaman">
+              <button type="button" id="viewer-page-first" class="btn-icon viewer-document-control" title="Halaman pertama" aria-label="Halaman pertama">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 6l-6 6 6 6M19 6l-6 6 6 6M5 6v12"/></svg>
+              </button>
+              <button type="button" id="viewer-page-prev" class="btn-icon viewer-document-control" title="Halaman sebelumnya" aria-label="Halaman sebelumnya">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <label class="viewer-page-input-wrap">
+                <input id="viewer-page-current" class="viewer-page-input viewer-document-control" type="number" min="1" value="" inputmode="numeric" aria-label="Nomor halaman aktif" />
+                <span aria-hidden="true">/</span>
+                <span id="viewer-page-total">—</span>
+              </label>
+              <button type="button" id="viewer-page-next" class="btn-icon viewer-document-control" title="Halaman berikutnya" aria-label="Halaman berikutnya">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+              <button type="button" id="viewer-page-last" class="btn-icon viewer-document-control" title="Halaman terakhir" aria-label="Halaman terakhir">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M13 6l6 6-6 6M5 6l6 6-6 6M19 6v12"/></svg>
+              </button>
+            </div>
+
+            <span id="viewer-page-status" class="viewer-page-status" aria-live="polite">Belum ada halaman</span>
             <span id="preview-page-info" class="preview-page-info" aria-live="polite">1 halaman</span>
           </div>
           <div class="preview-toolbar__actions">
@@ -202,6 +226,11 @@
             </button>
             <button id="btn-zoom-reset" class="btn-icon" title="Reset zoom" aria-label="Reset zoom">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3.51 15a9 9 0 1 0 .49-4.95"/><polyline points="1,4 1,10 7,10"/></svg>
+            </button>
+            <span class="preview-toolbar__divider" aria-hidden="true"></span>
+            <button id="viewer-focus-toggle" class="btn-icon viewer-focus-toggle" title="Mode fokus preview" aria-label="Buka preview dalam mode fokus" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              <span class="viewer-focus-label">Fokus</span>
             </button>
           </div>
         </div>
