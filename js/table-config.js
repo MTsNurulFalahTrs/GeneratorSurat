@@ -754,6 +754,10 @@ const TableConfigManager = (() => {
 
     const result = {
       columnWidths: { byKey: { ...(base.columnWidths?.byKey || {}) } },
+      colors: {
+        header: base.colors?.header || '#FFFFFF',
+        body:   base.colors?.body   || '#FFFFFF',
+      },
       header: { columns: { ...(base.header?.columns || {}) } },
       body:   { columns: { ...(base.body?.columns   || {}) } },
     };
