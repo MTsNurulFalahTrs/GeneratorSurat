@@ -198,9 +198,12 @@ const UI = (() => {
     if (!wrap || !textEl) return;
 
     if (!meta || !meta.lastSavedAt) {
+      wrap.classList.remove('storage-info--dirty');
       wrap.classList.add('hidden');
       return;
     }
+
+    wrap.classList.remove('storage-info--dirty');
 
     const remaining = Utils.getRemainingTime(meta.expiresAt);
     const savedAt   = Utils.formatDateTime(meta.lastSavedAt);
@@ -214,6 +217,25 @@ const UI = (() => {
     textEl.textContent = `Tersimpan ${savedAt} · Kedaluwarsa dalam ${remStr}`;
     wrap.classList.remove('hidden');
     wrap.title = `Data tersimpan di perangkat ini dan akan dihapus otomatis setelah 2 jam sejak penyimpanan terakhir.\nPenyimpanan terakhir: ${savedAt}`;
+  }
+
+  /* ── Tandai ada perubahan yang belum disimpan ── */
+  function markStorageDirty() {
+    const wrap = document.getElementById('storage-info');
+    const textEl = document.getElementById('storage-info-text');
+    if (!wrap || !textEl) return;
+
+    const meta = Storage.getMeta();
+    const savedAt = meta?.lastSavedAt ? Utils.formatDateTime(meta.lastSavedAt) : null;
+
+    wrap.classList.add('storage-info--dirty');
+    wrap.classList.remove('hidden');
+    textEl.textContent = savedAt
+      ? 'Belum disimpan · Terakhir disimpan ' + savedAt
+      : 'Belum disimpan';
+    wrap.title = savedAt
+      ? 'Ada perubahan yang belum disimpan. Penyimpanan terakhir: ' + savedAt
+      : 'Ada perubahan yang belum disimpan. Klik Simpan untuk menyimpan data.';
   }
 
   /* ── Refresh storage info setiap menit ── */
@@ -365,6 +387,7 @@ const UI = (() => {
     showExpiredBanner,
     hideExpiredBanner,
     updateStorageInfo,
+    markStorageDirty,
     startStorageInfoRefresh,
     initTabs,
     switchTab,
