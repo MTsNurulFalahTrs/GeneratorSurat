@@ -226,32 +226,44 @@ const TableConfigManager = (() => {
     if (!TemplateRegistry.templateHasTables(templateId)) return;
 
     const tableDefs = TemplateRegistry.getTableDefinitions(templateId);
-    const savedAll  = State.getTableConfig(templateId); // {} jika belum ada
+    const savedAll  = State.getTableConfig(templateId);
+    const hasExistingTemplateConfig = Object.keys(savedAll || {}).length > 0;
 
-    const initializedAll = {};
+    // Saat pertama kali template dipakai, inisialisasi default tanpa menandai
+    // state sebagai perubahan pengguna.
+    if (!hasExistingTemplateConfig) {
+      const defaults = {};
+      tableDefs.forEach(tableDef => {
+        defaults[tableDef.id] = buildDefaultConfig(
+          tableDef.columns,
+          tableDef.tableDefaultConfig
+        );
+      });
+      State.initTableConfig(templateId, defaults);
+      return;
+    }
 
+    // Untuk config yang sudah ada, normalisasi hanya bila hasilnya benar-benar
+    // berbeda. Ini mencegah render/template switch berulang kali menandai dirty.
     tableDefs.forEach(tableDef => {
-      const defaultCfg = buildDefaultConfig(tableDef.columns, tableDef.tableDefaultConfig);
-      const savedCfg   = savedAll[tableDef.id] || null;
-      initializedAll[tableDef.id] = normalizeConfig(defaultCfg, savedCfg);
-    });
-
-    // Pakai initTableConfig agar tidak overwrite jika sudah ada
-    // Tapi kita perlu normalisasi kolom baru → set langsung per tabel
-    tableDefs.forEach(tableDef => {
-      const defaultCfg  = buildDefaultConfig(tableDef.columns, tableDef.tableDefaultConfig);
-      const savedCfg    = savedAll[tableDef.id] || null;
-      const normalized  = normalizeConfig(defaultCfg, savedCfg);
-
-      // Hanya set jika berbeda dari yang tersimpan (hindari emit berulang)
       const existing = savedAll[tableDef.id];
       if (!existing) {
-        // Belum ada → init
+        State.setTableConfig(
+          templateId,
+          tableDef.id,
+          buildDefaultConfig(tableDef.columns, tableDef.tableDefaultConfig)
+        );
+        return;
+      }
+
+      const defaultCfg = buildDefaultConfig(
+        tableDef.columns,
+        tableDef.tableDefaultConfig
+      );
+      const normalized = normalizeConfig(defaultCfg, existing);
+
+      if (JSON.stringify(existing) !== JSON.stringify(normalized)) {
         State.setTableConfig(templateId, tableDef.id, normalized);
-      } else {
-        // Sudah ada → normalisasi (tangani kolom baru/hilang)
-        const reNormalized = normalizeConfig(defaultCfg, existing);
-        State.setTableConfig(templateId, tableDef.id, reNormalized);
       }
     });
   }
