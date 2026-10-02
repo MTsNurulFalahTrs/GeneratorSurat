@@ -1,0 +1,437 @@
+/* =============================================================
+   responsive.css — Phase 1 Responsive Foundation
+   Screen UI only; document rendering and print remain isolated.
+   ============================================================= */
+
+:root {
+  --app-min-inline: 320px;
+  --mobile-side-padding: clamp(10px, 3vw, 18px);
+  --mobile-control-size: 44px;
+  --tablet-control-size: 42px;
+}
+
+html,
+body { min-width: var(--app-min-inline); }
+
+@media screen and (min-width: 1200px) {
+  .editor-panel { width: clamp(380px, 31vw, var(--editor-panel-max)); }
+  .preview-viewport { padding: clamp(20px, 2.4vw, 36px); }
+}
+
+@media screen and (min-width: 769px) and (max-width: 1199px) {
+  .editor-panel {
+    width: clamp(360px, 38vw, 500px);
+    min-width: 340px;
+    max-width: 520px;
+  }
+
+  .editor-tabs {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+
+  .editor-tab {
+    flex: 0 0 auto;
+    min-width: 104px;
+  }
+
+  .preview-viewport { padding: clamp(16px, 2vw, 24px); }
+}
+
+@media screen and (max-width: 980px) {
+  .app-body { min-height: 0; }
+
+  .editor-panel,
+  .preview-panel {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .editor-panel { max-width: none; }
+
+  .editor-tabs {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+  }
+
+  .editor-tab {
+    min-height: var(--tablet-control-size);
+    touch-action: manipulation;
+  }
+
+  .editor-tab svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .editor-tab-content { min-width: 0; }
+
+  .form-input,
+  .form-select,
+  .form-textarea { max-width: 100%; }
+}
+
+@media screen and (max-width: 767px) {
+  html,
+  body {
+    width: 100%;
+    min-width: 320px;
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100svh;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+  }
+
+  .app-container {
+    width: 100%;
+    min-height: 100svh;
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    width: 100%;
+    min-height: max(56px, env(safe-area-inset-top) + 48px);
+    padding-top: max(8px, env(safe-area-inset-top));
+  }
+
+  .app-header__brand {
+    min-width: 0;
+    max-width: 48%;
+  }
+
+  .app-header__title { min-width: 0; }
+
+  .app-header__actions {
+    min-width: 0;
+    justify-content: flex-end;
+  }
+
+  .app-header__actions .btn {
+    min-width: var(--mobile-control-size);
+    min-height: var(--mobile-control-size);
+  }
+
+  .app-body {
+    width: 100%;
+    min-height: calc(100dvh - var(--header-height));
+    height: auto;
+    overflow: hidden;
+  }
+
+  .editor-panel {
+    width: 100%;
+    min-width: 0;
+    height: clamp(420px, 58dvh, 760px);
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .editor-tabs {
+    width: 100%;
+    min-width: 0;
+    padding: 5px;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    scrollbar-width: thin;
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+    touch-action: auto;
+  }
+
+  .editor-tab {
+    flex: 0 0 clamp(108px, 29vw, 132px);
+    width: clamp(108px, 29vw, 132px);
+    min-width: clamp(108px, 29vw, 132px);
+    min-height: var(--mobile-control-size);
+    padding: 8px 10px;
+    scroll-snap-align: start;
+    touch-action: manipulation;
+  }
+
+  .editor-tab-content {
+    min-width: 0;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .section-header,
+  .template-list,
+  .form-section { padding-inline: var(--mobile-side-padding); }
+
+  .form-group { min-width: 0; }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--mobile-control-size);
+  }
+
+  .btn,
+  .preset-btn,
+  .orient-btn,
+  .seg-btn { min-height: var(--mobile-control-size); }
+
+  .btn-icon {
+    width: var(--mobile-control-size);
+    height: var(--mobile-control-size);
+  }
+
+  .input-stepper__btn {
+    width: var(--mobile-control-size);
+    min-width: var(--mobile-control-size);
+    height: var(--mobile-control-size);
+  }
+
+  .preview-panel {
+    width: 100%;
+    min-width: 0;
+    min-height: clamp(360px, 42dvh, 600px);
+    max-height: none;
+  }
+
+  .preview-toolbar {
+    min-height: 48px;
+    height: auto;
+    flex-wrap: nowrap;
+  }
+
+  .preview-toolbar__identity,
+  .preview-toolbar__actions { min-width: 0; }
+
+  .preview-viewport {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: max(10px, 2.5vw);
+  }
+
+  .preview-canvas-wrapper { min-width: 0; }
+
+  .mobile-preview-toggle-wrap {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  /* Tabel: kontrol menumpuk agar tidak memaksa horizontal scroll. */
+  .tbl-cfg__control-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .tbl-cfg__control-group--flex,
+  .tbl-cfg__control-group--center,
+  .tbl-cfg__control-group--fs {
+    grid-column: auto;
+    grid-row: auto;
+    min-width: 0;
+  }
+
+  .tbl-cfg__v-align-select,
+  .tbl-cfg__fs-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tbl-cfg__style-btns,
+  .tbl-cfg__align-btns { flex-wrap: wrap; }
+
+  .tbl-cfg__align-btn,
+  .tbl-cfg__apply-btn {
+    width: var(--mobile-control-size);
+    min-width: var(--mobile-control-size);
+    height: var(--mobile-control-size);
+  }
+
+  .tbl-cfg__fs-input {
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  .tbl-cfg__width-row { align-items: stretch; }
+
+  .tbl-cfg__width-col-label {
+    width: 100%;
+    max-width: none;
+  }
+
+  .tbl-cfg__width-controls {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tbl-cfg__width-mode-btns {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* KOP: ubah grid fixed menjadi stack pada mobile. */
+  .kop-row-item__controls { grid-template-columns: 1fr; }
+  .kop-row-item__controls-full { grid-column: 1; }
+  .kop-logo-pair { grid-template-columns: 1fr; }
+
+  .align-btn {
+    width: var(--mobile-control-size);
+    height: var(--mobile-control-size);
+    min-width: var(--mobile-control-size);
+  }
+
+  .kop-row-item__body { padding: var(--mobile-side-padding); }
+
+  /* Pengaturan: semua kontrol aman terhadap lebar viewport. */
+  #settings-root {
+    padding: var(--mobile-side-padding);
+    gap: 10px;
+  }
+
+  .settings-card,
+  .settings-row,
+  .settings-card__body { min-width: 0; }
+
+  .settings-card__header { min-height: var(--mobile-control-size); }
+
+  .settings-card__body { padding: var(--mobile-side-padding); }
+
+  .settings-row { width: 100%; }
+
+  .settings-row > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .settings-label {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .settings-select,
+  .orientation-btns { width: 100%; }
+
+  .orient-btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .seg-control {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .seg-btn {
+    flex: 1 1 0;
+    min-width: 72px;
+  }
+
+  /* Diagram margin fluid dan terisolasi. */
+  .margin-diagram-wrap { overflow: visible; }
+
+  .margin-middle {
+    grid-template-columns: minmax(0, 1fr) minmax(66px, .78fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .margin-page-preview {
+    width: 100%;
+    max-width: 86px;
+  }
+
+  .margin-field--left,
+  .margin-field--right { width: 100%; }
+
+  .margin-input { width: 100% !important; }
+
+  .storage-status-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .storage-status-label,
+  .storage-status-value {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .storage-status-value { margin-left: auto; }
+}
+
+@media screen and (max-width: 374px) {
+  .app-header__brand { max-width: 44%; }
+  .app-header__title { font-size: 12px; }
+
+  .editor-tab {
+    flex-basis: 104px;
+    width: 104px;
+    min-width: 104px;
+  }
+
+  .preview-toolbar { padding-inline: 7px; }
+
+  .preview-toolbar__actions .btn-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .mobile-preview-toggle { min-height: 44px; }
+
+  .margin-middle {
+    grid-template-columns: minmax(0, 1fr) 58px minmax(0, 1fr);
+  }
+
+  .margin-page-preview {
+    max-width: 58px;
+    min-height: 62px;
+  }
+
+  .settings-card__body,
+  #settings-root { padding-inline: 9px; }
+}
+
+@media screen and (max-width: 767px) and (orientation: landscape) {
+  .app-header {
+    min-height: 48px;
+    padding-top: max(4px, env(safe-area-inset-top));
+  }
+
+  .app-header__title { font-size: 12px; }
+
+  .app-body { min-height: calc(100dvh - 48px); }
+
+  .editor-panel { height: clamp(300px, 66dvh, 520px); }
+  .preview-panel { min-height: 300px; }
+
+  .editor-tabs,
+  .preview-toolbar { min-height: 44px; }
+
+  .preview-viewport { padding: 8px; }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  button,
+  [role="button"],
+  select,
+  input,
+  textarea { touch-action: manipulation; }
+
+  .editor-tabs { touch-action: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-tabs { scroll-behavior: auto; }
+}
