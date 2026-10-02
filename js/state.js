@@ -387,6 +387,10 @@ const State = (() => {
      SETTINGS GETTERS & SETTERS
   ──────────────────────────────────────────────── */
   const VALID_PAPER_UNITS = ['mm', 'cm', 'in'];
+  const CUSTOM_WIDTH_MIN_MM  = 50;
+  const CUSTOM_WIDTH_MAX_MM  = 600;
+  const CUSTOM_HEIGHT_MIN_MM = 50;
+  const CUSTOM_HEIGHT_MAX_MM = 900;
 
   function _normalizePaperSize(value) {
     const raw = String(value ?? '').trim();
@@ -419,14 +423,12 @@ const State = (() => {
     settings.paper.customWidth = _toFiniteNumber(
       settings.paper.customWidth,
       DEFAULT_SETTINGS().paper.customWidth,
-      CUSTOM_DIMENSION_MIN_MM,
-      CUSTOM_DIMENSION_MAX_MM
+      CUSTOM_WIDTH_MIN_MM, CUSTOM_WIDTH_MAX_MM
     );
     settings.paper.customHeight = _toFiniteNumber(
       settings.paper.customHeight,
       DEFAULT_SETTINGS().paper.customHeight,
-      CUSTOM_DIMENSION_MIN_MM,
-      CUSTOM_DIMENSION_MAX_MM
+      CUSTOM_WIDTH_MIN_MM, CUSTOM_WIDTH_MAX_MM
     );
 
     settings.orientation = settings.orientation === 'landscape' ? 'landscape' : 'portrait';
@@ -474,11 +476,9 @@ const State = (() => {
 
     settings.preview = settings.preview || {};
     const previewZoom = settings.preview.zoom;
-    if (
-      typeof previewZoom !== 'string' &&
-      !Number.isFinite(Number(previewZoom))
-    ) {
-      settings.preview.zoom = DEFAULT_SETTINGS().preview.zoom;
+    const validZoomModes = ['auto', 'fit-page', 'fit-width', 'actual'];
+    if (!validZoomModes.includes(previewZoom)) {
+      settings.preview.zoom = 'actual';
     }
 
     return settings;
