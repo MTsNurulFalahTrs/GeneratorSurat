@@ -743,8 +743,9 @@ const PreviewRenderer = (() => {
 
     const vpW = viewport.clientWidth || 800;
     const vpH = viewport.clientHeight || 600;
-    const paperW = preview.offsetWidth || 794;
-    const paperH = preview.scrollHeight || 1123;
+    const dimensions = State.getPaperDimensions();
+    const paperW = (dimensions.widthMm || 210) * PX_PER_MM;
+    const paperH = (dimensions.heightMm || 297) * PX_PER_MM;
 
     let zoom = 1;
     if (mode === 'fit-page') {
