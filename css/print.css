@@ -168,7 +168,15 @@
     display: block !important;
   }
 
-  /* Tabel dengan custom column width: wrapper juga harus full-width */
+  /* Wrapper forced (saat ada wrapText=true): full-width agar wrap bekerja saat cetak */
+  .doc-table-wrap--forced {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: visible !important;
+    display: block !important;
+  }
+
+  /* Tabel dengan custom column width atau wrap text: wrapper juga harus full-width */
   .doc-table-wrap:has(.doc-table--fixed) {
     width: 100% !important;
     max-width: 100% !important;
