@@ -103,6 +103,10 @@ const TableConfigManager = (() => {
 
     const base = {
       columnWidths,
+      colors: {
+        header: '#FFFFFF',
+        body: '#FFFFFF',
+      },
       header: { columns: headerCols },
       body:   { columns: bodyCols },
     };
@@ -165,6 +169,10 @@ const TableConfigManager = (() => {
 
     const result = {
       columnWidths: { byKey: {} },
+      colors: {
+        header: _sanitizeColor(savedCfg?.colors?.header) || '#FFFFFF',
+        body:   _sanitizeColor(savedCfg?.colors?.body)   || '#FFFFFF',
+      },
       header: { columns: {} },
       body:   { columns: {} },
     };
@@ -278,6 +286,43 @@ const TableConfigManager = (() => {
    * @returns {Object} { header: { columns: {...} }, body: { columns: {...} } }
    *   Config yang sudah siap dipakai renderer.
    */
+  function updateTableColors(templateId, tableId, partial) {
+    if (!templateId || !tableId || !partial || typeof partial !== 'object') return;
+
+    const colors = {};
+    if ('header' in partial) {
+      const header = _sanitizeColor(partial.header);
+      if (header) colors.header = header;
+    }
+    if ('body' in partial) {
+      const body = _sanitizeColor(partial.body);
+      if (body) colors.body = body;
+    }
+    if (Object.keys(colors).length === 0) return;
+
+    const currentAll = State.getTableConfig(templateId);
+    const tableDef = TemplateRegistry.getTableDefinitions(templateId).find(t => t.id === tableId);
+    const current = currentAll[tableId] || buildDefaultConfig(tableDef?.columns || []);
+
+    State.setTableConfig(templateId, tableId, {
+      ...current,
+      colors: {
+        header: current.colors?.header || '#FFFFFF',
+        body: current.colors?.body || '#FFFFFF',
+        ...colors,
+      },
+    });
+  }
+
+  function resetTableColors(templateId, tableId) {
+    updateTableColors(templateId, tableId, { header: '#FFFFFF', body: '#FFFFFF' });
+  }
+
+  function getTableColors(templateId, tableId) {
+    const cfg = getResolvedConfig(templateId, tableId);
+    return { header: cfg.colors?.header || '#FFFFFF', body: cfg.colors?.body || '#FFFFFF' };
+  }
+
   function getResolvedConfig(templateId, tableId) {
     if (!templateId || !tableId) return { columnWidths: { byKey: {} }, header: { columns: {} }, body: { columns: {} } };
 
@@ -625,6 +670,11 @@ const TableConfigManager = (() => {
      Internal helpers
   ──────────────────────────────────────────────── */
 
+  function _sanitizeColor(value) {
+    const text = String(value ?? '').trim().toUpperCase();
+    return /^#[0-9A-F]{6}$/.test(text) ? text : '';
+  }
+
   /** Sanitasi & validasi satu kolom config object (untuk header/body) */
   function _sanitizeColConfig(obj) {
     if (!obj || typeof obj !== 'object') return {};
@@ -704,6 +754,10 @@ const TableConfigManager = (() => {
 
     const result = {
       columnWidths: { byKey: { ...(base.columnWidths?.byKey || {}) } },
+      colors: {
+        header: base.colors?.header || '#FFFFFF',
+        body:   base.colors?.body   || '#FFFFFF',
+      },
       header: { columns: { ...(base.header?.columns || {}) } },
       body:   { columns: { ...(base.body?.columns   || {}) } },
     };
@@ -720,6 +774,13 @@ const TableConfigManager = (() => {
           );
         }
       });
+    }
+
+    if (override.colors && typeof override.colors === 'object') {
+      const headerColor = _sanitizeColor(override.colors.header);
+      const bodyColor   = _sanitizeColor(override.colors.body);
+      if (headerColor) result.colors.header = headerColor;
+      if (bodyColor)   result.colors.body = bodyColor;
     }
 
     if (override.header?.columns) {
@@ -757,6 +818,9 @@ const TableConfigManager = (() => {
     copyHeaderToBody,
     resetToDefault,
     buildCellStyle,
+    updateTableColors,
+    resetTableColors,
+    getTableColors,
     // Column width API
     updateColumnWidth,
     resetColumnWidths,

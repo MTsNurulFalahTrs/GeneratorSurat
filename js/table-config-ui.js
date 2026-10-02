@@ -153,6 +153,7 @@ const TableConfigUI = (() => {
     const tableId     = tableDef.id;
 
     // ── Tiga panel: Lebar Kolom | Header | Isi ──
+    const colorHtml  = _buildColorPanel(templateId, tableId, resolvedCfg.colors);
     const widthHtml  = _buildWidthPanel(templateId, tableId, columns, resolvedCfg.columnWidths);
     const headerHtml = _buildSectionPanel(templateId, tableId, 'header', columns, resolvedCfg.header?.columns || {});
     const bodyHtml   = _buildSectionPanel(templateId, tableId, 'body',   columns, resolvedCfg.body?.columns   || {});
@@ -178,10 +179,47 @@ const TableConfigUI = (() => {
     return `
       <div class="tbl-cfg__table" data-table-id="${_esc(tableId)}">
         ${tableLabel}
+        ${colorHtml}
         ${widthHtml}
         ${headerHtml}
         ${bodyHtml}
       </div>`;
+  }
+
+  function _buildColorPanel(templateId, tableId, colors) {
+    const sectionKey = tableId + '-colors';
+    const isOpen = _openSections[sectionKey] !== false;
+    const sectionId = 'tbl-sec-' + _esc(tableId) + '-colors';
+    const headerColor = colors?.header || '#FFFFFF';
+    const bodyColor = colors?.body || '#FFFFFF';
+    const presetColors = [
+      ['#FFFFFF', 'Putih'], ['#F1F5F9', 'Abu muda'], ['#DBEAFE', 'Biru muda'],
+      ['#E0F2FE', 'Biru lembut'], ['#DCFCE7', 'Hijau muda'], ['#FEF3C7', 'Kuning muda']
+    ];
+    const presets = presetColors.map(function(preset) {
+      return '<button type=\'button\' class=\'tbl-cfg__color-preset\' data-action=\'color-preset\' data-color=\'' + preset[0] + '\' data-table-id=\'' + _esc(tableId) + '\' title=\'' + _esc(preset[1]) + '\' aria-label=\'Pilih warna ' + _esc(preset[1]) + '\'>'+
+        '<span class=\'tbl-cfg__color-dot\' style=\'background:' + preset[0] + ';\'></span></button>';
+    }).join('');
+    return '<div class=\'tbl-cfg__section tbl-cfg__color-section\'>'+
+      '<button type=\'button\' class=\'tbl-cfg__section-toggle' + (isOpen ? ' is-open' : '') + '\' aria-expanded=\'' + isOpen + '\' aria-controls=\'' + sectionId + '\' data-section-key=\'' + _esc(sectionKey) + '\'>'+
+        '<span class=\'tbl-cfg__section-icon\' aria-hidden=\'true\'>🎨</span>'+
+        '<span class=\'tbl-cfg__section-title\'>Warna Tabel</span>'+
+        '<span class=\'tbl-cfg__section-chevron\' aria-hidden=\'true\'><svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' width=\'13\' height=\'13\'><polyline points=\'6 9 12 15 18 9\'/></svg></span>'+
+      '</button>'+
+      '<div class=\'tbl-cfg__section-body' + (isOpen ? ' is-open' : '') + '\' id=\'' + sectionId + '\' role=\'region\'>'+
+        '<div class=\'tbl-cfg__color-hint\'>Atur warna latar <strong>Header</strong> dan <strong>Isi</strong> tabel secara terpisah.</div>'+
+        '<div class=\'tbl-cfg__color-row\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'header\'>'+
+          '<div class=\'tbl-cfg__color-label-wrap\'><span class=\'tbl-cfg__color-preview\' style=\'background:' + headerColor + ';\'></span><div><span class=\'tbl-cfg__color-label\'>Header Tabel</span><span class=\'tbl-cfg__color-description\'>Warna latar baris judul kolom</span></div></div>'+
+          '<div class=\'tbl-cfg__color-input-wrap\'><input type=\'color\' class=\'tbl-cfg__color-picker\' data-action=\'table-color\' data-template-id=\'' + _esc(templateId) + '\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'header\' value=\'' + headerColor + '\' aria-label=\'Header Tabel\'/><input type=\'text\' class=\'form-input tbl-cfg__color-hex\' data-action=\'table-color-hex\' data-template-id=\'' + _esc(templateId) + '\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'header\' value=\'' + headerColor + '\' maxlength=\'7\' spellcheck=\'false\' aria-label=\'Kode warna Header Tabel\' placeholder=\'#FFFFFF\'/></div>'+
+        '</div>'+
+        '<div class=\'tbl-cfg__color-row\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'body\'>'+
+          '<div class=\'tbl-cfg__color-label-wrap\'><span class=\'tbl-cfg__color-preview\' style=\'background:' + bodyColor + ';\'></span><div><span class=\'tbl-cfg__color-label\'>Isi Tabel</span><span class=\'tbl-cfg__color-description\'>Warna latar seluruh baris data</span></div></div>'+
+          '<div class=\'tbl-cfg__color-input-wrap\'><input type=\'color\' class=\'tbl-cfg__color-picker\' data-action=\'table-color\' data-template-id=\'' + _esc(templateId) + '\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'body\' value=\'' + bodyColor + '\' aria-label=\'Isi Tabel\'/><input type=\'text\' class=\'form-input tbl-cfg__color-hex\' data-action=\'table-color-hex\' data-template-id=\'' + _esc(templateId) + '\' data-table-id=\'' + _esc(tableId) + '\' data-color-section=\'body\' value=\'' + bodyColor + '\' maxlength=\'7\' spellcheck=\'false\' aria-label=\'Kode warna Isi Tabel\' placeholder=\'#FFFFFF\'/></div>'+
+        '</div>'+
+        '<div class=\'tbl-cfg__color-presets\'><span class=\'tbl-cfg__color-presets-label\'>Pilihan cepat · diterapkan ke Header</span><div class=\'tbl-cfg__color-preset-list\'>'+presets+'</div></div>'+
+        '<div class=\'tbl-cfg__color-reset-row\'><span>Reset kedua warna ke putih</span><button type=\'button\' class=\'btn btn--sm btn--ghost\' data-action=\'reset-table-colors\' data-table-id=\'' + _esc(tableId) + '\'>Reset Warna</button></div>'+
+      '</div>'+
+    '</div>';
   }
 
   /* ════════════════════════════════════════════════
@@ -601,8 +639,25 @@ const TableConfigUI = (() => {
     const colIdx   = parseInt(btn.dataset.colIdx, 10);
     const colKey   = btn.dataset.colKey;
     const value    = btn.dataset.value;
+    const colorSection = btn.dataset.colorSection;
+    const color = btn.dataset.color;
 
     switch (action) {
+
+      /* ── Preset warna tabel ── */
+      case 'color-preset': {
+        if (tableId && color) TableConfigManager.updateTableColors(templateId, tableId, { header: color });
+        break;
+      }
+
+      /* ── Reset warna tabel ── */
+      case 'reset-table-colors': {
+        if (tableId) {
+          TableConfigManager.resetTableColors(templateId, tableId);
+          UI.toast('Warna Header dan Isi tabel direset ke putih.', 'info', 1800);
+        }
+        break;
+      }
 
       /* ── Lebar kolom: toggle mode Auto / Manual ── */
       case 'width-mode': {
@@ -773,6 +828,13 @@ const TableConfigUI = (() => {
     const section = el.dataset.section;
     const colIdx  = parseInt(el.dataset.colIdx, 10);
     const colKey  = el.dataset.colKey;
+    const colorSection = el.dataset.colorSection;
+
+    /* ── Warna picker ── */
+    if (action === 'table-color' && colorSection) {
+      TableConfigManager.updateTableColors(templateId, tableId, { [colorSection]: el.value.toUpperCase() });
+      return;
+    }
 
     /* ── Vertical alignment ── */
     if (action === 'v-align' && !isNaN(colIdx)) {
@@ -814,6 +876,16 @@ const TableConfigUI = (() => {
   function _handleInput(e, templateId) {
     const el     = e.target;
     const action = el.dataset.action;
+    const tableId = el.dataset.tableId;
+    const colorSection = el.dataset.colorSection;
+
+    /* ── Kode HEX warna ── */
+    if (action === 'table-color-hex' && colorSection) {
+      const value = el.value.trim().toUpperCase();
+      if (!/^#[0-9A-F]{6}$/.test(value)) return;
+      TableConfigManager.updateTableColors(templateId, tableId, { [colorSection]: value });
+      return;
+    }
 
     /* ── Font size ── */
     if (action === 'font-size') {
@@ -875,6 +947,9 @@ const TableConfigUI = (() => {
       const tableId     = tableDef.id;
       const resolvedCfg = TableConfigManager.getResolvedConfig(templateId, tableId);
 
+      // ── Sync warna tabel ──
+      _syncTableColors(tableId, resolvedCfg.colors);
+
       // ── Sync Header + Body section (styling teks per kolom) ──
       ['header', 'body'].forEach(section => {
         const colsCfg = resolvedCfg[section]?.columns || {};
@@ -889,6 +964,22 @@ const TableConfigUI = (() => {
 
       // ── Sync total % indicator di header section Lebar Kolom ──
       _syncWidthTotal(tableId, resolvedCfg.columnWidths);
+    });
+  }
+
+  function _syncTableColors(tableId, colors) {
+    if (!_mountEl) return;
+    ['header', 'body'].forEach(function(section) {
+      const color = colors?.[section] || '#FFFFFF';
+      const rows = _mountEl.querySelectorAll('.tbl-cfg__color-row[data-table-id][data-color-section]');
+      const row = Array.from(rows).find(function(el) { return el.dataset.tableId === tableId && el.dataset.colorSection === section; });
+      if (!row) return;
+      const picker = row.querySelector('[data-action="table-color"]');
+      const hex = row.querySelector('[data-action="table-color-hex"]');
+      const preview = row.querySelector('.tbl-cfg__color-preview');
+      if (picker && picker.value !== color) picker.value = color;
+      if (hex && hex.value !== color) hex.value = color;
+      if (preview) preview.style.background = color;
     });
   }
 
