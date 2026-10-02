@@ -538,6 +538,7 @@ const PreviewRenderer = (() => {
     });
   }
 
+
   async function _paginateDpuPreview(source, renderToken, paperWidthPx, paperHeightPx) {
     if (renderToken !== _renderToken || !_previewEl) return;
 
@@ -546,9 +547,23 @@ const PreviewRenderer = (() => {
     const tableIndex = children.findIndex(el => el.matches('.doc-table-wrap'));
     const tableWrap = tableIndex >= 0 ? children[tableIndex] : null;
 
-    // Bila struktur DPU berubah/tidak memiliki tabel, kembali ke paginator umum.
+    /*
+     * DPU mempunyai satu struktur linear:
+     *   KOP + metadata + judul → tabel peserta → tanda tangan.
+     *
+     * Header sebelum tabel hanya boleh berada pada halaman pertama.
+     * Tabel dipaginasi per-row dan setiap fragment tabel mengulang <thead>.
+     * Blok setelah tabel diperlakukan sebagai satu unit logis.
+     */
     if (!tableWrap) {
-      return _paginatePreviewGeneric(source, children, renderToken, paperWidthPx, paperHeightPx, baseStyle);
+      return _paginatePreviewGeneric(
+        source,
+        children,
+        renderToken,
+        paperWidthPx,
+        paperHeightPx,
+        baseStyle
+      );
     }
 
     const before = children.slice(0, tableIndex);
@@ -560,33 +575,53 @@ const PreviewRenderer = (() => {
     const pages = [];
 
     const createPage = () => {
-      const page = _createPreviewPage(
+      const pageState = _createPreviewPage(
         pages.length + 1,
         paperWidthPx,
         paperHeightPx,
         baseStyle
       );
-      _previewEl.appendChild(page.page);
-      pages.push(page);
-      return page;
+      _previewEl.appendChild(pageState.page);
+      pages.push(pageState);
+      return pageState;
     };
 
+    /*
+     * Tambahkan blok atomik. Bila tidak muat dan halaman sudah berisi konten,
+     * pindahkan seluruh blok ke halaman berikutnya. Bila blok sendiri lebih
+     * tinggi dari satu halaman, biarkan utuh agar tidak dipotong/clipped.
+     */
     const appendAtomic = (pageState, node) => {
       pageState.content.appendChild(node);
+      _forceLayout(node);
+
       if (_fitsOnPage(pageState.content, node)) return pageState;
 
       pageState.content.removeChild(node);
+
+      if (pageState.content.children.length === 0) {
+        pageState.content.appendChild(node);
+        _forceLayout(node);
+        return pageState;
+      }
+
       pageState = createPage();
       pageState.content.appendChild(node);
+      _forceLayout(node);
       return pageState;
     };
 
     let current = createPage();
 
-    // Header statis DPU hanya ditempatkan pada halaman pertama.
+    /*
+     * KOP + metadata + judul adalah header DPU halaman pertama.
+     * Jangan memindahkan bagian-bagiannya ke halaman berikutnya karena hal itu
+     * dapat membuat halaman 2 dimulai dengan KOP/metadata tanpa konteks.
+     */
     for (const child of before) {
       if (renderToken !== _renderToken) return;
-      current = appendAtomic(current, child);
+      current.content.appendChild(child);
+      _forceLayout(child);
     }
 
     const table = tableWrap.querySelector(':scope > table');
@@ -598,6 +633,7 @@ const PreviewRenderer = (() => {
       const rows = Array.from(tbody.rows);
       const tableTemplate = table.cloneNode(true);
       const templateBody = tableTemplate.querySelector(':scope > tbody');
+
       if (!templateBody) {
         current = appendAtomic(current, tableWrap);
       } else {
@@ -607,77 +643,121 @@ const PreviewRenderer = (() => {
         let fragmentTable = null;
         let fragmentBody = null;
 
-        const startTableFragment = () => {
-          fragmentWrap = tableWrap.cloneNode(false);
-          fragmentTable = tableTemplate.cloneNode(true);
-          fragmentBody = fragmentTable.querySelector(':scope > tbody');
-          fragmentBody.innerHTML = '';
-          fragmentWrap.appendChild(fragmentTable);
-          current.content.appendChild(fragmentWrap);
+        const createTableFragment = (pageState) => {
+          const wrap = tableWrap.cloneNode(false);
+          const tableClone = tableTemplate.cloneNode(true);
+          const body = tableClone.querySelector(':scope > tbody');
+
+          if (!body) return null;
+
+          body.innerHTML = '';
+          wrap.appendChild(tableClone);
+          pageState.content.appendChild(wrap);
+
+          _forceLayout(tableClone);
+
+          return {
+            wrap,
+            table: tableClone,
+            body,
+          };
         };
 
-        for (const row of rows) {
-          if (renderToken !== _renderToken) return;
+        /*
+         * Tabel tanpa baris tetap menampilkan header satu kali, tetapi tidak
+         * boleh membuat halaman kosong tambahan.
+         */
+        if (rows.length === 0) {
+          const emptyFragment = createTableFragment(current);
+          if (emptyFragment) {
+            fragmentWrap = emptyFragment.wrap;
+            fragmentTable = emptyFragment.table;
+            fragmentBody = emptyFragment.body;
 
-          if (!fragmentWrap) {
-            startTableFragment();
+            if (!_fitsOnPage(current.content, fragmentWrap)) {
+              current.content.removeChild(fragmentWrap);
+              current = createPage();
+
+              const movedFragment = createTableFragment(current);
+              if (movedFragment) {
+                fragmentWrap = movedFragment.wrap;
+                fragmentTable = movedFragment.table;
+                fragmentBody = movedFragment.body;
+              }
+            }
           }
+        } else {
+          for (const row of rows) {
+            if (renderToken !== _renderToken) return;
 
-          const candidate = row.cloneNode(true);
-          fragmentBody.appendChild(candidate);
+            if (!fragmentWrap) {
+              const fragment = createTableFragment(current);
+              if (!fragment) {
+                current = appendAtomic(current, tableWrap);
+                break;
+              }
+              fragmentWrap = fragment.wrap;
+              fragmentTable = fragment.table;
+              fragmentBody = fragment.body;
+            }
 
-          if (_fitsOnPage(current.content, fragmentWrap)) {
-            continue;
+            const candidate = row.cloneNode(true);
+            fragmentBody.appendChild(candidate);
+
+            /*
+             * Memaksa browser menghitung ulang tinggi row setelah text wrapping,
+             * font, dan lebar kolom diterapkan.
+             */
+            _forceLayout(candidate);
+            _forceLayout(fragmentTable);
+
+            if (_fitsOnPage(current.content, fragmentWrap)) {
+              continue;
+            }
+
+            /*
+             * Candidate tidak muat. Row yang sudah lolos tetap berada di page
+             * sebelumnya; hanya candidate yang dipindahkan.
+             */
+            fragmentBody.removeChild(candidate);
+
+            if (fragmentBody.rows.length === 0) {
+              current.content.removeChild(fragmentWrap);
+            }
+
+            current = createPage();
+
+            const nextFragment = createTableFragment(current);
+            if (!nextFragment) {
+              current.content.appendChild(candidate);
+              _forceLayout(candidate);
+              continue;
+            }
+
+            fragmentWrap = nextFragment.wrap;
+            fragmentTable = nextFragment.table;
+            fragmentBody = nextFragment.body;
+
+            fragmentBody.appendChild(candidate);
+            _forceLayout(candidate);
+            _forceLayout(fragmentTable);
           }
-
-          // Baris tidak muat. Baris-baris yang sudah berada di fragment
-          // tetap dipertahankan pada halaman sekarang; hanya candidate yang
-          // dipindahkan ke halaman baru bersama header DPU yang terulang.
-          fragmentBody.removeChild(candidate);
-
-          // Jika bahkan baris pertama tidak muat, header tabel jangan dibiarkan
-          // sendirian di halaman sebelumnya. Pindahkan seluruh fragment ke
-          // halaman berikutnya.
-          if (fragmentBody.rows.length === 0) {
-            current.content.removeChild(fragmentWrap);
-          }
-
-          current = createPage();
-          startTableFragment();
-          fragmentBody.appendChild(candidate);
-
-          // Row yang sangat tinggi tidak boleh dipotong; biarkan utuh pada
-          // halaman baru dan lanjutkan ke row berikutnya.
-        }
-
-        // Bila tabel kosong, tetap pertahankan header tabel.
-        if (!fragmentWrap) {
-          current = createPage();
-          startTableFragment();
         }
       }
     }
 
-    // Blok tanda tangan/elemen akhir dipertahankan sebagai unit logis.
+    /*
+     * Tanda tangan adalah satu blok logis. Bila tidak tersedia ruang tersisa,
+     * seluruh blok dipindahkan ke halaman berikutnya, bukan dipotong.
+     */
     for (const child of after) {
       if (renderToken !== _renderToken) return;
       current = appendAtomic(current, child);
     }
 
-    _previewEl.dataset.pageCount = String(pages.length);
-    _previewEl.classList.add('surat-preview--document');
-    _updatePageInfo(pages.length);
-    _updateWrapperHeight(_currentZoom);
-
-    if (typeof DocumentViewer !== 'undefined') DocumentViewer.refresh();
-
-    requestAnimationFrame(() => {
-      if (renderToken !== _renderToken || typeof Settings === 'undefined') return;
-      const sv = State.getSettings().preview;
-      if (sv.showMarginGuide)   _reApplyMarginGuide(sv.showMarginGuide);
-      if (sv.showPrintableArea) _reApplyPrintableArea(sv.showPrintableArea);
-    });
+    _finalizePagination(pages, renderToken);
   }
+
 
   function _paginatePreviewGeneric(source, children, renderToken, paperWidthPx, paperHeightPx, baseStyle) {
     const pages = [];
@@ -699,38 +779,124 @@ const PreviewRenderer = (() => {
 
         if (child.matches('.doc-table-wrap')) {
           await _appendTableWithPagination(
-            child, current, pages, paperWidthPx, paperHeightPx, baseStyle, renderToken
+            child,
+            current,
+            pages,
+            paperWidthPx,
+            paperHeightPx,
+            baseStyle,
+            renderToken
           );
           current = pages[pages.length - 1];
           continue;
         }
 
         current.content.appendChild(child);
+        _forceLayout(child);
+
         if (_isPageOverflowing(current.content) && current.content.children.length > 1) {
           current.content.removeChild(child);
-          current = _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle);
+          current = _appendNewPreviewPage(
+            pages,
+            paperWidthPx,
+            paperHeightPx,
+            baseStyle
+          );
           current.content.appendChild(child);
+          _forceLayout(child);
         }
       }
 
-      _previewEl.dataset.pageCount = String(pages.length);
-      _previewEl.classList.add('surat-preview--document');
-      _updatePageInfo(pages.length);
-      _updateWrapperHeight(_currentZoom);
-
-      if (typeof DocumentViewer !== 'undefined') DocumentViewer.refresh();
+      _finalizePagination(pages, renderToken);
     })();
+  }
+
+  function _finalizePagination(pages, renderToken) {
+    if (renderToken !== _renderToken || !_previewEl) return;
+
+    /*
+     * Pastikan tidak pernah ada halaman kosong di belakang dokumen akibat
+     * pagination. Halaman kosong hanya dipertahankan bila dokumen memang tidak
+     * memiliki elemen konten sama sekali.
+     */
+    while (pages.length > 1) {
+      const last = pages[pages.length - 1];
+      if (last.content.children.length > 0) break;
+      last.page.remove();
+      pages.pop();
+    }
+
+    pages.forEach((pageState, index) => {
+      pageState.page.dataset.pageNumber = String(index + 1);
+      pageState.page.setAttribute('aria-label', 'Halaman ' + (index + 1));
+    });
+
+    _previewEl.dataset.pageCount = String(pages.length);
+    _previewEl.classList.add('surat-preview--document');
+    _updatePageInfo(pages.length);
+    _updateWrapperHeight(_currentZoom);
+
+    if (typeof DocumentViewer !== 'undefined') {
+      DocumentViewer.refresh();
+    }
+
+    requestAnimationFrame(() => {
+      if (renderToken !== _renderToken) return;
+      if (typeof Settings === 'undefined') return;
+
+      const sv = State.getSettings().preview;
+      if (sv.showMarginGuide) _reApplyMarginGuide(sv.showMarginGuide);
+      else _reApplyMarginGuide(false);
+
+      if (sv.showPrintableArea) _reApplyPrintableArea(sv.showPrintableArea);
+      else _reApplyPrintableArea(false);
+    });
+  }
+
+  function _forceLayout(node) {
+    if (!node) return 0;
+
+    /*
+     * offsetHeight/scrollHeight dipakai hanya untuk memaksa reflow. Nilai
+     * visual final tetap diukur oleh getBoundingClientRect() pada helper fit.
+     */
+    const height = node.offsetHeight;
+    void node.scrollHeight;
+    return height;
+  }
+
+  function _getPageContentBottom(content) {
+    if (!content) return 0;
+
+    const rect = content.getBoundingClientRect();
+    const cssHeight = content.offsetHeight || content.clientHeight || rect.height || 1;
+
+    /*
+     * getBoundingClientRect() sudah memperhitungkan transform zoom, sedangkan
+     * padding dari getComputedStyle() berada dalam CSS pixel. Skala ini membuat
+     * keduanya berada pada satu satuan sehingga batas bawah tetap akurat pada
+     * zoom 30%–250%.
+     */
+    const scale = cssHeight > 0 ? rect.height / cssHeight : 1;
+    const styles = getComputedStyle(content);
+    const paddingBottom = parseFloat(styles.paddingBottom) || 0;
+
+    return rect.top + (cssHeight - paddingBottom) * scale;
   }
 
   function _fitsOnPage(content, node) {
     if (!content || !node) return true;
 
-    const contentRect = content.getBoundingClientRect();
-    const styles = getComputedStyle(content);
-    const paddingBottom = parseFloat(styles.paddingBottom) || 0;
-    const pageBottom = contentRect.bottom - paddingBottom;
+    _forceLayout(content);
+    _forceLayout(node);
+
+    const pageBottom = _getPageContentBottom(content);
     const nodeBottom = node.getBoundingClientRect().bottom;
 
+    /*
+     * +0.5px memberi toleransi rounding browser tanpa menciptakan ruang kosong
+     * yang berarti pada akhir halaman.
+     */
     return nodeBottom <= pageBottom + 0.5;
   }
 
