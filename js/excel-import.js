@@ -312,6 +312,11 @@ const ExcelImport = (() => {
     const cfg = getConfig(templateId, sectionId);
     if (!cfg) return;
 
+    if (!file || typeof file.name !== 'string') {
+      UI.toast('File Excel belum dipilih.', 'warning');
+      return;
+    }
+
     if (typeof window.XLSX === 'undefined') {
       UI.toast('Fitur Excel belum siap. Pastikan koneksi internet tersedia lalu muat ulang halaman.', 'error');
       return;
@@ -439,7 +444,7 @@ const ExcelImport = (() => {
     if (!text) return '';
     if (['sudah', 'ya', 'yes', 'true', '1', 'terdaftar'].includes(text)) return true;
     if (['belum', 'tidak', 'no', 'false', '0', 'belum terdaftar'].includes(text)) return false;
-    return Boolean(value);
+    return '';
   }
 
   function normalizeClass(value) {
@@ -457,7 +462,7 @@ const ExcelImport = (() => {
       return ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][numeric - 1];
     }
 
-    const match = text.match(/^(I{1,3}|IV|V?I{0,3}|IX|X{1,3}|XI|XII)\b/);
+    const match = text.match(/^(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)\b/);
     return match ? match[1] : text;
   }
 
