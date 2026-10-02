@@ -258,12 +258,59 @@ const Utils = (() => {
   }
 
   /* ── 8. Debounce ── */
+  const _pendingDebounces = new Set();
+
   function debounce(fn, delay = 300) {
-    let timer;
-    return function (...args) {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn.apply(this, args), delay);
+    let timer = null;
+    let lastArgs = [];
+    let lastThis = null;
+
+    const invoke = () => {
+      timer = null;
+      _pendingDebounces.delete(debounced);
+
+      const args = lastArgs;
+      const context = lastThis;
+      lastArgs = [];
+      lastThis = null;
+
+      return fn.apply(context, args);
     };
+
+    function debounced(...args) {
+      clearTimeout(timer);
+      lastArgs = args;
+      lastThis = this;
+      _pendingDebounces.add(debounced);
+      timer = setTimeout(invoke, delay);
+    }
+
+    debounced.cancel = () => {
+      clearTimeout(timer);
+      timer = null;
+      lastArgs = [];
+      lastThis = null;
+      _pendingDebounces.delete(debounced);
+    };
+
+    debounced.flush = () => {
+      if (timer === null) return undefined;
+      clearTimeout(timer);
+      return invoke();
+    };
+
+    return debounced;
+  }
+
+  function flushDebounces() {
+    // Salin snapshot supaya callback yang dijalankan tidak mengubah iterator.
+    Array.from(_pendingDebounces).forEach(fn => {
+      try {
+        fn.flush?.();
+      } catch (err) {
+        console.warn('[Utils] Gagal flush debounce:', err);
+      }
+    });
   }
 
   /* ── 9. Throttle ── */
@@ -387,6 +434,7 @@ const Utils = (() => {
     formatBytes,
     compressImage,
     debounce,
+    flushDebounces,
     throttle,
     clamp,
     safeInt,
