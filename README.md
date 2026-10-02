@@ -30,7 +30,7 @@ Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesi
 - **Penyimpanan Lokal** otomatis dengan TTL 2 jam — data tidak hilang saat refresh, tetapi terhapus otomatis setelah 2 jam sejak penyimpanan terakhir
 - **100% Client-Side** — tidak ada server, tidak ada database, tidak ada data dikirim ke luar perangkat
 - **Extensible** — template baru dapat ditambahkan tanpa mengubah arsitektur inti
-- **Responsif** — dapat digunakan di desktop, tablet, dan smartphone
+- **Responsif** — editor dan preview beradaptasi pada desktop, tablet, dan smartphone
 
 ---
 
@@ -759,7 +759,7 @@ State.resetSettings();                      // → emit 'settings:change' + 'set
 ## Catatan Pengembang
 
 ### Keterbatasan Saat Ini
-- Hanya mendukung ukuran kertas **A4**. Untuk ukuran lain (F4, Letter), perlu menambahkan CSS class baru di `preview.css` dan logika di `print.js`.
+- Engine dokumen menggunakan HTML/CSS browser sehingga detail hasil cetak dapat sedikit berbeda antar-browser/printer.
 - Ukuran gambar logo setelah kompresi diupayakan ≤ 2 MB. Logo dengan resolusi sangat tinggi akan dikompresi otomatis.
 - `localStorage` memiliki batas ~5–10 MB tergantung browser. Jika logo berukuran besar, total data bisa mendekati batas. Gunakan logo berformat PNG/SVG dengan resolusi wajar (maks 300×300 px).
 
