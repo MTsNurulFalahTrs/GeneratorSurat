@@ -127,6 +127,7 @@ const PreviewRenderer = (() => {
     requestAnimationFrame(() => {
       if (renderToken !== _renderToken) return;
       _updateWrapperHeight(_currentZoom);
+      if (typeof DocumentViewer !== 'undefined') DocumentViewer.refresh();
       if (typeof Settings !== 'undefined') {
         const sv = State.getSettings().preview;
         if (sv.showMarginGuide)   _reApplyMarginGuide(sv.showMarginGuide);
@@ -453,7 +454,10 @@ const PreviewRenderer = (() => {
       requestAnimationFrame(() => {
         _paginatePreview(renderToken, paperWidthPx, paperHeightPx).catch(err => {
           console.warn('[PreviewRenderer] Pagination gagal:', err);
-          if (renderToken === _renderToken) _updateWrapperHeight(_currentZoom);
+          if (renderToken === _renderToken) {
+            _updateWrapperHeight(_currentZoom);
+            if (typeof DocumentViewer !== 'undefined') DocumentViewer.refresh();
+          }
         });
       });
     });
@@ -503,11 +507,16 @@ const PreviewRenderer = (() => {
     _updatePageInfo(pages.length);
     _updateWrapperHeight(_currentZoom);
 
+    // Sinkronkan viewer setelah seluruh .surat-page benar-benar terbentuk.
+    if (typeof DocumentViewer !== 'undefined') DocumentViewer.refresh();
+
     requestAnimationFrame(() => {
-      if (renderToken !== _renderToken || typeof Settings === 'undefined') return;
-      const sv = State.getSettings().preview;
-      if (sv.showMarginGuide)   _reApplyMarginGuide(sv.showMarginGuide);
-      if (sv.showPrintableArea) _reApplyPrintableArea(sv.showPrintableArea);
+      if (renderToken !== _renderToken) return;
+      if (typeof Settings !== 'undefined') {
+        const sv = State.getSettings().preview;
+        if (sv.showMarginGuide)   _reApplyMarginGuide(sv.showMarginGuide);
+        if (sv.showPrintableArea) _reApplyPrintableArea(sv.showPrintableArea);
+      }
     });
   }
 
