@@ -248,14 +248,24 @@ const App = (() => {
   /* ── On state change (auto-save indicator) ── */
   let _autoSaveTimer = null;
   function _onStateChange() {
-    // Debounced indicator: tampilkan tanda "belum tersimpan" setelah 1 detik idle
+    // Feedback persistence tetap non-blocking: pengguna diberi tahu bahwa
+    // perubahan belum tersimpan tanpa memicu penyimpanan otomatis.
     clearTimeout(_autoSaveTimer);
     _autoSaveTimer = setTimeout(() => {
-      if (State.isDirty()) {
-        const saveBtn = document.getElementById('btn-save');
-        if (saveBtn) saveBtn.title = 'Ada perubahan yang belum disimpan';
+      const saveBtn = document.getElementById('btn-save');
+      if (saveBtn) {
+        saveBtn.title = State.isDirty()
+          ? 'Ada perubahan yang belum disimpan'
+          : 'Simpan data ke penyimpanan lokal';
       }
-    }, 1000);
+
+      if (State.isDirty()) {
+        UI.markStorageDirty();
+      } else {
+        const meta = Storage.getMeta();
+        UI.updateStorageInfo(meta);
+      }
+    }, 250);
   }
 
   /* ── Fatal error fallback ── */
