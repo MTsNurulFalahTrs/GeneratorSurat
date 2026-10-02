@@ -876,6 +876,8 @@ const TableConfigUI = (() => {
   function _handleInput(e, templateId) {
     const el     = e.target;
     const action = el.dataset.action;
+    const tableId = el.dataset.tableId;
+    const colorSection = el.dataset.colorSection;
 
     /* ── Kode HEX warna ── */
     if (action === 'table-color-hex' && colorSection) {
