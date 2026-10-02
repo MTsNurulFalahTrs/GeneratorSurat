@@ -225,7 +225,7 @@ const FormRenderer = (() => {
     const labelText = _getItemLabel(section, item, idx);
 
     entry.innerHTML = `
-      <div class="row-entry__header">
+      <div class="row-entry__header" role="button" tabindex="0" aria-expanded="true">
         <span class="row-entry__num">${idx + 1}</span>
         <span class="row-entry__label">${Utils.escapeHtml(labelText)}</span>
         <div class="row-entry__actions">
@@ -251,11 +251,24 @@ const FormRenderer = (() => {
     const deleteBtn = entry.querySelector('.entry-delete-btn');
 
     // Toggle collapse (klik header, bukan tombol delete)
-    header.addEventListener('click', (e) => {
-      if (deleteBtn.contains(e.target)) return;
+    const toggleEntry = () => {
       const isOpen = body.classList.contains('is-open');
       body.classList.toggle('is-open', !isOpen);
       chevron.classList.toggle('is-open', !isOpen);
+      header.setAttribute('aria-expanded', String(!isOpen));
+    };
+
+    header.addEventListener('click', (e) => {
+      if (deleteBtn.contains(e.target)) return;
+      toggleEntry();
+    });
+
+    header.addEventListener('keydown', (e) => {
+      if (deleteBtn.contains(e.target)) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleEntry();
+      }
     });
 
     // Delete
