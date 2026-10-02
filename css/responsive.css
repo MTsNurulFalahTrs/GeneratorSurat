@@ -408,15 +408,50 @@
 
   .app-header__title { font-size: 12px; }
 
-  .app-body { min-height: calc(100dvh - 48px); }
+  /* Seluruh workspace harus muat di viewport landscape yang pendek. */
+  .app-body {
+    height: calc(100dvh - 48px);
+    min-height: 0;
+    overflow: hidden;
+    flex: 1 1 auto;
+  }
 
-  .editor-panel { height: clamp(300px, 66dvh, 520px); }
-  .preview-panel { min-height: 300px; }
+  /* Editor dan preview berbagi ruang secara proporsional. */
+  .editor-panel {
+    flex: 0 1 52%;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+  }
+
+  .preview-panel {
+    flex: 1 1 48%;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  /* Saat preview disembunyikan, editor mengambil seluruh workspace. */
+  .app-body.is-mobile-preview-hidden .editor-panel {
+    flex: 1 1 100%;
+    height: auto;
+    min-height: 0;
+  }
 
   .editor-tabs,
   .preview-toolbar { min-height: 44px; }
 
-  .preview-viewport { padding: 8px; }
+  .preview-viewport {
+    padding: 8px;
+    min-height: 0;
+  }
+
+  .mobile-preview-toggle-wrap {
+    flex: 0 0 auto;
+  }
 }
 
 @media (hover: none) and (pointer: coarse) {
