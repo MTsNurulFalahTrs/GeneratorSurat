@@ -1,0 +1,206 @@
+/* =============================================================
+   document-viewer.css — Phase 3 Professional Document Viewer
+   Screen UI only.
+   ============================================================= */
+
+.preview-panel {
+  --viewer-toolbar-height: 54px;
+}
+
+.preview-toolbar {
+  min-width: 0;
+  gap: 10px;
+}
+
+.preview-toolbar__identity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.viewer-template-label {
+  min-width: 0;
+  max-width: min(30vw, 320px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.viewer-page-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-2);
+  flex-shrink: 0;
+}
+
+.viewer-document-control {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+}
+
+.viewer-page-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-inline: 5px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.viewer-page-input {
+  width: 42px;
+  min-width: 42px;
+  height: 30px;
+  padding: 3px 5px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.viewer-page-input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.viewer-page-status {
+  display: none;
+}
+
+.viewer-focus-toggle {
+  margin-left: 2px;
+}
+
+.viewer-focus-mode {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: calc(var(--z-modal) - 1);
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  background: var(--color-bg);
+}
+
+.viewer-focus-mode .preview-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.viewer-focus-mode .preview-viewport {
+  min-height: 0;
+}
+
+.surat-page.is-viewer-current {
+  outline: 2px solid rgba(37,99,235,.14);
+  outline-offset: 4px;
+}
+
+@media screen and (max-width: 980px) {
+  .viewer-template-label {
+    display: none;
+  }
+
+  .preview-toolbar__identity {
+    flex-shrink: 0;
+  }
+
+  .preview-toolbar__actions {
+    min-width: max-content;
+    flex-shrink: 0;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .preview-toolbar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+
+  .preview-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .viewer-page-nav {
+    gap: 1px;
+  }
+
+  .viewer-document-control,
+  .viewer-page-input {
+    min-height: 40px;
+  }
+
+  .viewer-document-control {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+  }
+
+  .viewer-page-input {
+    width: 44px;
+    min-width: 44px;
+    height: 40px;
+  }
+
+  .viewer-focus-label {
+    display: none;
+  }
+
+  .viewer-focus-toggle {
+    flex-shrink: 0;
+  }
+}
+
+@media screen and (max-width: 374px) {
+  .viewer-page-nav {
+    padding: 2px;
+  }
+
+  .viewer-document-control {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+  }
+
+  .viewer-page-input {
+    width: 40px;
+    min-width: 40px;
+    height: 38px;
+  }
+}
+
+@media screen and (max-width: 767px) and (orientation: landscape) {
+  .viewer-document-control,
+  .viewer-page-input {
+    min-height: 34px;
+    height: 34px;
+  }
+
+  .viewer-document-control {
+    width: 34px;
+    min-width: 34px;
+  }
+
+  .viewer-page-input {
+    width: 38px;
+    min-width: 38px;
+  }
+}
