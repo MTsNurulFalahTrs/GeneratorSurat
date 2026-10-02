@@ -101,6 +101,12 @@
     border-color: var(--color-border);
   }
 
+  .storage-info--dirty {
+    background: var(--color-warning-light);
+    border-color: #fcd34d;
+    color: #92400e;
+  }
+
   .panel-resizer {
     width: 6px;
     background: #e8edf3;
