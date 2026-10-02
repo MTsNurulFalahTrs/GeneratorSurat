@@ -150,8 +150,8 @@ const App = (() => {
   /* ── Handle template dipilih ── */
   function _handleTemplateSelect(templateId) {
     if (State.getActiveTemplate() === templateId) {
-      // Sudah aktif, langsung ke tab form
-      UI.switchTab('form');
+      // Template sudah aktif; tetap arahkan ke langkah KOP.
+      UI.switchTab('kop');
       return;
     }
 
