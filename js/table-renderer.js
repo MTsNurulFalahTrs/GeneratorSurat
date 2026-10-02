@@ -190,8 +190,16 @@ const TableRenderer = (() => {
       if (colCfg) {
         const cfgStyle = _buildConfigStyle(colCfg, headerFontSize);
         if (cfgStyle) {
-          parts.push(cfgStyle);
-          return parts.join(';');
+          // Hapus properti dari parts yang akan di-override oleh cfgStyle
+          // agar tidak ada deklarasi CSS duplikat dalam satu inline style attribute.
+          // Duplikat bisa menyebabkan perilaku tidak konsisten di beberapa browser/context.
+          const cfgProps = new Set(cfgStyle.split(';').map(d => d.split(':')[0].trim()).filter(Boolean));
+          const filteredParts = parts.filter(p => {
+            const prop = p.split(':')[0].trim();
+            return !cfgProps.has(prop);
+          });
+          filteredParts.push(cfgStyle);
+          return filteredParts.join(';');
         }
       }
     }
