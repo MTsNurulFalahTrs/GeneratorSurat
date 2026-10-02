@@ -39,49 +39,38 @@ const TableConfigUI = (() => {
     if (!mountEl) return;
     _mountEl = mountEl;
 
-    State.on('template:change', ({ templateId }) => {
-      _templateId = templateId;
-      TableConfigManager.initForTemplate(templateId);
-      render(templateId);
-    });
-
     /*
-     * PENTING: Accordion TIDAK subscribe ke 'table:change' / 'table:reset'.
+     * CATATAN ARSITEKTUR — siapa yang memanggil render():
      *
-     * Alasan: setiap kali Apply-to-All atau update kolom dipanggil,
-     * State emit 'table:change' → dulu accordion melakukan full re-render
-     * (innerHTML = ...) → _bindEvents() terpasang ulang di atas listener
-     * yang masih ada → duplicate listener → setiap klik section toggle
-     * dipanggil 2x (buka-tutup-buka) → accordion tampak terkunci.
+     * TableConfigUI.init() TIDAK subscribe ke 'template:change'.
+     * FormRenderer.render() yang secara eksplisit memanggil
+     * TableConfigUI.render(templateId) setelah form di-render.
      *
-     * PreviewRenderer yang subscribe 'table:change' dan memperbarui preview.
-     * Accordion sudah menampilkan state yang benar karena dirender dari
-     * getResolvedConfig() saat template dipilih — perubahan tabel tidak
-     * perlu memperbarui HTML accordion. Hanya nilai kolom (font size, wrap,
-     * dll.) yang berubah di dalam state, tapi UI toggle sudah merespons
-     * lewat data-action tanpa membutuhkan re-render DOM.
+     * Alasan: jika init() juga subscribe ke 'template:change',
+     * maka saat FormRenderer menangani 'template:change' dan memanggil
+     * render(templateId), TableConfigUI.render() akan terpanggil DUA KALI:
+     *   1. Dari subscriber init() — via state event
+     *   2. Dari FormRenderer.render() — via explicit call
      *
-     * Untuk sinkronisasi visual setelah Apply-to-All (misal Bold, Wrap, Align
-     * semua kolom berubah sekaligus), kita gunakan _syncControls() yang
-     * memperbarui elemen in-place tanpa menyentuh innerHTML accordion utama.
-     * Ini aman karena tidak mengganti DOM struktur accordion → tidak ada
-     * duplicate listener → tidak ada accordion lock.
+     * Dua panggilan render() → dua panggilan _bindEvents(_mountEl) →
+     * DUA listener 'click' di _mountEl → setiap klik toggle accordion
+     * dipanggil dua kali → accordion toggle dan langsung balik (terkunci).
+     *
+     * Solusi: render() hanya dipanggil dari FormRenderer.render() secara
+     * eksplisit. state:restore juga ditangani di FormRenderer.
+     *
+     * State events yang di-subscribe di sini hanya untuk sync in-place
+     * (tanpa re-render DOM accordion) dan lifecycle:
+     *   - 'table:change' → _syncControls (in-place update tombol/input)
+     *   - 'table:reset'  → _syncControls (in-place update)
+     *   - 'state:reset'  → _hide
      */
+
     const debouncedSync = Utils.debounce(() => {
       if (_templateId) _syncControls(_templateId);
     }, 60);
     State.on('table:change', debouncedSync);
     State.on('table:reset',  debouncedSync);
-
-    State.on('state:restore', () => {
-      _templateId = State.getActiveTemplate();
-      if (_templateId) {
-        TableConfigManager.initForTemplate(_templateId);
-        render(_templateId);
-      } else {
-        _hide();
-      }
-    });
 
     State.on('state:reset', () => {
       _templateId = null;
