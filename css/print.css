@@ -248,7 +248,14 @@
     border: 1px solid #000 !important;
     padding: 2pt 3pt !important;
     color: #000 !important;
-    background: white !important;
+    /*
+     * Fallback putih hanya digunakan bila sel tidak memiliki warna inline.
+     * Jangan gunakan !important di sini: TableRenderer menulis
+     * background-color langsung pada setiap <th>/<td> sesuai konfigurasi pengguna,
+     * sehingga warna tersebut harus tetap menang saat mode print.
+     */
+    background: white;
+    background-color: white;
     /*
      * PENTING: overflow-wrap dan word-break TIDAK menggunakan !important
      * agar inline style dari TableRenderer (buildCellStyle) dapat menang.
@@ -274,7 +281,9 @@
   }
 
   .doc-table th {
-    background: white !important;
+    /* Fallback putih; warna Header Tabel dari TableRenderer harus tetap menang. */
+    background: white;
+    background-color: white;
     /*
      * font-weight dan white-space diatur per kolom via inline style dari tableConfig.
      * Header mendapat bold:true dan wrapText:false secara default.
