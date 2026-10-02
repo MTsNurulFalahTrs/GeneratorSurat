@@ -206,6 +206,12 @@ const FormRenderer = (() => {
       setTimeout(() => entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
     });
 
+    // Toolbar import Excel ditempatkan sebelum daftar siswa/peserta.
+    if (typeof ExcelImport !== 'undefined') {
+      const excelToolbar = ExcelImport.buildToolbar(templateId, section.id);
+      if (excelToolbar) bodyEl.appendChild(excelToolbar);
+    }
+
     bodyEl.appendChild(listEl);
     bodyEl.appendChild(addBtn);
   }
