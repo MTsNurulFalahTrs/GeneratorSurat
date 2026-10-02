@@ -283,6 +283,12 @@ const Workflow = (() => {
   }
 
   function preparePrint() {
+    // Pastikan perubahan input/settings yang masih dalam debounce sudah masuk
+    // ke State sebelum preflight validation membaca data.
+    if (typeof Utils.flushDebounces === 'function') {
+      Utils.flushDebounces();
+    }
+
     const errors = _collectPrintChecks();
 
     if (errors.length === 0) {
