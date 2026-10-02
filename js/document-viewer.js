@@ -131,7 +131,12 @@ const DocumentViewer = (() => {
   }
 
   function _getPages() {
-    return Array.from(_preview.querySelectorAll(':scope > .surat-page'));
+    const pages = Array.from(_preview.querySelectorAll(':scope > .surat-page'));
+    if (pages.length) return pages;
+
+    // DPU menggunakan satu halaman langsung di #surat-preview.
+    if (_preview.querySelector(':scope > .doc-content')) return [_preview];
+    return [];
   }
 
   function _getPageCount() {
