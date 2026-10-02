@@ -318,7 +318,7 @@ const Workflow = (() => {
         {
           label: 'Perbaiki Sekarang',
           class: 'btn--primary',
-          onClick: () => _focusError(first),
+          onClick: () => setTimeout(() => _focusError(first), 80),
         },
         {
           label: 'Tutup',
