@@ -125,7 +125,7 @@ body { min-width: var(--app-min-inline); }
     width: 100%;
     min-height: calc(100dvh - var(--header-height));
     height: auto;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .editor-panel {
@@ -165,7 +165,7 @@ body { min-width: var(--app-min-inline); }
 
   .editor-tab-content {
     min-width: 0;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 
