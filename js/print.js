@@ -13,7 +13,14 @@ const Print = (() => {
   const STYLE_ID = 'print-page-style';
 
   /* ── Cetak surat ── */
-  function printDocument() {
+  async function printDocument() {
+    // Input, settings, KOP, dan preview memiliki debounce sendiri. Untuk aksi
+    // kritis, flush semua perubahan yang masih tertunda agar State menjadi
+    // sumber data terbaru sebelum validasi/cetak.
+    if (typeof Utils.flushDebounces === 'function') {
+      Utils.flushDebounces();
+    }
+
     const templateId = State.getActiveTemplate();
     if (!templateId) {
       UI.toast('Pilih template surat terlebih dahulu.', 'warning');
@@ -32,14 +39,18 @@ const Print = (() => {
       return;
     }
 
-    // Terapkan @page style dari settings
+    // Untuk template multi-page, tunggu DOM pagination selesai. Ini mencegah
+    // window.print() mengambil DOM sementara setelah perubahan terakhir.
+    if (typeof PreviewRenderer?.waitForReady === 'function') {
+      await PreviewRenderer.waitForReady();
+    }
+
     _applyPageStyle();
 
-    // Beri browser waktu untuk apply style, lalu cetak
+    // Beri browser frame untuk menerapkan style print sebelum membuka dialog.
     requestAnimationFrame(() => {
       setTimeout(() => {
         window.print();
-        // Cleanup setelah dialog cetak ditutup
         setTimeout(_cleanupPageStyle, 1500);
       }, 150);
     });
