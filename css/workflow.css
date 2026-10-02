@@ -1,0 +1,181 @@
+/* =============================================================
+   workflow.css — Phase 2 UX Workflow
+   Screen UI only; document/print styles remain isolated.
+   ============================================================= */
+
+.editor-tabs .editor-tab {
+  position: relative;
+  padding-right: 25px;
+}
+
+.editor-tab__status {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+  box-shadow: 0 0 0 2px var(--color-surface-2);
+}
+
+.editor-tab__status[data-state="complete"] {
+  background: var(--color-success);
+}
+
+.editor-tab__status[data-state="attention"] {
+  background: var(--color-warning);
+}
+
+.editor-tab.workflow-attention:not(.active) {
+  color: #92400e;
+}
+
+.workflow-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-border);
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 -3px 12px rgba(15,23,42,.035);
+  backdrop-filter: blur(8px);
+}
+
+.workflow-actions__meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workflow-actions__step {
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .01em;
+}
+
+.workflow-actions__status {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.workflow-actions__status[data-state="attention"] {
+  color: #92400e;
+}
+
+.workflow-actions__status[data-state="complete"] {
+  color: #166534;
+}
+
+.workflow-actions__buttons {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.workflow-actions__buttons .btn {
+  min-height: 38px;
+}
+
+.workflow-actions__next {
+  min-width: 126px;
+}
+
+.workflow-actions__back {
+  min-width: 92px;
+}
+
+.workflow-validation p {
+  margin-bottom: 10px;
+  color: var(--color-text-secondary);
+}
+
+.workflow-validation ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text);
+}
+
+.workflow-validation li {
+  margin: 7px 0;
+}
+
+.workflow-validation-more {
+  margin-top: 8px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+@media screen and (max-width: 767px) {
+  .editor-tabs .editor-tab {
+    padding-right: 24px;
+  }
+
+  .editor-tab__status {
+    top: 9px;
+    right: 9px;
+  }
+
+  .workflow-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 8px var(--mobile-side-padding);
+  }
+
+  .workflow-actions__buttons {
+    width: 100%;
+  }
+
+  .workflow-actions__buttons .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .workflow-actions__next {
+    min-width: 0;
+  }
+
+  .workflow-actions__back {
+    min-width: 0;
+  }
+}
+
+@media screen and (max-width: 374px) {
+  .workflow-actions__buttons {
+    gap: 5px;
+  }
+
+  .workflow-actions__buttons .btn {
+    padding-inline: 9px;
+  }
+}
+
+@media screen and (max-width: 767px) and (orientation: landscape) {
+  .workflow-actions {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    gap: 5px;
+  }
+
+  .workflow-actions__step {
+    font-size: 10px;
+  }
+
+  .workflow-actions__status {
+    font-size: 10px;
+    max-height: 28px;
+    overflow: hidden;
+  }
+
+  .workflow-actions__buttons .btn {
+    min-height: 36px;
+  }
+}
