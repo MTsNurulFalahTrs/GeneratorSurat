@@ -477,6 +477,14 @@ const PreviewRenderer = (() => {
     await _waitForLayoutAssets(source);
     if (renderToken !== _renderToken) return;
 
+    // DPU memiliki struktur tabel khusus (15 kolom + header 2 tingkat),
+    // sehingga gunakan paginator khusus agar pembagian baris dan header tetap
+    // deterministik tanpa mengubah engine template lain.
+    if (State.getActiveTemplate() === 'dpu') {
+      await _paginateDpuPreview(source, renderToken, paperWidthPx, paperHeightPx);
+      return;
+    }
+
     const baseStyle = source.getAttribute('style') || '';
     const children = Array.from(source.children);
     const pages = [];
@@ -528,6 +536,195 @@ const PreviewRenderer = (() => {
         if (sv.showPrintableArea) _reApplyPrintableArea(sv.showPrintableArea);
       }
     });
+  }
+
+  async function _paginateDpuPreview(source, renderToken, paperWidthPx, paperHeightPx) {
+    if (renderToken !== _renderToken || !_previewEl) return;
+
+    const baseStyle = source.getAttribute('style') || '';
+    const children = Array.from(source.children);
+    const tableIndex = children.findIndex(el => el.matches('.doc-table-wrap'));
+    const tableWrap = tableIndex >= 0 ? children[tableIndex] : null;
+
+    // Bila struktur DPU berubah/tidak memiliki tabel, kembali ke paginator umum.
+    if (!tableWrap) {
+      return _paginatePreviewGeneric(source, children, renderToken, paperWidthPx, paperHeightPx, baseStyle);
+    }
+
+    const before = children.slice(0, tableIndex);
+    const after = children.slice(tableIndex + 1);
+
+    _previewEl.innerHTML = '';
+    _previewEl.dataset.pageCount = '0';
+
+    const pages = [];
+
+    const createPage = () => {
+      const page = _createPreviewPage(
+        pages.length + 1,
+        paperWidthPx,
+        paperHeightPx,
+        baseStyle
+      );
+      _previewEl.appendChild(page.page);
+      pages.push(page);
+      return page;
+    };
+
+    const appendAtomic = (pageState, node) => {
+      pageState.content.appendChild(node);
+      if (_fitsOnPage(pageState.content, node)) return pageState;
+
+      pageState.content.removeChild(node);
+      pageState = createPage();
+      pageState.content.appendChild(node);
+      return pageState;
+    };
+
+    let current = createPage();
+
+    // Header statis DPU hanya ditempatkan pada halaman pertama.
+    for (const child of before) {
+      if (renderToken !== _renderToken) return;
+      current = appendAtomic(current, child);
+    }
+
+    const table = tableWrap.querySelector(':scope > table');
+    const tbody = table?.querySelector(':scope > tbody');
+
+    if (!table || !tbody) {
+      current = appendAtomic(current, tableWrap);
+    } else {
+      const rows = Array.from(tbody.rows);
+      const tableTemplate = table.cloneNode(true);
+      const templateBody = tableTemplate.querySelector(':scope > tbody');
+      if (!templateBody) {
+        current = appendAtomic(current, tableWrap);
+      } else {
+        templateBody.innerHTML = '';
+
+        let fragmentWrap = null;
+        let fragmentTable = null;
+        let fragmentBody = null;
+
+        const startTableFragment = () => {
+          fragmentWrap = tableWrap.cloneNode(false);
+          fragmentTable = tableTemplate.cloneNode(true);
+          fragmentBody = fragmentTable.querySelector(':scope > tbody');
+          fragmentBody.innerHTML = '';
+          fragmentWrap.appendChild(fragmentTable);
+          current.content.appendChild(fragmentWrap);
+        };
+
+        for (const row of rows) {
+          if (renderToken !== _renderToken) return;
+
+          if (!fragmentWrap) {
+            startTableFragment();
+          }
+
+          const candidate = row.cloneNode(true);
+          fragmentBody.appendChild(candidate);
+
+          if (_fitsOnPage(current.content, fragmentWrap)) {
+            continue;
+          }
+
+          // Baris tidak muat: kembalikan row, mulai halaman baru,
+          // kemudian masukkan row tersebut bersama header DPU yang terulang.
+          fragmentBody.removeChild(candidate);
+          current.content.removeChild(fragmentWrap);
+
+          current = createPage();
+          startTableFragment();
+          fragmentBody.appendChild(candidate);
+
+          // Row yang sangat tinggi tidak boleh dipotong; biarkan utuh pada
+          // halaman baru dan lanjutkan ke row berikutnya.
+        }
+
+        // Bila tabel kosong, tetap pertahankan header tabel.
+        if (!fragmentWrap) {
+          current = createPage();
+          startTableFragment();
+        }
+      }
+    }
+
+    // Blok tanda tangan/elemen akhir dipertahankan sebagai unit logis.
+    for (const child of after) {
+      if (renderToken !== _renderToken) return;
+      current = appendAtomic(current, child);
+    }
+
+    _previewEl.dataset.pageCount = String(pages.length);
+    _previewEl.classList.add('surat-preview--document');
+    _updatePageInfo(pages.length);
+    _updateWrapperHeight(_currentZoom);
+
+    if (typeof DocumentViewer !== 'undefined') DocumentViewer.refresh();
+
+    requestAnimationFrame(() => {
+      if (renderToken !== _renderToken || typeof Settings === 'undefined') return;
+      const sv = State.getSettings().preview;
+      if (sv.showMarginGuide)   _reApplyMarginGuide(sv.showMarginGuide);
+      if (sv.showPrintableArea) _reApplyPrintableArea(sv.showPrintableArea);
+    });
+  }
+
+  function _paginatePreviewGeneric(source, children, renderToken, paperWidthPx, paperHeightPx, baseStyle) {
+    const pages = [];
+    _previewEl.innerHTML = '';
+
+    let current = _createPreviewPage(
+      pages.length + 1,
+      paperWidthPx,
+      paperHeightPx,
+      baseStyle,
+      children.length === 0
+    );
+    _previewEl.appendChild(current.page);
+    pages.push(current);
+
+    return (async () => {
+      for (const child of children) {
+        if (renderToken !== _renderToken) return;
+
+        if (child.matches('.doc-table-wrap')) {
+          await _appendTableWithPagination(
+            child, current, pages, paperWidthPx, paperHeightPx, baseStyle, renderToken
+          );
+          current = pages[pages.length - 1];
+          continue;
+        }
+
+        current.content.appendChild(child);
+        if (_isPageOverflowing(current.content) && current.content.children.length > 1) {
+          current.content.removeChild(child);
+          current = _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle);
+          current.content.appendChild(child);
+        }
+      }
+
+      _previewEl.dataset.pageCount = String(pages.length);
+      _previewEl.classList.add('surat-preview--document');
+      _updatePageInfo(pages.length);
+      _updateWrapperHeight(_currentZoom);
+
+      if (typeof DocumentViewer !== 'undefined') DocumentViewer.refresh();
+    })();
+  }
+
+  function _fitsOnPage(content, node) {
+    if (!content || !node) return true;
+
+    const contentRect = content.getBoundingClientRect();
+    const styles = getComputedStyle(content);
+    const paddingBottom = parseFloat(styles.paddingBottom) || 0;
+    const pageBottom = contentRect.bottom - paddingBottom;
+    const nodeBottom = node.getBoundingClientRect().bottom;
+
+    return nodeBottom <= pageBottom + 0.5;
   }
 
   async function _waitForLayoutAssets(root) {
