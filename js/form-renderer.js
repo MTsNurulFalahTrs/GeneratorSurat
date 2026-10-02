@@ -393,6 +393,20 @@ const FormRenderer = (() => {
           const val = cbInput.checked;
           cbLabel.textContent = val ? (fieldDef.labelTrue || 'Ya') : (fieldDef.labelFalse || 'Tidak');
           _saveFieldValue(fieldDef, val, templateId, itemId, sectionId);
+
+          // Checkbox dapat mengubah visibilitas field dengan showIf.
+          // Sinkronkan hanya field kondisional agar input lain tidak dire-render
+          // dan fokus pengguna tidak hilang.
+          if (itemId && sectionId) {
+            const section = TemplateRegistry.get(templateId)
+              ?.formSections?.find(s => s.id === sectionId);
+            const updated = State.getFormData(templateId)?.[sectionId]
+              ?.find(item => item.id === itemId);
+            const body = group.parentElement;
+            if (section && updated && body) {
+              _syncConditionalFields(section.fields, updated, templateId, itemId, body);
+            }
+          }
         });
         break;
       }
@@ -402,6 +416,48 @@ const FormRenderer = (() => {
     }
 
     return group;
+  }
+
+  function _syncConditionalFields(fields, formData, templateId, itemId, containerEl) {
+    if (!Array.isArray(fields) || !containerEl || !itemId) return;
+
+    fields.forEach((fieldDef, index) => {
+      if (typeof fieldDef?.showIf !== 'function') return;
+
+      let shouldShow = false;
+      try {
+        shouldShow = fieldDef.showIf(formData) === true;
+      } catch (err) {
+        console.warn('[FormRenderer] showIf gagal dievaluasi:', fieldDef.key, err);
+      }
+
+      const existing = Array.from(containerEl.querySelectorAll('.form-group[data-field-key]'))
+        .find(group => group.dataset.fieldKey === fieldDef.key);
+
+      if (!shouldShow) {
+        existing?.remove();
+        return;
+      }
+
+      if (existing) return;
+
+      const group = _buildField(fieldDef, formData, templateId, itemId, fields?.[index]?.sectionId);
+
+      if (!group) return;
+
+      // Sisipkan tepat setelah field sebelumnya yang dirender.
+      for (let previous = index - 1; previous >= 0; previous -= 1) {
+        const previousDef = fields[previous];
+        const previousGroup = Array.from(containerEl.querySelectorAll('.form-group[data-field-key]'))
+          .find(el => el.dataset.fieldKey === previousDef.key);
+        if (previousGroup) {
+          previousGroup.insertAdjacentElement('afterend', group);
+          return;
+        }
+      }
+
+      containerEl.appendChild(group);
+    });
   }
 
   /* ── Bind input event ke state ── */
