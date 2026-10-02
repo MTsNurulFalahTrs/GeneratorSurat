@@ -469,6 +469,10 @@ const PreviewRenderer = (() => {
     const source = _previewEl.querySelector(':scope > .doc-content');
     if (!source) return;
 
+    // Reset hitungan halaman sebelum proses layout dimulai agar viewer tidak
+    // membaca hasil render sebelumnya selama pagination berlangsung.
+    _previewEl.dataset.pageCount = '0';
+
     await _waitForLayoutAssets(source);
     if (renderToken !== _renderToken) return;
 
@@ -563,7 +567,19 @@ const PreviewRenderer = (() => {
   }
 
   function _isPageOverflowing(content) {
-    return content.scrollHeight > content.clientHeight + 0.5;
+    if (!content || !content.children.length) return false;
+
+    // Jangan bergantung hanya pada scrollHeight. Pada kombinasi flex container,
+    // transform zoom, dan overflow:visible, nilai scrollHeight dapat tetap sama
+    // dengan clientHeight walaupun child sudah melewati batas halaman fisik.
+    const contentRect = content.getBoundingClientRect();
+    const styles = getComputedStyle(content);
+    const paddingBottom = parseFloat(styles.paddingBottom) || 0;
+    const limitBottom = contentRect.bottom - paddingBottom;
+    const lastChild = content.lastElementChild;
+    if (!lastChild) return false;
+
+    return lastChild.getBoundingClientRect().bottom > limitBottom + 0.5;
   }
 
   async function _appendTableWithPagination(tableWrap, current, pages, paperWidthPx, paperHeightPx, baseStyle, renderToken) {
