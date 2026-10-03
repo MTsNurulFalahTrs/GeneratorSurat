@@ -55,7 +55,6 @@ const UI = (() => {
   }
 
   /* ── Modal ── */
-  let _modalResolve = null;
   let _modalEscHandler = null;
   let _modalPreviousFocus = null;
 
@@ -134,11 +133,6 @@ const UI = (() => {
     if (_modalEscHandler) {
       document.removeEventListener('keydown', _modalEscHandler);
       _modalEscHandler = null;
-    }
-
-    if (typeof _modalResolve === 'function') {
-      _modalResolve(false);
-      _modalResolve = null;
     }
 
     const restore = _modalPreviousFocus;
