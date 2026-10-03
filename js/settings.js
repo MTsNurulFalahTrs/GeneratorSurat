@@ -797,7 +797,9 @@ const Settings = (() => {
     });
 
     const debScale = Utils.debounce(() => {
-      const val = Utils.clamp(parseInt(custom?.value ?? 100, 10), SCALE_MIN, SCALE_MAX);
+      const raw = String(custom?.value ?? '').trim();
+      const parsed = raw === '' ? NaN : Number(raw);
+      const val = Utils.clamp(Number.isFinite(parsed) ? parsed : 100, SCALE_MIN, SCALE_MAX);
       State.setSettings({ print: { scale: val }, activePreset: 'custom' });
       _markPresetCustom();
     }, 400);
