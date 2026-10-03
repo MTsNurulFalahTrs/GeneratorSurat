@@ -351,38 +351,6 @@
   vertical-align: middle;
 }
 
-/* Kolom center alignment */
-.doc-table .col-center {
-  text-align: center;
-}
-
-/* Kolom nomor urut: lebar minimal, tengah */
-.doc-table .col-no {
-  /* min-width bukan width agar tidak paksa ukuran */
-  min-width: 7mm;
-  max-width: 12mm;
-  text-align: center;
-  white-space: nowrap;
-}
-
-/* Kolom yang kontennya pendek dan tidak perlu wrapping */
-.doc-table .col-fixed {
-  white-space: nowrap;
-}
-
-/* Kolom yang kontennya fleksibel (nama, keterangan, dll) */
-.doc-table .col-flex {
-  /* min-width memberi ruang minimum, browser bisa lebih lebar */
-  min-width: 20mm;
-}
-
-/* Sel dengan konten sangat panjang (nomor surat, alamat, dll) */
-.doc-table .col-wrap {
-  min-width: 15mm;
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-
 /* Tabel DPU memiliki banyak kolom → perlu penanganan khusus agar
    tidak terlalu lebar pada kertas A4 landscape */
 .doc-table--dpu {
@@ -572,27 +540,8 @@
   text-align: left;
 }
 
-/* ── 15. Checkbox display ── */
-.doc-checkbox {
-  display: inline-block;
-  width: 10pt;
-  height: 10pt;
-  border: 1px solid #000;
-  text-align: center;
-  line-height: 10pt;
-  font-size: 8pt;
-}
-
-.doc-checkbox.checked::after {
-  content: '✓';
-}
-
-/* ── 16. Empty cell placeholder ── */
+/* ── 15. Empty cell placeholder ── */
 .doc-empty-row {
   background: #fafafa;
 }
 
-/* ── 17. Tabel header multi-level ── */
-.doc-table-header-group th {
-  font-size: 7pt;
-}
