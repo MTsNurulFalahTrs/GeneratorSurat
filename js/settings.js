@@ -419,6 +419,20 @@ const Settings = (() => {
         </div>
       </div>
 
+      <!-- ── DATA MANAGEMENT ───────────────────────── -->
+      <div class="settings-card" id="settings-card-data-manager">
+        <div class="settings-card__header">
+          <span class="settings-card__icon">🗂️</span>
+          <span class="settings-card__title">Manajemen Data Lanjutan</span>
+        </div>
+        <div class="settings-card__body">
+          <p class="settings-hint">
+            Kelola draft bernama dan pindahkan data antar perangkat melalui backup JSON.
+          </p>
+          <div id="data-manager-root"></div>
+        </div>
+      </div>
+
       <!-- ── TINDAKAN ─────────────────────────────── -->
       <div class="settings-card" id="settings-card-actions">
         <div class="settings-card__header">
@@ -512,6 +526,9 @@ const Settings = (() => {
     _bindPrintScale();
     _bindPreviewControls();
     _bindStorageActions();
+    if (typeof DataManager !== 'undefined') {
+      DataManager.mount(document.getElementById('data-manager-root'));
+    }
   }
 
   /* ── Preset grid ── */
