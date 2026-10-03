@@ -1187,10 +1187,12 @@ const Settings = (() => {
      KONVERSI SATUAN
   ═══════════════════════════════════════════════════════════ */
   function _toMmFromUnit(value, unit) {
-    const n = parseFloat(value) || 0;
-    if (unit === 'cm') return n * 10;
-    if (unit === 'in') return n * 25.4;
-    return n;
+    const raw = String(value ?? '').trim();
+    const n = raw === '' ? 0 : Number(raw);
+    const safe = Number.isFinite(n) ? n : 0;
+    if (unit === 'cm') return safe * 10;
+    if (unit === 'in') return safe * 25.4;
+    return safe;
   }
 
   function _fromMm(mm, unit) {
