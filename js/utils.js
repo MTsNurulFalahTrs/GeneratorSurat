@@ -240,17 +240,6 @@ const Utils = (() => {
   }
 
 
-  function isLocalStorageAvailable() {
-    try {
-      const key = '__storage_test__';
-      localStorage.setItem(key, '1');
-      localStorage.removeItem(key);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   /* ── 8. Hitung sisa waktu TTL ── */
   function getRemainingTime(expiresAt) {
     const remaining = expiresAt - Date.now();
@@ -288,7 +277,6 @@ const Utils = (() => {
     clamp,
     safeInt,
     safeFloat,
-    isLocalStorageAvailable,
     getRemainingTime,
     buildStyleString,
   };
