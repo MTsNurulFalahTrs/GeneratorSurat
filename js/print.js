@@ -41,7 +41,7 @@ const Print = (() => {
 
     // Untuk template multi-page, tunggu DOM pagination selesai. Ini mencegah
     // window.print() mengambil DOM sementara setelah perubahan terakhir.
-    if (typeof PreviewRenderer?.waitForReady === 'function') {
+    if (typeof PreviewRenderer !== 'undefined' && typeof PreviewRenderer.waitForReady === 'function') {
       await PreviewRenderer.waitForReady();
     }
 
