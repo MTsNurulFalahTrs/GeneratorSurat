@@ -42,7 +42,6 @@ const Utils = (() => {
 
   /* ── 4. Tanggal & Waktu ── */
 
-  /** Format timestamp ke string HH:MM WIB */
   /** Format timestamp ke string DD/MM/YYYY HH:MM */
   function formatDateTime(timestamp) {
     const d = new Date(timestamp);
@@ -65,7 +64,6 @@ const Utils = (() => {
     return `${minutes} menit`;
   }
 
-  /** Format tanggal ISO (YYYY-MM-DD) ke tampilan Indonesia (DD Bulan YYYY) */
   /** Format tanggal ISO ke DD Mon YYYY (e.g. "14 Feb 2012") */
   function formatDateShort(isoDate) {
     if (!isoDate) return '';
@@ -81,7 +79,6 @@ const Utils = (() => {
     return `${parseInt(dd, 10)} ${bulan[monthIdx]} ${yyyy}`;
   }
 
-  /** Ambil tahun dari ISO date string */
   /* ── 5. String Helpers ── */
 
   /** Truncate string dengan ellipsis */
@@ -90,7 +87,6 @@ const Utils = (() => {
     return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
   }
 
-  /** Capitalize huruf pertama setiap kata */
   /** Escape HTML entities untuk mencegah XSS */
   function escapeHtml(str) {
     if (typeof str !== 'string') return String(str ?? '');
@@ -102,23 +98,8 @@ const Utils = (() => {
       .replace(/'/g, '&#x27;');
   }
 
-  /** Strip HTML tags */
-  /** Pad angka ke jumlah digit */
 
-  /** Query selector wrapper */
-  function qs(selector, parent = document) {
-    return parent.querySelector(selector);
-  }
-
-  /** Query selector all wrapper */
-  function qsa(selector, parent = document) {
-    return Array.from(parent.querySelectorAll(selector));
-  }
-
-  /** Buat elemen dengan atribut & anak */
-  /** Toggle class dengan kondisi opsional */
-  /** Set display hidden/visible */
-  /* ── 7. File / Image Helpers ── */
+  /* ── 5. File / Image Helpers ── */
 
   /**
    * Baca file gambar sebagai Data URL (base64).
@@ -180,7 +161,7 @@ const Utils = (() => {
     });
   }
 
-  /* ── 8. Debounce ── */
+  /* ── 6. Debounce ── */
   const _pendingDebounces = new Set();
 
   function debounce(fn, delay = 300) {
@@ -236,7 +217,7 @@ const Utils = (() => {
     });
   }
 
-  /* ── 10. Number Helpers ── */
+  /* ── 7. Number Helpers ── */
 
   /** Clamp value dalam rentang min–max */
   function clamp(value, min, max) {
@@ -267,18 +248,13 @@ const Utils = (() => {
     }
   }
 
-  function pxToPt(px) {
-    return px / PT_TO_PX;
-  }
-
-
-  /* ── 15. Hitung sisa waktu TTL ── */
+  /* ── 8. Hitung sisa waktu TTL ── */
   function getRemainingTime(expiresAt) {
     const remaining = expiresAt - Date.now();
     return Math.max(0, remaining);
   }
 
-  /* ── 16. Buat style string dari object ── */
+  /* ── 9. Buat style string dari object ── */
   function buildStyleString(styleObj) {
     return Object.entries(styleObj)
       .filter(([, v]) => v !== null && v !== undefined && v !== '')
