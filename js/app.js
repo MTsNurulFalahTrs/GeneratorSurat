@@ -350,6 +350,7 @@ ${Utils.escapeHtml(err?.stack || err?.message || String(err))}
   return {
     init,
     switchTab,
+    selectTemplate: _handleTemplateSelect,
     save:  _handleSave,
     reset: _handleReset,
   };
