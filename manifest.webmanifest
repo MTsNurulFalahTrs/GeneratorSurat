@@ -1,0 +1,28 @@
+{
+  "name": "Generator Surat Madrasah",
+  "short_name": "Generator Surat",
+  "description": "Generator surat resmi madrasah yang dapat digunakan seperti aplikasi dan tetap bekerja saat koneksi terputus setelah shell tersimpan.",
+  "lang": "id-ID",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#1E3A5F",
+  "icons": [
+    {
+      "src": "assets/icons/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
