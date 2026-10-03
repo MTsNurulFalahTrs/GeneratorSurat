@@ -158,7 +158,9 @@ const PreviewRenderer = (() => {
      RENDERER: DPU
   ──────────────────────────────────────────────── */
   function _renderDpu(data, kop, margin, typo) {
-    const { meta, peserta = [], tandaTangan: ttd = {} } = data;
+    const meta = data?.meta && typeof data.meta === 'object' ? data.meta : {};
+    const peserta = Array.isArray(data?.peserta) ? data.peserta : [];
+    const ttd = data?.tandaTangan && typeof data.tandaTangan === 'object' ? data.tandaTangan : {};
     const m  = margin || State.getMarginMm();
     const t  = typo   || State.getTypography();
     // font-family dan font-size isi surat diambil dari settings typography
@@ -256,7 +258,10 @@ const PreviewRenderer = (() => {
      RENDERER: Mutasi Masuk & Siswa Baru (struktur mirip)
   ──────────────────────────────────────────────── */
   function _renderSiswa(data, kop, tpl, isMutasi, margin, typo) {
-    const { meta, siswa = [], tandaTangan: ttd = {}, catatan } = data;
+    const meta = data?.meta && typeof data.meta === 'object' ? data.meta : {};
+    const siswa = Array.isArray(data?.siswa) ? data.siswa : [];
+    const ttd = data?.tandaTangan && typeof data.tandaTangan === 'object' ? data.tandaTangan : {};
+    const catatan = data?.catatan && typeof data.catatan === 'object' ? data.catatan : {};
     const m  = margin || State.getMarginMm();
     const t  = typo   || State.getTypography();
     const marginStyle = `padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;`

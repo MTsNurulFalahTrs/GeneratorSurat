@@ -5,7 +5,6 @@
 const FormRenderer = (() => {
 
   let _containerEl = null;
-  const _debounced = new WeakMap();
 
   /* ── Inisialisasi ── */
   function init() {
@@ -162,7 +161,7 @@ const FormRenderer = (() => {
   /* ── Build repeatable section (daftar siswa/peserta) ── */
   function _buildRepeatableSection(section, formData, templateId, bodyEl) {
     const dataKey   = section.id; // 'peserta' | 'siswa'
-    const items     = (formData[dataKey] || []);
+    const items     = Array.isArray(formData[dataKey]) ? formData[dataKey] : [];
     const listEl    = document.createElement('div');
     listEl.id       = `repeatable-list-${section.id}`;
 
@@ -185,7 +184,7 @@ const FormRenderer = (() => {
 
     addBtn.addEventListener('click', () => {
       const current = State.getFormData(templateId);
-      const currentItems = current[dataKey] || [];
+      const currentItems = Array.isArray(current?.[dataKey]) ? current[dataKey] : [];
       const newItem = section.itemFactory(currentItems.length + 1);
       const updatedItems = [...currentItems, newItem];
 
@@ -280,7 +279,9 @@ const FormRenderer = (() => {
         () => {
           const current = State.getFormData(templateId);
           const dataKey = section.id;
-          const newItems = current[dataKey].filter(it => it.id !== item.id);
+          const newItems = Array.isArray(current?.[dataKey])
+            ? current[dataKey].filter(it => it.id !== item.id)
+            : [];
           State.setFormData(templateId, { [dataKey]: newItems });
           entry.remove();
           // Renumber entries
@@ -338,7 +339,7 @@ const FormRenderer = (() => {
         group.innerHTML = labelHtml + `
           <input type="number" class="form-input"
             id="${fieldDomId}"
-            value="${value ?? ''}"
+            value="${Utils.escapeHtml(String(value ?? ''))}"
             min="${fieldDef.min ?? 0}"
             max="${fieldDef.max ?? 9999}"
             ${fieldDef.required ? 'required' : ''} />`;
@@ -473,7 +474,9 @@ const FormRenderer = (() => {
 
     inputEl.addEventListener(eventType, (e) => {
       let val = e.target.value;
-      if (fieldDef.type === 'number') val = Utils.safeFloat(val, 0);
+      if (fieldDef.type === 'number') {
+        val = e.target.value === '' ? '' : Utils.safeFloat(val, 0);
+      }
       debSave(val);
     });
 

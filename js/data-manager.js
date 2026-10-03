@@ -519,8 +519,24 @@ const DataManager = (() => {
     if (data.forms !== undefined && (!data.forms || typeof data.forms !== 'object' || Array.isArray(data.forms))) {
       return { valid: false, reason: 'Data form tidak valid.' };
     }
+    if (data.forms && typeof data.forms === 'object') {
+      for (const [templateId, form] of Object.entries(data.forms)) {
+        if (!allowedTemplates.has(templateId)) continue;
+        if (!form || typeof form !== 'object' || Array.isArray(form)) {
+          return { valid: false, reason: 'Struktur form template ' + templateId + ' tidak valid.' };
+        }
+        for (const key of ['siswa', 'peserta']) {
+          if (key in form && form[key] !== undefined && !Array.isArray(form[key])) {
+            return { valid: false, reason: 'Daftar ' + key + ' pada template ' + templateId + ' harus berupa array.' };
+          }
+        }
+      }
+    }
     if (data.tables !== undefined && (!data.tables || typeof data.tables !== 'object' || Array.isArray(data.tables))) {
       return { valid: false, reason: 'Konfigurasi tabel tidak valid.' };
+    }
+    if (data.kop?.rows !== undefined && !Array.isArray(data.kop.rows)) {
+      return { valid: false, reason: 'Daftar baris KOP harus berupa array.' };
     }
 
     return { valid: true, data };

@@ -29,6 +29,7 @@ const DocumentViewer = (() => {
     _bindScrollTracking();
 
     State.on('template:change', () => requestAnimationFrame(_sync));
+    State.on('state:restore', () => requestAnimationFrame(_sync));
     State.on('state:reset', () => requestAnimationFrame(_sync));
 
     _sync();
@@ -92,7 +93,7 @@ const DocumentViewer = (() => {
       }
 
       if (event.key === '+' || event.key === '=') {
-        if (typeof PreviewRenderer?.setZoomMode !== 'function') return;
+        if (typeof PreviewRenderer === 'undefined' || typeof PreviewRenderer.setZoomMode !== 'function') return;
         event.preventDefault();
         const current = State.getUi().previewZoom || 1;
         State.setZoom(Math.min(2.5, Number((current + 0.1).toFixed(2))));
@@ -100,7 +101,7 @@ const DocumentViewer = (() => {
       }
 
       if (event.key === '-' || event.key === '_') {
-        if (typeof PreviewRenderer?.setZoomMode !== 'function') return;
+        if (typeof PreviewRenderer === 'undefined' || typeof PreviewRenderer.setZoomMode !== 'function') return;
         event.preventDefault();
         const current = State.getUi().previewZoom || 1;
         State.setZoom(Math.max(0.3, Number((current - 0.1).toFixed(2))));

@@ -129,7 +129,7 @@ const Workflow = (() => {
   }
 
   function _getKopValidation() {
-    if (typeof Validation?.kopConfig !== 'function') {
+    if (typeof Validation === 'undefined' || typeof Validation.kopConfig !== 'function') {
       return { valid: true, errors: [] };
     }
     return Validation.kopConfig(State.getKop());

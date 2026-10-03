@@ -101,7 +101,7 @@ const Settings = (() => {
                 <label class="settings-label" for="custom-width-input">Lebar</label>
                 <div class="input-with-unit">
                   <input type="number" class="form-input" id="custom-width-input"
-                    step="0.1" min="50" max="600" value="210" />
+                    step="1" min="50" max="600" value="210" />
                   <span class="input-unit-badge" id="custom-width-unit">mm</span>
                 </div>
               </div>
@@ -109,7 +109,7 @@ const Settings = (() => {
                 <label class="settings-label" for="custom-height-input">Tinggi</label>
                 <div class="input-with-unit">
                   <input type="number" class="form-input" id="custom-height-input"
-                    step="0.1" min="50" max="900" value="297" />
+                    step="1" min="50" max="900" value="297" />
                   <span class="input-unit-badge" id="custom-height-unit">mm</span>
                 </div>
               </div>
@@ -586,8 +586,18 @@ const Settings = (() => {
         // Konversi nilai yang sudah ada ke unit baru sebelum menyimpan
         const s = State.getSettings();
         const curUnit = s.paper.unit;
-        const wMm = _toMmFromUnit(parseFloat(document.getElementById('custom-width-input').value)  || 210, curUnit);
-        const hMm = _toMmFromUnit(parseFloat(document.getElementById('custom-height-input').value) || 297, curUnit);
+        const wEl = document.getElementById('custom-width-input');
+        const hEl = document.getElementById('custom-height-input');
+        const wRaw = Number.parseFloat(wEl?.value);
+        const hRaw = Number.parseFloat(hEl?.value);
+        const wMm = _toMmFromUnit(
+          Number.isFinite(wRaw) ? wRaw : State.getSettings().paper.customWidth,
+          curUnit
+        );
+        const hMm = _toMmFromUnit(
+          Number.isFinite(hRaw) ? hRaw : State.getSettings().paper.customHeight,
+          curUnit
+        );
         const wNew = _fromMm(wMm, unit);
         const hNew = _fromMm(hMm, unit);
 
@@ -600,6 +610,7 @@ const Settings = (() => {
         btn.classList.add('active');
 
         State.setSettings({ paper: { unit, customWidth: wMm, customHeight: hMm }, activePreset: 'custom' });
+        _syncCustomSizeConstraints(unit);
         _updatePaperInfo();
         _markPresetCustom();
       });
@@ -608,10 +619,11 @@ const Settings = (() => {
     const debSave = Utils.debounce(() => {
       const s = State.getSettings();
       const unit = s.paper.unit;
-      const wRaw = parseFloat(document.getElementById('custom-width-input').value)  || 210;
-      const hRaw = parseFloat(document.getElementById('custom-height-input').value) || 297;
-      const wMm  = _toMmFromUnit(wRaw, unit);
-      const hMm  = _toMmFromUnit(hRaw, unit);
+      const wRaw = Number.parseFloat(document.getElementById('custom-width-input')?.value);
+      const hRaw = Number.parseFloat(document.getElementById('custom-height-input')?.value);
+      if (!Number.isFinite(wRaw) || !Number.isFinite(hRaw)) return;
+      const wMm = Utils.clamp(_toMmFromUnit(wRaw, unit), CUSTOM_W_MIN, CUSTOM_W_MAX);
+      const hMm = Utils.clamp(_toMmFromUnit(hRaw, unit), CUSTOM_H_MIN, CUSTOM_H_MAX);
       State.setSettings({ paper: { customWidth: wMm, customHeight: hMm }, activePreset: 'custom' });
       _updatePaperInfo();
       _markPresetCustom();
@@ -908,10 +920,42 @@ const Settings = (() => {
   }
 
   /* ── Sync helper: custom size inputs ── */
+  function _getCustomDisplayConstraints(unit) {
+    const factor = unit === 'cm' ? 0.1 : unit === 'in' ? (1 / 25.4) : 1;
+    const roundValue = value => Number(value.toFixed(2));
+    return {
+      width: {
+        min: roundValue(CUSTOM_W_MIN * factor),
+        max: roundValue(CUSTOM_W_MAX * factor),
+      },
+      height: {
+        min: roundValue(CUSTOM_H_MIN * factor),
+        max: roundValue(CUSTOM_H_MAX * factor),
+      },
+      step: unit === 'mm' ? '1' : '0.1',
+    };
+  }
+
+  function _syncCustomSizeConstraints(unit) {
+    const constraints = _getCustomDisplayConstraints(unit);
+    const wEl = document.getElementById('custom-width-input');
+    const hEl = document.getElementById('custom-height-input');
+    if (wEl) {
+      wEl.min = constraints.width.min;
+      wEl.max = constraints.width.max;
+      wEl.step = constraints.step;
+    }
+    if (hEl) {
+      hEl.min = constraints.height.min;
+      hEl.max = constraints.height.max;
+      hEl.step = constraints.step;
+    }
+  }
+
   function _syncCustomSizeInputs(s) {
     const unit = s.paper.unit || 'mm';
-    const wMm  = s.paper.customWidth  || 210;
-    const hMm  = s.paper.customHeight || 297;
+    const wMm = Number.isFinite(Number(s.paper.customWidth)) ? Number(s.paper.customWidth) : 210;
+    const hMm = Number.isFinite(Number(s.paper.customHeight)) ? Number(s.paper.customHeight) : 297;
     const wDisp = _round(_fromMm(wMm, unit));
     const hDisp = _round(_fromMm(hMm, unit));
 
@@ -925,8 +969,9 @@ const Settings = (() => {
 
     document.getElementById('unit-seg')?.querySelectorAll('.seg-btn')
       .forEach(btn => btn.classList.toggle('active', btn.dataset.unit === unit));
-  }
 
+    _syncCustomSizeConstraints(unit);
+  }
   /* ── Sync helper: typography ── */
   function _syncTypography(typo) {
     if (!typo) return;

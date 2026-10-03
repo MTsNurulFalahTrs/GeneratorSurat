@@ -24,6 +24,9 @@ const Utils = (() => {
     const result = deepClone(target);
     if (!source || typeof source !== 'object') return result;
     for (const key of Object.keys(source)) {
+      // Jangan izinkan key prototype masuk ke recursive merge; data restore/import
+      // adalah input yang dapat berasal dari file eksternal.
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
       if (
         source[key] !== null &&
         typeof source[key] === 'object' &&
@@ -41,14 +44,6 @@ const Utils = (() => {
   }
 
   /* ── 4. Tanggal & Waktu ── */
-
-  /** Format timestamp ke string HH:MM WIB */
-  function formatTime(timestamp) {
-    const d = new Date(timestamp);
-    const h = String(d.getHours()).padStart(2, '0');
-    const m = String(d.getMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
-  }
 
   /** Format timestamp ke string DD/MM/YYYY HH:MM */
   function formatDateTime(timestamp) {
@@ -72,21 +67,6 @@ const Utils = (() => {
     return `${minutes} menit`;
   }
 
-  /** Format tanggal ISO (YYYY-MM-DD) ke tampilan Indonesia (DD Bulan YYYY) */
-  function formatDateIndo(isoDate) {
-    if (!isoDate) return '';
-    const bulan = [
-      'Januari','Februari','Maret','April','Mei','Juni',
-      'Juli','Agustus','September','Oktober','November','Desember'
-    ];
-    const parts = isoDate.split('-');
-    if (parts.length < 3) return isoDate;
-    const [yyyy, mm, dd] = parts;
-    const monthIdx = parseInt(mm, 10) - 1;
-    if (monthIdx < 0 || monthIdx > 11) return isoDate;
-    return `${parseInt(dd, 10)} ${bulan[monthIdx]} ${yyyy}`;
-  }
-
   /** Format tanggal ISO ke DD Mon YYYY (e.g. "14 Feb 2012") */
   function formatDateShort(isoDate) {
     if (!isoDate) return '';
@@ -102,24 +82,12 @@ const Utils = (() => {
     return `${parseInt(dd, 10)} ${bulan[monthIdx]} ${yyyy}`;
   }
 
-  /** Ambil tahun dari ISO date string */
-  function getYear(isoDate) {
-    if (!isoDate) return '';
-    return isoDate.split('-')[0] || '';
-  }
-
   /* ── 5. String Helpers ── */
 
   /** Truncate string dengan ellipsis */
   function truncate(str, maxLen = 40) {
     if (!str) return '';
     return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
-  }
-
-  /** Capitalize huruf pertama setiap kata */
-  function titleCase(str) {
-    if (!str) return '';
-    return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
   }
 
   /** Escape HTML entities untuk mencegah XSS */
@@ -133,69 +101,8 @@ const Utils = (() => {
       .replace(/'/g, '&#x27;');
   }
 
-  /** Strip HTML tags */
-  function stripHtml(str) {
-    if (!str) return '';
-    return str.replace(/<[^>]*>/g, '');
-  }
 
-  /** Pad angka ke jumlah digit */
-  function padNum(num, size = 2) {
-    return String(num).padStart(size, '0');
-  }
-
-  /* ── 6. DOM Helpers ── */
-
-  /** Query selector wrapper */
-  function qs(selector, parent = document) {
-    return parent.querySelector(selector);
-  }
-
-  /** Query selector all wrapper */
-  function qsa(selector, parent = document) {
-    return Array.from(parent.querySelectorAll(selector));
-  }
-
-  /** Buat elemen dengan atribut & anak */
-  function createElement(tag, attrs = {}, children = []) {
-    const el = document.createElement(tag);
-    for (const [key, val] of Object.entries(attrs)) {
-      if (key === 'className') {
-        el.className = val;
-      } else if (key === 'innerHTML') {
-        el.innerHTML = val;
-      } else if (key === 'textContent') {
-        el.textContent = val;
-      } else if (key.startsWith('on') && typeof val === 'function') {
-        el.addEventListener(key.slice(2).toLowerCase(), val);
-      } else {
-        el.setAttribute(key, val);
-      }
-    }
-    for (const child of children) {
-      if (child instanceof Node) el.appendChild(child);
-      else if (typeof child === 'string') el.appendChild(document.createTextNode(child));
-    }
-    return el;
-  }
-
-  /** Toggle class dengan kondisi opsional */
-  function toggleClass(el, className, condition) {
-    if (!el) return;
-    if (condition === undefined) {
-      el.classList.toggle(className);
-    } else {
-      el.classList.toggle(className, condition);
-    }
-  }
-
-  /** Set display hidden/visible */
-  function setHidden(el, hidden) {
-    if (!el) return;
-    el.classList.toggle('hidden', hidden);
-  }
-
-  /* ── 7. File / Image Helpers ── */
+  /* ── 5. File / Image Helpers ── */
 
   /**
    * Baca file gambar sebagai Data URL (base64).
@@ -257,7 +164,7 @@ const Utils = (() => {
     });
   }
 
-  /* ── 8. Debounce ── */
+  /* ── 6. Debounce ── */
   const _pendingDebounces = new Set();
 
   function debounce(fn, delay = 300) {
@@ -313,19 +220,7 @@ const Utils = (() => {
     });
   }
 
-  /* ── 9. Throttle ── */
-  function throttle(fn, limit = 100) {
-    let lastRun = 0;
-    return function (...args) {
-      const now = Date.now();
-      if (now - lastRun >= limit) {
-        lastRun = now;
-        fn.apply(this, args);
-      }
-    };
-  }
-
-  /* ── 10. Number Helpers ── */
+  /* ── 7. Number Helpers ── */
 
   /** Clamp value dalam rentang min–max */
   function clamp(value, min, max) {
@@ -344,7 +239,6 @@ const Utils = (() => {
     return isNaN(n) ? fallback : n;
   }
 
-  /* ── 11. Browser Feature Detection ── */
 
   function isLocalStorageAvailable() {
     try {
@@ -357,46 +251,13 @@ const Utils = (() => {
     }
   }
 
-  function isIndexedDBAvailable() {
-    return typeof indexedDB !== 'undefined' && indexedDB !== null;
-  }
-
-  /* ── 12. pt ↔ px conversion (72 dpi untuk screen preview) ── */
-  const PT_TO_PX = 96 / 72; // 1pt = 1.333...px at 96dpi
-
-  function ptToPx(pt) {
-    return pt * PT_TO_PX;
-  }
-
-  function pxToPt(px) {
-    return px / PT_TO_PX;
-  }
-
-  /* ── 13. Array Helpers ── */
-
-  function moveArrayItem(arr, fromIndex, toIndex) {
-    const copy = [...arr];
-    const [item] = copy.splice(fromIndex, 1);
-    copy.splice(toIndex, 0, item);
-    return copy;
-  }
-
-  function removeArrayItem(arr, index) {
-    return arr.filter((_, i) => i !== index);
-  }
-
-  /* ── 14. Sanitize filename ── */
-  function sanitizeFilename(name) {
-    return name.replace(/[^a-zA-Z0-9_\-. ]/g, '_').trim();
-  }
-
-  /* ── 15. Hitung sisa waktu TTL ── */
+  /* ── 8. Hitung sisa waktu TTL ── */
   function getRemainingTime(expiresAt) {
     const remaining = expiresAt - Date.now();
     return Math.max(0, remaining);
   }
 
-  /* ── 16. Buat style string dari object ── */
+  /* ── 9. Buat style string dari object ── */
   function buildStyleString(styleObj) {
     return Object.entries(styleObj)
       .filter(([, v]) => v !== null && v !== undefined && v !== '')
@@ -413,39 +274,21 @@ const Utils = (() => {
     generateId,
     deepClone,
     deepMerge,
-    formatTime,
     formatDateTime,
     formatDuration,
-    formatDateIndo,
     formatDateShort,
-    getYear,
     truncate,
-    titleCase,
     escapeHtml,
-    stripHtml,
-    padNum,
-    qs,
-    qsa,
-    createElement,
-    toggleClass,
-    setHidden,
     readFileAsDataUrl,
     base64SizeBytes,
     formatBytes,
     compressImage,
     debounce,
     flushDebounces,
-    throttle,
     clamp,
     safeInt,
     safeFloat,
     isLocalStorageAvailable,
-    isIndexedDBAvailable,
-    ptToPx,
-    pxToPt,
-    moveArrayItem,
-    removeArrayItem,
-    sanitizeFilename,
     getRemainingTime,
     buildStyleString,
   };
