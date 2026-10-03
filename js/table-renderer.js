@@ -187,7 +187,10 @@ const TableRenderer = (() => {
    */
   function _buildThStyle(col, headerFontSize, tableConfig, colIdx) {
     const parts = [];
-    const hasCustom = TableConfigManager?.hasAnyCustomWidth(tableConfig?.columnWidths) ?? false;
+    const hasCustom = typeof TableConfigManager !== 'undefined'
+      && typeof TableConfigManager.hasAnyCustomWidth === 'function'
+      ? TableConfigManager.hasAnyCustomWidth(tableConfig?.columnWidths)
+      : false;
 
     if (!hasCustom) {
       // Fit to Content: pakai min-width legacy dari definisi kolom
