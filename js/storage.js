@@ -41,6 +41,17 @@ const Storage = (() => {
       const parsed = JSON.parse(raw);
       // Validasi schema version
       if (!parsed || parsed.version !== SCHEMA_VERSION) return null;
+      if (
+        typeof parsed.lastSavedAt !== 'number' ||
+        !Number.isFinite(parsed.lastSavedAt) ||
+        typeof parsed.expiresAt !== 'number' ||
+        !Number.isFinite(parsed.expiresAt) ||
+        parsed.expiresAt < parsed.lastSavedAt ||
+        !Object.prototype.hasOwnProperty.call(parsed, 'data')
+      ) {
+        _clearRaw();
+        return null;
+      }
       return parsed;
     } catch {
       // Data corrupt → hapus
@@ -75,7 +86,10 @@ const Storage = (() => {
   /* ── 5. Cek apakah data sudah expired ── */
   function _isExpired(record) {
     if (!record) return false;
-    if (!record.expiresAt || typeof record.expiresAt !== 'number') return false;
+    if (
+      typeof record.expiresAt !== 'number' ||
+      !Number.isFinite(record.expiresAt)
+    ) return true;
     return Date.now() >= record.expiresAt;
   }
 
@@ -219,21 +233,7 @@ const Storage = (() => {
     };
   }
 
-  /* ── 14. Update sebagian data (partial update) ── */
-  function update(partialData) {
-    if (!_available) return { success: false, reason: 'localStorage tidak tersedia' };
-
-    const existing = load();
-    if (!existing) {
-      // Tidak ada data sebelumnya → simpan baru
-      return save(partialData);
-    }
-
-    const merged = Utils.deepMerge(existing, partialData);
-    return save(merged);
-  }
-
-  /* ── 15. Hapus semua data ── */
+  /* ── 14. Hapus semua data ── */
   function clear() {
     _clearRaw();
     return true;
@@ -271,25 +271,15 @@ const Storage = (() => {
     return _available;
   }
 
-  /* ── 19. Destroy (cleanup, untuk testing) ── */
-  function destroy() {
-    _stopIntervalCheck();
-    _onExpiredCallback = null;
-  }
-
   /* ── Public API ── */
   return {
     init,
     load,
     save,
-    update,
     clear,
     getMeta,
     getStorageSize,
     isAvailable,
-    checkExpiry,
-    destroy,
-    TTL_DURATION_MS,
   };
 
 })();
