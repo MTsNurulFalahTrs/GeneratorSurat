@@ -55,7 +55,6 @@ const UI = (() => {
   }
 
   /* ── Modal ── */
-  let _modalResolve = null;
   let _modalEscHandler = null;
   let _modalPreviousFocus = null;
 
@@ -136,10 +135,6 @@ const UI = (() => {
       _modalEscHandler = null;
     }
 
-    if (typeof _modalResolve === 'function') {
-      _modalResolve(false);
-      _modalResolve = null;
-    }
 
     const restore = _modalPreviousFocus;
     _modalPreviousFocus = null;
