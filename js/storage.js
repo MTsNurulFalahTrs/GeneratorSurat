@@ -126,15 +126,7 @@ const Storage = (() => {
     }, CHECK_INTERVAL_MS);
   }
 
-  /* ── 9. Stop interval checker ── */
-  function _stopIntervalCheck() {
-    if (_checkIntervalId) {
-      clearInterval(_checkIntervalId);
-      _checkIntervalId = null;
-    }
-  }
-
-  /* ── 10. Setup page visibility listener ── */
+  /* ── 9. Setup page visibility listener ── */
   function _setupVisibilityListener() {
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
