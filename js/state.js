@@ -186,6 +186,76 @@ const State = (() => {
     ],
   });
 
+  const KOP_FONT_FAMILIES = [
+    'Times New Roman', 'Arial', 'Calibri', 'Georgia', 'Verdana', 'Tahoma',
+    'Trebuchet MS', 'Palatino Linotype',
+  ];
+  const KOP_ALIGNMENTS = ['left', 'center', 'right'];
+  const KOP_V_ALIGNMENTS = ['top', 'center', 'bottom'];
+  const KOP_OBJECT_FITS = ['contain', 'cover', 'fill', 'none', 'scale-down'];
+  const KOP_TEXT_TRANSFORMS = ['none', 'uppercase', 'capitalize', 'lowercase'];
+
+  function _normalizeBoolean(value, fallback = false) {
+    if (typeof value === 'boolean') return value;
+    const normalized = String(value ?? '').trim().toLowerCase();
+    if (['true', '1', 'yes', 'ya'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'tidak'].includes(normalized)) return false;
+    return fallback;
+  }
+
+  function _normalizeHex(value, fallback = '#000000') {
+    return /^#[0-9A-Fa-f]{6}$/.test(String(value || '')) ? String(value).toUpperCase() : fallback;
+  }
+
+  function _normalizeLogo(input, defaults) {
+    const merged = Utils.deepMerge(defaults, input && typeof input === 'object' ? input : {});
+    const dataUrl = typeof merged.dataUrl === 'string'
+      && /^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);/i.test(merged.dataUrl)
+      ? merged.dataUrl
+      : null;
+    return {
+      ...defaults,
+      enabled: _normalizeBoolean(merged.enabled, defaults.enabled),
+      dataUrl,
+      width: Utils.clamp(Number.isFinite(Number(merged.width)) ? Number(merged.width) : defaults.width, 20, 200),
+      height: Utils.clamp(Number.isFinite(Number(merged.height)) ? Number(merged.height) : defaults.height, 20, 200),
+      objectFit: KOP_OBJECT_FITS.includes(merged.objectFit) ? merged.objectFit : defaults.objectFit,
+      verticalAlign: KOP_V_ALIGNMENTS.includes(merged.verticalAlign) ? merged.verticalAlign : defaults.verticalAlign,
+    };
+  }
+
+  function _normalizeKopRow(input, fallback) {
+    const merged = Utils.deepMerge(fallback, input && typeof input === 'object' ? input : {});
+    return {
+      id: typeof merged.id === 'string' && merged.id.trim() ? merged.id.trim() : fallback.id,
+      text: String(merged.text ?? ''),
+      fontFamily: KOP_FONT_FAMILIES.includes(merged.fontFamily) ? merged.fontFamily : fallback.fontFamily,
+      fontSize: Number.isFinite(Number(merged.fontSize)) ? Utils.clamp(Number(merged.fontSize), 7, 22) : fallback.fontSize,
+      bold: _normalizeBoolean(merged.bold, fallback.bold),
+      italic: _normalizeBoolean(merged.italic, fallback.italic),
+      underline: _normalizeBoolean(merged.underline, fallback.underline),
+      textAlign: KOP_ALIGNMENTS.includes(merged.textAlign) ? merged.textAlign : fallback.textAlign,
+      lineHeight: Number.isFinite(Number(merged.lineHeight)) ? Utils.clamp(Number(merged.lineHeight), 0.5, 3) : fallback.lineHeight,
+      color: _normalizeHex(merged.color, fallback.color),
+      letterSpacing: Number.isFinite(Number(merged.letterSpacing)) ? Utils.clamp(Number(merged.letterSpacing), -2, 2) : fallback.letterSpacing,
+      textTransform: KOP_TEXT_TRANSFORMS.includes(merged.textTransform) ? merged.textTransform : fallback.textTransform,
+    };
+  }
+
+  function _normalizeKop(input) {
+    const defaults = DEFAULT_KOP_CONFIG();
+    const source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+    const rows = Array.isArray(source.rows) ? source.rows.slice(0, 10) : defaults.rows;
+    const normalizedRows = rows.map((row, index) =>
+      _normalizeKopRow(row, defaults.rows[index] || DEFAULT_KOP_ROW(index))
+    );
+    return {
+      logoLeft: _normalizeLogo(source.logoLeft, defaults.logoLeft),
+      logoRight: _normalizeLogo(source.logoRight, defaults.logoRight),
+      rows: normalizedRows.length ? normalizedRows : defaults.rows,
+    };
+  }
+
   /* ── Application State (in-memory) ── */
   let _state = {
     /* Template aktif */
@@ -270,10 +340,6 @@ const State = (() => {
     return Utils.deepClone(_state.ui);
   }
 
-  function getStorageMeta() {
-    return Utils.deepClone(_state.storage);
-  }
-
   /* ── Setter: template aktif ── */
   function setActiveTemplate(templateId) {
     if (_state.activeTemplate === templateId) return;
@@ -281,14 +347,6 @@ const State = (() => {
     _state.ui.isDirty = true;
     emit('template:change', { templateId });
     emit('state:change', { field: 'activeTemplate' });
-  }
-
-  /* ── Setter: KOP config (partial update) ── */
-  function setKop(partial) {
-    _state.kop = Utils.deepMerge(_state.kop, partial);
-    _state.ui.isDirty = true;
-    emit('kop:change', { kop: Utils.deepClone(_state.kop) });
-    emit('state:change', { field: 'kop' });
   }
 
   /* ── Setter: KOP row tunggal ── */
@@ -355,12 +413,6 @@ const State = (() => {
       _state.forms[templateId] = Utils.deepClone(defaultData);
       emit('form:init', { templateId });
     }
-  }
-
-  /* ── Setter: UI state ── */
-  function setUi(partial) {
-    _state.ui = { ..._state.ui, ...partial };
-    emit('ui:change', { ui: Utils.deepClone(_state.ui) });
   }
 
   /* ── Setter: active tab ── */
@@ -556,14 +608,6 @@ const State = (() => {
     emit('state:change', { field: 'settings' });
   }
 
-  /* ── Konversi satuan ke mm (internal selalu mm) ── */
-  function _toMm(value, unit) {
-    const n = parseFloat(value) || 0;
-    if (unit === 'cm')  return n * 10;
-    if (unit === 'in')  return n * 25.4;
-    return n; // mm default
-  }
-
   /* ── Daftar font yang tersedia untuk isi surat ── */
   const DOCUMENT_FONTS = [
     { value: 'Times New Roman',    label: 'Times New Roman'    },
@@ -692,7 +736,7 @@ const State = (() => {
         _state.activeTemplate = savedData.activeTemplate;
       }
       if (savedData.kop) {
-        _state.kop = Utils.deepMerge(DEFAULT_KOP_CONFIG(), savedData.kop);
+        _state.kop = _normalizeKop(savedData.kop);
       }
       if (savedData.settings) {
         _state.settings = _normalizeSettings(savedData.settings);
@@ -734,7 +778,6 @@ const State = (() => {
     getActiveTemplate,
     getFormData,
     getUi,
-    getStorageMeta,
     getSettings,
     getPaperDimensions,
     getMarginMm,
@@ -744,13 +787,11 @@ const State = (() => {
 
     // Setters
     setActiveTemplate,
-    setKop,
     setKopRow,
     setKopRowCount,
     setKopLogo,
     setFormData,
     initFormData,
-    setUi,
     setActiveTab,
     setZoom,
     setStorageMeta,
