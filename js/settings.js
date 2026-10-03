@@ -759,8 +759,9 @@ const Settings = (() => {
       let valid = true;
       sides.forEach(side => {
         const el = document.getElementById(`margin-${side}`);
-        const val = parseFloat(el?.value ?? 0);
-        if (isNaN(val) || val < MARGIN_MIN_MM || val > MARGIN_MAX_MM) {
+        const raw = String(el?.value ?? '').trim();
+        const val = raw === '' ? NaN : Number(raw);
+        if (!Number.isFinite(val) || val < MARGIN_MIN_MM || val > MARGIN_MAX_MM) {
           el?.classList.add('is-error');
           valid = false;
         } else {
