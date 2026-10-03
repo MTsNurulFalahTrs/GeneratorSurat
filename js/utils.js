@@ -24,6 +24,9 @@ const Utils = (() => {
     const result = deepClone(target);
     if (!source || typeof source !== 'object') return result;
     for (const key of Object.keys(source)) {
+      // Jangan izinkan key prototype masuk ke recursive merge; data restore/import
+      // adalah input yang dapat berasal dari file eksternal.
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
       if (
         source[key] !== null &&
         typeof source[key] === 'object' &&
