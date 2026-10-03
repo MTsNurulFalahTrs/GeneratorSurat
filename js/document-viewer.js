@@ -316,7 +316,6 @@ const DocumentViewer = (() => {
   return {
     init,
     refresh,
-    goToPage: _goToPage,
   };
 
 })();
