@@ -186,6 +186,12 @@ const State = (() => {
     ],
   });
 
+  const VALID_TEMPLATE_IDS = ['dpu', 'mutasi-masuk', 'siswa-baru'];
+
+  function _normalizeTemplateId(value) {
+    return typeof value === 'string' && VALID_TEMPLATE_IDS.includes(value) ? value : null;
+  }
+
   /* ── Application State (in-memory) ── */
   let _state = {
     /* Template aktif */
@@ -273,7 +279,7 @@ const State = (() => {
   /* ── Setter: template aktif ── */
   function setActiveTemplate(templateId) {
     if (_state.activeTemplate === templateId) return;
-    _state.activeTemplate = templateId;
+    _state.activeTemplate = _normalizeTemplateId(templateId);
     _state.ui.isDirty = true;
     emit('template:change', { templateId });
     emit('state:change', { field: 'activeTemplate' });
@@ -735,9 +741,7 @@ const State = (() => {
     if (!savedData) return;
     try {
       if (savedData.activeTemplate !== undefined) {
-        _state.activeTemplate = typeof savedData.activeTemplate === 'string'
-          ? savedData.activeTemplate
-          : null;
+        _state.activeTemplate = _normalizeTemplateId(savedData.activeTemplate);
       }
       if (savedData.kop) {
         _state.kop = _normalizeKopConfig(Utils.deepMerge(DEFAULT_KOP_CONFIG(), savedData.kop));
