@@ -507,6 +507,9 @@ const DataManager = (() => {
     const result = Storage.save(State.serialize());
     if (result.success) {
       State.markSaved(result);
+      const meta = Storage.getMeta();
+      UI.updateStorageInfo(meta);
+      if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
     }
     return result;
   }
