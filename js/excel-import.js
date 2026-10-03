@@ -16,7 +16,7 @@ const ExcelImport = (() => {
         { key: 'registrasi', header: 'No. Registrasi', aliases: ['no registrasi', 'nomor registrasi', 'registrasi'] },
         { key: 'nik', header: 'NIK', aliases: ['nik'] },
         { key: 'namaSiswa', header: 'Nama Siswa', required: true, aliases: ['nama siswa', 'nama', 'nama lengkap'] },
-        { key: 'jenisKelamin', header: 'L/P', aliases: ['l/p', 'lp', 'jenis kelamin', 'jk', 'jenis_kelamin'] },
+        { key: 'jenisKelamin', header: 'L/P', type: 'gender', aliases: ['l/p', 'lp', 'jenis kelamin', 'jk', 'jenis_kelamin'] },
         { key: 'tempatLahir', header: 'Tempat Lahir', aliases: ['tempat lahir', 'tempat_lahir'] },
         { key: 'tanggalLahir', header: 'Tanggal Lahir', type: 'date', aliases: ['tanggal lahir', 'tgl lahir', 'tanggal_lahir', 'tgl_lahir'] },
         { key: 'namaOrangTua', header: 'Nama Orang Tua', aliases: ['nama orang tua', 'orang tua', 'wali', 'nama_orang_tua'] },
@@ -34,7 +34,7 @@ const ExcelImport = (() => {
         { key: 'nis', header: 'NIS', aliases: ['nis'] },
         { key: 'nisn', header: 'NISN', aliases: ['nisn'] },
         { key: 'namaSiswa', header: 'Nama Siswa', required: true, aliases: ['nama siswa', 'nama', 'nama lengkap'] },
-        { key: 'jenisKelamin', header: 'L/P', aliases: ['l/p', 'lp', 'jenis kelamin', 'jk', 'jenis_kelamin'] },
+        { key: 'jenisKelamin', header: 'L/P', type: 'gender', aliases: ['l/p', 'lp', 'jenis kelamin', 'jk', 'jenis_kelamin'] },
         { key: 'tempatLahir', header: 'Tempat Lahir', aliases: ['tempat lahir', 'tempat_lahir'] },
         { key: 'tanggalLahir', header: 'Tanggal Lahir', type: 'date', aliases: ['tanggal lahir', 'tgl lahir', 'tanggal_lahir', 'tgl_lahir'] },
         { key: 'namaOrangTua', header: 'Nama Orang Tua', aliases: ['nama orang tua', 'orang tua', 'wali', 'nama_orang_tua'] },
@@ -53,7 +53,7 @@ const ExcelImport = (() => {
         { key: 'nis', header: 'NIS', aliases: ['nis'] },
         { key: 'nisn', header: 'NISN', aliases: ['nisn'] },
         { key: 'namaSiswa', header: 'Nama Siswa', required: true, aliases: ['nama siswa', 'nama', 'nama lengkap'] },
-        { key: 'jenisKelamin', header: 'L/P', aliases: ['l/p', 'lp', 'jenis kelamin', 'jk', 'jenis_kelamin'] },
+        { key: 'jenisKelamin', header: 'L/P', type: 'gender', aliases: ['l/p', 'lp', 'jenis kelamin', 'jk', 'jenis_kelamin'] },
         { key: 'tempatLahir', header: 'Tempat Lahir', aliases: ['tempat lahir', 'tempat_lahir'] },
         { key: 'tanggalLahir', header: 'Tanggal Lahir', type: 'date', aliases: ['tanggal lahir', 'tgl lahir', 'tanggal_lahir', 'tgl_lahir'] },
         { key: 'namaOrangTua', header: 'Nama Orang Tua', aliases: ['nama orang tua', 'orang tua', 'wali', 'nama_orang_tua'] },
@@ -372,14 +372,40 @@ const ExcelImport = (() => {
           return;
         }
 
+        // Nilai enum yang diberikan pengguna harus dikenali. Jangan diam-diam
+        // mengubah nilai invalid menjadi default yang terlihat valid.
+        const rawGender = headerMap.has('jenisKelamin')
+          ? row[headerMap.get('jenisKelamin')]
+          : '';
+        if (String(rawGender ?? '').trim() && item.jenisKelamin === '') {
+          skipped.push(`baris ${rowNumber}: L/P tidak dikenali (gunakan L/P, Laki-laki, atau Perempuan)`);
+          return;
+        }
+
         item.id = Utils.generateId(templateId === 'dpu' ? 'peserta' : 'siswa');
 
         if (templateId === 'dpu') {
           item.urt = toNumberOr(index + 1, item.urt);
-          if (item.terdaftarEmis === '') item.terdaftarEmis = true;
+          const rawEmis = headerMap.has('terdaftarEmis')
+            ? row[headerMap.get('terdaftarEmis')]
+            : '';
+          if (!String(rawEmis ?? '').trim()) {
+            item.terdaftarEmis = true;
+          } else if (item.terdaftarEmis === '') {
+            skipped.push(`baris ${rowNumber}: Nilai Terdaftar di EMIS tidak dikenali`);
+            return;
+          }
         }
 
-        if (templateId === 'mutasi-masuk' && !item.kelas) item.kelas = 'VIII';
+        if (templateId === 'mutasi-masuk') {
+          const rawKelas = headerMap.has('kelas') ? row[headerMap.get('kelas')] : '';
+          if (!String(rawKelas ?? '').trim()) {
+            item.kelas = 'VIII';
+          } else if (!item.kelas) {
+            skipped.push(`baris ${rowNumber}: Kelas Tujuan tidak valid`);
+            return;
+          }
+        }
 
         items.push(item);
       });
@@ -432,6 +458,7 @@ const ExcelImport = (() => {
 
     if (col.type === 'date') return normalizeDate(value);
     if (col.type === 'boolean') return normalizeBoolean(value);
+    if (col.type === 'gender') return normalizeGender(value);
     if (col.type === 'class') return normalizeClass(value);
     if (col.type === 'number') return toNumberOr('', value);
 
@@ -444,6 +471,14 @@ const ExcelImport = (() => {
     if (!text) return '';
     if (['sudah', 'ya', 'yes', 'true', '1', 'terdaftar'].includes(text)) return true;
     if (['belum', 'tidak', 'no', 'false', '0', 'belum terdaftar'].includes(text)) return false;
+    return '';
+  }
+
+  function normalizeGender(value) {
+    const text = normalize(value);
+    if (!text) return '';
+    if (['l', 'laki laki', 'male'].includes(text)) return 'L';
+    if (['p', 'perempuan', 'female'].includes(text)) return 'P';
     return '';
   }
 
@@ -464,8 +499,15 @@ const ExcelImport = (() => {
       }
     }
 
-    const match = text.match(/^(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)\b/);
-    return match ? match[1] : text;
+    const roman = text.match(/^(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)(?:\s*\([^)]*\))?$/);
+    if (roman) return roman[1];
+
+    const numericWithLabel = text.match(/^([1-9]|1[0-2])(?:\s*\([^)]*\))?$/);
+    if (numericWithLabel) {
+      return ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][Number(numericWithLabel[1]) - 1];
+    }
+
+    return '';
   }
 
   function normalizeDate(value) {
