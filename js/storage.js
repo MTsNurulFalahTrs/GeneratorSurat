@@ -29,7 +29,15 @@ const Storage = (() => {
 
   /* ── 1. Cek ketersediaan localStorage ── */
   function _checkAvailability() {
-    _available = Utils.isLocalStorageAvailable();
+    try {
+      // Probe write/remove juga menangani mode private atau storage yang diblokir.
+      const testKey = '__generator_surat_storage_probe__';
+      localStorage.setItem(testKey, '1');
+      localStorage.removeItem(testKey);
+      _available = true;
+    } catch {
+      _available = false;
+    }
     return _available;
   }
 
