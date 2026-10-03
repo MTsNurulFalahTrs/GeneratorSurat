@@ -245,20 +245,7 @@ const Storage = (() => {
     };
   }
 
-  /* ── 17. Estimasi ukuran data tersimpan ── */
-  function getStorageSize() {
-    if (!_available) return 0;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return 0;
-      // Perkiraan: 2 bytes per karakter (UTF-16)
-      return raw.length * 2;
-    } catch {
-      return 0;
-    }
-  }
-
-  /* ── 18. Cek apakah storage tersedia ── */
+  /* ── 17. Cek apakah storage tersedia ── */
   function isAvailable() {
     return _available;
   }
@@ -270,7 +257,6 @@ const Storage = (() => {
     save,
     clear,
     getMeta,
-    getStorageSize,
     isAvailable,
   };
 
