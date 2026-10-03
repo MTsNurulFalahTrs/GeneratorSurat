@@ -261,19 +261,6 @@ const Utils = (() => {
     return isNaN(n) ? fallback : n;
   }
 
-  /* ── 10. Browser Feature Detection ── */
-
-  function isLocalStorageAvailable() {
-    try {
-      const key = '__storage_test__';
-      localStorage.setItem(key, '1');
-      localStorage.removeItem(key);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   /* ── 11. Hitung sisa waktu TTL ── */
   function getRemainingTime(expiresAt) {
     const remaining = expiresAt - Date.now();
@@ -312,7 +299,6 @@ const Utils = (() => {
     clamp,
     safeInt,
     safeFloat,
-    isLocalStorageAvailable,
     getRemainingTime,
     buildStyleString,
   };
