@@ -1300,7 +1300,7 @@ const PreviewRenderer = (() => {
     }
   }
 
-  /* ── Public API ──
+  /* ── Public API ── */
   return {
     init,
     render,
