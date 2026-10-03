@@ -26,21 +26,6 @@ const Validation = (() => {
     return result(true);
   }
 
-  /* ── 2. Validasi panjang string ── */
-  function maxLength(value, max, fieldName = 'Field ini') {
-    if (typeof value === 'string' && value.length > max) {
-      return result(false, `${fieldName} maksimal ${max} karakter.`);
-    }
-    return result(true);
-  }
-
-  function minLength(value, min, fieldName = 'Field ini') {
-    if (typeof value === 'string' && value.trim().length < min) {
-      return result(false, `${fieldName} minimal ${min} karakter.`);
-    }
-    return result(true);
-  }
-
   /* ── 3. Validasi font size KOP (7–22 pt) ── */
   function fontSize(value, fieldName = 'Ukuran font') {
     const num = parseFloat(value);
@@ -82,37 +67,6 @@ const Validation = (() => {
       return result(false, `Ukuran file terlalu besar. Maksimum: ${Utils.formatBytes(maxSize)}.`);
     }
 
-    return result(true);
-  }
-
-  /* ── 6. Validasi data URL gambar (base64) ── */
-  function imageDataUrl(dataUrl) {
-    if (!dataUrl || typeof dataUrl !== 'string') {
-      return result(false, 'Data gambar tidak valid.');
-    }
-    if (!dataUrl.startsWith('data:image/')) {
-      return result(false, 'Format data gambar tidak dikenali.');
-    }
-    return result(true);
-  }
-
-  /* ── 7. Validasi angka dalam rentang ── */
-  function numberRange(value, min, max, fieldName = 'Nilai') {
-    const num = parseFloat(value);
-    if (isNaN(num)) {
-      return result(false, `${fieldName} harus berupa angka.`);
-    }
-    if (num < min || num > max) {
-      return result(false, `${fieldName} harus antara ${min}–${max}.`);
-    }
-    return result(true);
-  }
-
-  /* ── 8. Validasi pilihan dari enum ── */
-  function enumValue(value, allowed, fieldName = 'Pilihan') {
-    if (!allowed.includes(value)) {
-      return result(false, `${fieldName} tidak valid. Pilihan: ${allowed.join(', ')}.`);
-    }
     return result(true);
   }
 
@@ -162,14 +116,6 @@ const Validation = (() => {
     return result(true);
   }
 
-  /* ── 12. Validasi ukuran logo (px) ── */
-  function logoSize(value, fieldName = 'Ukuran') {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) return result(false, `${fieldName} harus angka.`);
-    if (num < 20 || num > 200) return result(false, `${fieldName} harus antara 20–200 px.`);
-    return result(true);
-  }
-
   /* ── 13. Validasi KOP config secara menyeluruh ── */
   function kopConfig(kop) {
     const errors = [];
@@ -207,7 +153,7 @@ const Validation = (() => {
 
     if (!formData) return { valid: false, errors: [{ field: 'form', message: 'Data form kosong.' }] };
 
-    const { meta, peserta, tandaTangan } = formData;
+    const { meta, peserta } = formData;
 
     // Meta
     const checkMeta = (field, label) => {
@@ -255,15 +201,6 @@ const Validation = (() => {
         if (p.tanggalLahir) {
           const rDate = isoDate(p.tanggalLahir, `Tanggal lahir siswa #${idx + 1}`);
           if (!rDate.valid) errors.push({ field: `peserta[${idx}].tanggalLahir`, message: rDate.message });
-        }
-      });
-    }
-
-    // Tanda tangan (opsional validasi nama)
-    if (tandaTangan) {
-      ['pihak1', 'pihak2', 'pihak3'].forEach(k => {
-        if (tandaTangan[k]) {
-          // nama tanda tangan opsional tapi kalau diisi harus valid
         }
       });
     }
@@ -337,65 +274,19 @@ const Validation = (() => {
     return { valid: errors.length === 0, errors };
   }
 
-  /* ── 16. Helper: tampilkan error pada elemen input ── */
-  function showFieldError(inputEl, message) {
-    if (!inputEl) return;
-    inputEl.classList.add('is-error');
-
-    // Hapus error sebelumnya
-    const existingError = inputEl.parentElement?.querySelector('.form-error');
-    if (existingError) existingError.remove();
-
-    if (message) {
-      const errEl = document.createElement('span');
-      errEl.className = 'form-error';
-      errEl.textContent = message;
-      inputEl.parentElement?.appendChild(errEl);
-    }
-  }
-
-  /* ── 17. Helper: bersihkan error pada elemen input ── */
-  function clearFieldError(inputEl) {
-    if (!inputEl) return;
-    inputEl.classList.remove('is-error');
-    const errEl = inputEl.parentElement?.querySelector('.form-error');
-    if (errEl) errEl.remove();
-  }
-
-  /* ── 18. Helper: validasi satu input dan tampilkan hasilnya ── */
-  function validateAndShow(inputEl, validationResult) {
-    if (!validationResult.valid) {
-      showFieldError(inputEl, validationResult.message);
-      return false;
-    }
-    clearFieldError(inputEl);
-    return true;
-  }
-
   /* ── Public API ── */
   return {
     // Validators
     required,
-    maxLength,
-    minLength,
     fontSize,
     kopRowCount,
     imageFile,
-    imageDataUrl,
-    numberRange,
-    enumValue,
     nisn,
     nik,
     isoDate,
-    logoSize,
     kopConfig,
     formDpu,
     formSiswa,
-
-    // DOM helpers
-    showFieldError,
-    clearFieldError,
-    validateAndShow,
 
     // Constants
     FONT_SIZE_MIN,
