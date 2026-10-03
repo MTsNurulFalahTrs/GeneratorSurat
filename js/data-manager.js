@@ -473,7 +473,11 @@ const DataManager = (() => {
       TemplateRegistry.renderTemplateList(
         document.getElementById('template-list'),
         null,
-        window.App?._handleTemplateSelect
+        (templateId) => {
+          if (typeof App !== 'undefined' && typeof App.selectTemplate === 'function') {
+            App.selectTemplate(templateId);
+          }
+        }
       );
       UI.switchTab('template');
     }
