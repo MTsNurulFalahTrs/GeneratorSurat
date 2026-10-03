@@ -172,7 +172,10 @@ const FormRenderer = (() => {
           : {};
       }
 
-      if (!item.id || typeof item.id !== 'string') {
+      if (
+        typeof item.id !== 'string' ||
+        !/^[A-Za-z0-9_-]{1,80}$/.test(item.id)
+      ) {
         normalized = true;
         return {
           ...item,
