@@ -379,10 +379,6 @@ const TableConfigManager = (() => {
     clearBodyColorRules(templateId, tableId);
   }
 
-  function getTableColors(templateId, tableId) {
-    const cfg = getResolvedConfig(templateId, tableId);
-    return { header: cfg.colors?.header || '#FFFFFF', body: cfg.colors?.body || '#FFFFFF' };
-  }
 
   function getResolvedConfig(templateId, tableId) {
     if (!templateId || !tableId) return { columnWidths: { byKey: {} }, header: { columns: {} }, body: { columns: {} } };
@@ -916,7 +912,6 @@ const TableConfigManager = (() => {
     buildCellStyle,
     updateTableColors,
     resetTableColors,
-    getTableColors,
     updateBodyColorRules,
     addBodyColorRule,
     removeBodyColorRule,
