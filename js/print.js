@@ -99,8 +99,6 @@ const Print = (() => {
   /* ── Public API ── */
   return {
     printDocument,
-    applyPageStyle:   _applyPageStyle,
-    cleanupPageStyle: _cleanupPageStyle,
   };
 
 })();

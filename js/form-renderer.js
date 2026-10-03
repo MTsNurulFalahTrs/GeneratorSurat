@@ -160,8 +160,33 @@ const FormRenderer = (() => {
 
   /* ── Build repeatable section (daftar siswa/peserta) ── */
   function _buildRepeatableSection(section, formData, templateId, bodyEl) {
-    const dataKey   = section.id; // 'peserta' | 'siswa'
-    const items     = Array.isArray(formData[dataKey]) ? formData[dataKey] : [];
+    const dataKey = section.id; // 'peserta' | 'siswa'
+    let items = Array.isArray(formData[dataKey]) ? formData[dataKey] : [];
+    let normalized = false;
+
+    items = items.map((item, index) => {
+      if (!item || typeof item !== 'object') {
+        normalized = true;
+        return typeof section.itemFactory === 'function'
+          ? section.itemFactory(index + 1)
+          : {};
+      }
+
+      if (typeof item.id !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(item.id)) {
+        normalized = true;
+        return {
+          ...item,
+          id: Utils.generateId(section.id === 'peserta' ? 'peserta' : 'siswa'),
+        };
+      }
+
+      return item;
+    });
+
+    if (!Array.isArray(formData[dataKey]) || normalized) {
+      State.setFormData(templateId, { [dataKey]: items });
+      formData = State.getFormData(templateId) || formData;
+    }
     const listEl    = document.createElement('div');
     listEl.id       = `repeatable-list-${section.id}`;
 

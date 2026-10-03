@@ -312,12 +312,6 @@
     display: flex !important;
   }
 
-  /* ── Checkbox ── */
-  .doc-checkbox {
-    border: 1px solid #000 !important;
-    display: inline-block !important;
-  }
-
   /* ── Rekap ── */
   .doc-rekap {
     page-break-inside: avoid !important;

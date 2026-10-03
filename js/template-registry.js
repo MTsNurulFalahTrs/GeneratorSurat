@@ -39,16 +39,6 @@ const TemplateRegistry = (() => {
     return Array.from(_templates.values());
   }
 
-  /* ── Ambil semua ID ── */
-  function getAllIds() {
-    return Array.from(_templates.keys());
-  }
-
-  /* ── Cek apakah template terdaftar ── */
-  function has(templateId) {
-    return _templates.has(templateId);
-  }
-
   /* ── Jumlah template terdaftar ── */
   function count() {
     return _templates.size;
@@ -191,8 +181,6 @@ const TemplateRegistry = (() => {
     register,
     get,
     getAll,
-    getAllIds,
-    has,
     count,
     renderTemplateList,
     updateActiveCard,

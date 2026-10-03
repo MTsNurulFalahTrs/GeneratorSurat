@@ -457,9 +457,11 @@ const ExcelImport = (() => {
     };
     if (romanMap[text]) return romanMap[text];
 
-    const numeric = parseInt(text, 10);
-    if (numeric >= 1 && numeric <= 12) {
-      return ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][numeric - 1];
+    if (/^\d{1,2}$/.test(text)) {
+      const numeric = Number(text);
+      if (numeric >= 1 && numeric <= 12) {
+        return ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][numeric - 1];
+      }
     }
 
     const match = text.match(/^(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)\b/);
@@ -516,6 +518,8 @@ const ExcelImport = (() => {
   }
 
   function toNumberOr(fallback, value) {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'string' && value.trim() === '') return fallback;
     const n = Number(value);
     return Number.isFinite(n) ? n : fallback;
   }
