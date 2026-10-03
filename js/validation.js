@@ -274,6 +274,38 @@ const Validation = (() => {
     return { valid: errors.length === 0, errors };
   }
 
+  /* ── DOM feedback helpers ── */
+  function showFieldError(inputEl, message) {
+    if (!inputEl) return;
+    inputEl.classList.add('is-error');
+
+    const existingError = inputEl.parentElement?.querySelector('.form-error');
+    if (existingError) existingError.remove();
+
+    if (message) {
+      const errEl = document.createElement('span');
+      errEl.className = 'form-error';
+      errEl.textContent = message;
+      inputEl.parentElement?.appendChild(errEl);
+    }
+  }
+
+  function clearFieldError(inputEl) {
+    if (!inputEl) return;
+    inputEl.classList.remove('is-error');
+    const errEl = inputEl.parentElement?.querySelector('.form-error');
+    if (errEl) errEl.remove();
+  }
+
+  function validateAndShow(inputEl, validationResult) {
+    if (!validationResult.valid) {
+      showFieldError(inputEl, validationResult.message);
+      return false;
+    }
+    clearFieldError(inputEl);
+    return true;
+  }
+
   /* ── Public API ── */
   return {
     // Validators
@@ -287,6 +319,11 @@ const Validation = (() => {
     kopConfig,
     formDpu,
     formSiswa,
+
+    // DOM feedback helpers
+    showFieldError,
+    clearFieldError,
+    validateAndShow,
 
     // Constants
     FONT_SIZE_MIN,
