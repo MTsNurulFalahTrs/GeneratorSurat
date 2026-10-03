@@ -356,8 +356,14 @@ const DataManager = (() => {
         State.restore(draft.data);
         _activeDraftId = draft.id;
         _writeActiveDraftId(draft.id);
+        const persisted = _persistActiveState();
         _refreshApplicationViews();
-        UI.toast(`Draft "${draft.name}" berhasil dimuat.`, 'success');
+
+        if (persisted.success) {
+          UI.toast(`Draft "${draft.name}" berhasil dimuat dan disimpan untuk pemulihan cepat.`, 'success');
+        } else {
+          UI.toast(`Draft "${draft.name}" berhasil dimuat, tetapi pemulihan cepat gagal disimpan: ${persisted.reason}`, 'warning', 6000);
+        }
       }
     );
   }
@@ -439,8 +445,14 @@ const DataManager = (() => {
           State.restore(validation.data);
           _activeDraftId = null;
           _writeActiveDraftId(null);
+          const persisted = _persistActiveState();
           _refreshApplicationViews();
-          UI.toast('Backup berhasil diimpor dan data aktif telah dipulihkan.', 'success', 5000);
+
+          if (persisted.success) {
+            UI.toast('Backup berhasil diimpor dan data aktif telah dipulihkan.', 'success', 5000);
+          } else {
+            UI.toast(`Backup berhasil diimpor, tetapi pemulihan cepat gagal disimpan: ${persisted.reason}`, 'warning', 6500);
+          }
         }
       );
     } catch (err) {
@@ -485,6 +497,21 @@ const DataManager = (() => {
     if (typeof Settings !== 'undefined') {
       Settings.updateStorageStatus();
     }
+  }
+
+  function _persistActiveState() {
+    if (!Storage.isAvailable()) {
+      return { success: false, reason: 'Penyimpanan lokal tidak tersedia di browser ini.' };
+    }
+
+    const result = Storage.save(State.serialize());
+    if (result.success) {
+      State.markSaved(result);
+      const meta = Storage.getMeta();
+      UI.updateStorageInfo(meta);
+      if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
+    }
+    return result;
   }
 
   function _validateBackup(payload) {
@@ -548,8 +575,11 @@ const DataManager = (() => {
       const raw = localStorage.getItem(DRAFTS_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.filter(draft => _isDraftRecordValid(draft));
+      if (!Array.isArray(parsed)) {
+        localStorage.removeItem(DRAFTS_KEY);
+        return [];
+      }
+      return parsed.filter(draft => _isDraftRecordValid(draft)).slice(0, MAX_DRAFTS);
     } catch (err) {
       console.warn('[DataManager] Gagal membaca drafts:', err);
       return [];
