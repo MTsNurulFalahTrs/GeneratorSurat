@@ -1,0 +1,99 @@
+/* =============================================================
+   platform.css — Phase 5 Platform UI
+   Screen UI only; print styles remain isolated.
+   ============================================================= */
+
+.platform-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.platform-status__dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 0 2px var(--color-success-light);
+}
+
+.platform-status[data-state="offline"] .platform-status__dot {
+  background: var(--color-warning);
+  box-shadow: 0 0 0 2px var(--color-warning-light);
+}
+
+.platform-status[data-state="offline"] #platform-status-label::after {
+  content: ' · Lokal';
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.platform-action {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+}
+
+.platform-action[hidden] {
+  display: none !important;
+}
+
+.platform-action svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+
+.platform-update {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.platform-update:hover {
+  border-color: var(--color-warning);
+}
+
+.platform-standalone .app-header__title::after {
+  content: ' • Aplikasi';
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+@media screen and (max-width: 767px) {
+  .platform-status {
+    min-height: 34px;
+    padding-inline: 8px;
+  }
+
+  .platform-status #platform-status-label {
+    display: none;
+  }
+
+  .platform-status[data-state="offline"] #platform-status-label::after {
+    content: '';
+  }
+
+  .platform-action .btn-label {
+    display: inline;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  .platform-action .btn-label {
+    display: none;
+  }
+
+  .platform-status {
+    padding-inline: 7px;
+  }
+}
