@@ -21,12 +21,10 @@ const KopEditor = (() => {
   const LOGO_MAX_DIM   = 250;             // px setelah kompresi
 
   let _rootEl = null;
-  let _previewEl = null; // elemen KOP mini-preview (di dalam editor)
 
   /* ── Inisialisasi editor ── */
   function init() {
     _rootEl    = document.getElementById('kop-editor-root');
-    _previewEl = null;
 
     if (!_rootEl) {
       console.warn('[KopEditor] Root element tidak ditemukan.');
@@ -70,8 +68,6 @@ const KopEditor = (() => {
     const rowsList = _buildRowsList(kop.rows);
     _rootEl.appendChild(rowsList);
 
-    // Simpan ref ke preview
-    _previewEl = _rootEl.querySelector('#kop-mini-preview-inner');
     _updateMiniPreview();
   }
 
