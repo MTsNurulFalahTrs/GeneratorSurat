@@ -28,8 +28,9 @@ const Validation = (() => {
 
   /* ── 3. Validasi font size KOP (7–22 pt) ── */
   function fontSize(value, fieldName = 'Ukuran font') {
-    const num = parseFloat(value);
-    if (isNaN(num)) {
+    const raw = String(value ?? '').trim();
+    const num = raw === '' ? NaN : Number(raw);
+    if (!Number.isFinite(num)) {
       return result(false, `${fieldName} harus berupa angka.`);
     }
     if (num < FONT_SIZE_MIN || num > FONT_SIZE_MAX) {
@@ -40,9 +41,10 @@ const Validation = (() => {
 
   /* ── 4. Validasi jumlah baris KOP ── */
   function kopRowCount(value) {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) {
-      return result(false, `Jumlah baris harus berupa angka.`);
+    const raw = String(value ?? '').trim();
+    const num = raw === '' ? NaN : Number(raw);
+    if (!Number.isInteger(num)) {
+      return result(false, `Jumlah baris harus berupa bilangan bulat.`);
     }
     if (num < KOP_ROWS_MIN || num > KOP_ROWS_MAX) {
       return result(false, `Jumlah baris KOP harus antara ${KOP_ROWS_MIN}–${KOP_ROWS_MAX}.`);

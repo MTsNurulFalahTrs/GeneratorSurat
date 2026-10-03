@@ -99,7 +99,10 @@ async function networkFirst(request) {
 
 async function staleWhileRevalidate(request) {
   const cached = await caches.match(request);
-  const network = fetch(request)
+
+  // Jika cache tersedia, kembalikan segera. Revalidasi berjalan di belakang
+  // agar koneksi lambat tidak membuat asset cached ikut menunggu network.
+  const refresh = fetch(request)
     .then(async response => {
       if (response.ok) {
         const cache = await caches.open(CACHE_NAME);
@@ -109,10 +112,12 @@ async function staleWhileRevalidate(request) {
     })
     .catch(() => null);
 
-  const refreshed = await network;
-  return cached
-    || refreshed
-    || caches.match('./index.html')
+  if (cached) {
+    return cached;
+  }
+
+  return (await refresh)
+    || await caches.match('./index.html')
     || Response.error();
 }
 

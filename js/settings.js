@@ -590,14 +590,15 @@ const Settings = (() => {
         const hEl = document.getElementById('custom-height-input');
         const wRaw = Number.parseFloat(wEl?.value);
         const hRaw = Number.parseFloat(hEl?.value);
-        const wMm = _toMmFromUnit(
-          Number.isFinite(wRaw) ? wRaw : State.getSettings().paper.customWidth,
-          curUnit
-        );
-        const hMm = _toMmFromUnit(
-          Number.isFinite(hRaw) ? hRaw : State.getSettings().paper.customHeight,
-          curUnit
-        );
+        // customWidth/customHeight di State selalu dalam mm. Saat input
+        // display sedang kosong/tidak valid, gunakan nilai mm langsung dan
+        // jangan konversi dua kali memakai unit tampilan aktif.
+        const wMm = Number.isFinite(wRaw)
+          ? _toMmFromUnit(wRaw, curUnit)
+          : Number(s.paper.customWidth);
+        const hMm = Number.isFinite(hRaw)
+          ? _toMmFromUnit(hRaw, curUnit)
+          : Number(s.paper.customHeight);
         const wNew = _fromMm(wMm, unit);
         const hNew = _fromMm(hMm, unit);
 
@@ -758,8 +759,9 @@ const Settings = (() => {
       let valid = true;
       sides.forEach(side => {
         const el = document.getElementById(`margin-${side}`);
-        const val = parseFloat(el?.value ?? 0);
-        if (isNaN(val) || val < MARGIN_MIN_MM || val > MARGIN_MAX_MM) {
+        const raw = String(el?.value ?? '').trim();
+        const val = raw === '' ? NaN : Number(raw);
+        if (!Number.isFinite(val) || val < MARGIN_MIN_MM || val > MARGIN_MAX_MM) {
           el?.classList.add('is-error');
           valid = false;
         } else {
@@ -789,13 +791,15 @@ const Settings = (() => {
         row?.classList.remove('hidden');
       } else {
         row?.classList.add('hidden');
-        State.setSettings({ print: { scale: parseInt(sel.value, 10) }, activePreset: 'custom' });
+        State.setSettings({ print: { scale: Number(sel.value) }, activePreset: 'custom' });
         _markPresetCustom();
       }
     });
 
     const debScale = Utils.debounce(() => {
-      const val = Utils.clamp(parseInt(custom?.value ?? 100, 10), SCALE_MIN, SCALE_MAX);
+      const raw = String(custom?.value ?? '').trim();
+      const parsed = raw === '' ? NaN : Number(raw);
+      const val = Utils.clamp(Number.isFinite(parsed) ? parsed : 100, SCALE_MIN, SCALE_MAX);
       State.setSettings({ print: { scale: val }, activePreset: 'custom' });
       _markPresetCustom();
     }, 400);
@@ -1183,10 +1187,12 @@ const Settings = (() => {
      KONVERSI SATUAN
   ═══════════════════════════════════════════════════════════ */
   function _toMmFromUnit(value, unit) {
-    const n = parseFloat(value) || 0;
-    if (unit === 'cm') return n * 10;
-    if (unit === 'in') return n * 25.4;
-    return n;
+    const raw = String(value ?? '').trim();
+    const n = raw === '' ? 0 : Number(raw);
+    const safe = Number.isFinite(n) ? n : 0;
+    if (unit === 'cm') return safe * 10;
+    if (unit === 'in') return safe * 25.4;
+    return safe;
   }
 
   function _fromMm(mm, unit) {
@@ -1205,7 +1211,6 @@ const Settings = (() => {
   return {
     init,
     updateStorageStatus,
-    syncFromState: _syncAllFromState,
   };
 
 })();

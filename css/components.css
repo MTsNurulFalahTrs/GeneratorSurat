@@ -626,51 +626,6 @@
   opacity: 1;
 }
 
-/* ── 8. Table (untuk daftar siswa/peserta) ── */
-.data-table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-4);
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-xs);
-}
-
-.data-table th {
-  background: var(--color-surface-2);
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-  font-weight: 600;
-  color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.data-table td {
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  vertical-align: middle;
-}
-
-.data-table tr:last-child td {
-  border-bottom: none;
-}
-
-.data-table tr:hover td {
-  background: var(--color-surface-2);
-}
-
-.data-table__actions {
-  display: flex;
-  gap: var(--space-1);
-  white-space: nowrap;
-}
-
 /* ── 9. Accordion / Collapsible row ── */
 .row-entry {
   border: 1px solid var(--color-border);
@@ -871,82 +826,6 @@
 .style-btn--bold      { font-weight: 700; font-size: var(--text-base); }
 .style-btn--italic    { font-style: italic; font-size: var(--text-base); }
 .style-btn--underline { text-decoration: underline; font-size: var(--text-base); }
-
-/* ── 16. File Upload Area ── */
-.upload-area {
-  border: 2px dashed var(--color-border-strong);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  text-align: center;
-  cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
-  background: var(--color-surface);
-  position: relative;
-}
-
-.upload-area:hover,
-.upload-area.is-dragover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
-}
-
-.upload-area__input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  width: 100%;
-  height: 100%;
-}
-
-.upload-area__icon {
-  font-size: 2rem;
-  margin-bottom: var(--space-2);
-}
-
-.upload-area__text {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-1);
-}
-
-.upload-area__subtext {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
-/* Logo preview in upload area */
-.logo-preview-wrap {
-  position: relative;
-  display: inline-block;
-}
-
-.logo-preview-img {
-  max-height: 80px;
-  max-width: 100%;
-  object-fit: contain;
-  border-radius: var(--radius-sm);
-}
-
-.logo-preview-remove {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-danger);
-  color: white;
-  border: none;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  box-shadow: var(--shadow-sm);
-}
-
 
 /* =============================================================
    Settings Tab — Komponen UI khusus tab Pengaturan

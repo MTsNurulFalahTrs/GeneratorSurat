@@ -694,8 +694,9 @@ const TableConfigUI = (() => {
         for (let i = a; i <= Math.min(b, 9999); i++) if (i >= min) out.add(i);
         return;
       }
-      const n = parseInt(token, 10);
-      if (Number.isInteger(n) && n >= min) out.add(n);
+      if (!/^\d+$/.test(token)) return;
+      const n = Number(token);
+      if (Number.isInteger(n) && n >= min && n <= 9999) out.add(n);
     });
     return Array.from(out).sort(function(a,b) { return a-b; });
   }
@@ -1073,8 +1074,8 @@ const TableConfigUI = (() => {
         TableConfigManager.updateColumn(templateId, tableId, section, colIdx, { fontSize: null });
         return;
       }
-      const num = parseFloat(rawVal);
-      if (isNaN(num)) return;
+      const num = Number(rawVal);
+      if (!Number.isFinite(num)) return;
       const clamped = Utils.clamp(num, TableConfigManager.FONT_SIZE_MIN, TableConfigManager.FONT_SIZE_MAX);
       if (num !== clamped) el.value = clamped;
       TableConfigManager.updateColumn(templateId, tableId, section, colIdx, { fontSize: clamped });
@@ -1090,8 +1091,8 @@ const TableConfigUI = (() => {
       const rawVal = el.value.trim();
       if (rawVal === '') return; // jangan update saat masih mengetik
 
-      const num  = parseFloat(rawVal);
-      if (isNaN(num) || num <= 0) return;
+      const num  = Number(rawVal);
+      if (!Number.isFinite(num) || num <= 0) return;
 
       const unit    = el.dataset.unit || TableConfigManager.WIDTH_UNIT_PCT;
       const minV    = unit === TableConfigManager.WIDTH_UNIT_MM ? TableConfigManager.WIDTH_MM_MIN : TableConfigManager.WIDTH_PCT_MIN;

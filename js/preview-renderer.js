@@ -16,6 +16,7 @@ const PreviewRenderer = (() => {
   let _pageInfoEl  = null;    // #preview-page-info
   let _currentZoom = 1;
   let _renderToken = 0;       // membatalkan pagination async dari render lama
+  let _paginationPromise = Promise.resolve(); // status pagination render terbaru
 
   const ZOOM_STEP = 0.1;
   const ZOOM_MIN  = 0.3;
@@ -460,17 +461,23 @@ const PreviewRenderer = (() => {
   }
 
   function _schedulePagination(renderToken, paperWidthPx, paperHeightPx) {
-    requestAnimationFrame(() => {
+    const afterLayout = new Promise(resolve => {
       requestAnimationFrame(() => {
-        _paginatePreview(renderToken, paperWidthPx, paperHeightPx).catch(err => {
-          console.warn('[PreviewRenderer] Pagination gagal:', err);
-          if (renderToken === _renderToken) {
-            _updateWrapperHeight(_currentZoom);
-            if (typeof DocumentViewer !== 'undefined') DocumentViewer.refresh();
-          }
-        });
+        requestAnimationFrame(resolve);
       });
     });
+
+    _paginationPromise = afterLayout
+      .then(() => _paginatePreview(renderToken, paperWidthPx, paperHeightPx))
+      .catch(err => {
+        console.warn('[PreviewRenderer] Pagination gagal:', err);
+        if (renderToken === _renderToken) {
+          _updateWrapperHeight(_currentZoom);
+          if (typeof DocumentViewer !== 'undefined') DocumentViewer.refresh();
+        }
+      });
+
+    return _paginationPromise;
   }
 
   async function _paginatePreview(renderToken, paperWidthPx, paperHeightPx) {
@@ -1261,19 +1268,20 @@ const PreviewRenderer = (() => {
   async function waitForReady(maxFrames = 90) {
     if (!_previewEl) return;
 
-    /*
-     * Critical action (mis. Print) harus melihat DOM setelah render terbaru.
-     * Frame-based waiting mengikuti font/image/layout browser, bukan timeout
-     * tetap yang bisa terlalu cepat atau terlalu lama.
-     */
+    const templateId = State.getActiveTemplate();
+    if (!templateId) return;
+
+    const isMultiPage = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(templateId);
+    if (isMultiPage && _paginationPromise) {
+      // Tunggu pagination render terbaru secara deterministik. Polling di bawah
+      // tetap menjadi fallback untuk render lama yang tidak memiliki promise.
+      await _paginationPromise;
+    }
+
     let frames = 0;
     while (frames < maxFrames) {
       frames += 1;
 
-      const templateId = State.getActiveTemplate();
-      if (!templateId) return;
-
-      const isMultiPage = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(templateId);
       if (!isMultiPage) {
         await new Promise(resolve => requestAnimationFrame(resolve));
         return;
