@@ -25,6 +25,7 @@ const Storage = (() => {
   let _checkIntervalId = null;
   let _onExpiredCallback = null;
   let _available = false;
+  let _listenersBound = false;
 
   /* ── 1. Cek ketersediaan localStorage ── */
   function _checkAvailability() {
@@ -40,7 +41,10 @@ const Storage = (() => {
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       // Validasi schema version
-      if (!parsed || parsed.version !== SCHEMA_VERSION) return null;
+      if (!parsed || parsed.version !== SCHEMA_VERSION) {
+        _clearRaw();
+        return null;
+      }
       return parsed;
     } catch {
       // Data corrupt → hapus
@@ -122,6 +126,9 @@ const Storage = (() => {
 
   /* ── 10. Setup page visibility listener ── */
   function _setupVisibilityListener() {
+    if (_listenersBound) return;
+    _listenersBound = true;
+
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
         // Tab kembali visible → cek expiry
@@ -219,20 +226,6 @@ const Storage = (() => {
     };
   }
 
-  /* ── 14. Update sebagian data (partial update) ── */
-  function update(partialData) {
-    if (!_available) return { success: false, reason: 'localStorage tidak tersedia' };
-
-    const existing = load();
-    if (!existing) {
-      // Tidak ada data sebelumnya → simpan baru
-      return save(partialData);
-    }
-
-    const merged = Utils.deepMerge(existing, partialData);
-    return save(merged);
-  }
-
   /* ── 15. Hapus semua data ── */
   function clear() {
     _clearRaw();
@@ -253,28 +246,9 @@ const Storage = (() => {
     };
   }
 
-  /* ── 17. Estimasi ukuran data tersimpan ── */
-  function getStorageSize() {
-    if (!_available) return 0;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return 0;
-      // Perkiraan: 2 bytes per karakter (UTF-16)
-      return raw.length * 2;
-    } catch {
-      return 0;
-    }
-  }
-
   /* ── 18. Cek apakah storage tersedia ── */
   function isAvailable() {
     return _available;
-  }
-
-  /* ── 19. Destroy (cleanup, untuk testing) ── */
-  function destroy() {
-    _stopIntervalCheck();
-    _onExpiredCallback = null;
   }
 
   /* ── Public API ── */
@@ -282,13 +256,10 @@ const Storage = (() => {
     init,
     load,
     save,
-    update,
     clear,
     getMeta,
-    getStorageSize,
     isAvailable,
     checkExpiry,
-    destroy,
     TTL_DURATION_MS,
   };
 
