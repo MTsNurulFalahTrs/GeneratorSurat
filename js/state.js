@@ -308,7 +308,10 @@ const State = (() => {
   function setKopRowCount(count) {
     const MIN_ROWS = 1;
     const MAX_ROWS = 10;
-    const safeCount = Utils.clamp(count, MIN_ROWS, MAX_ROWS);
+    const numericCount = Number(count);
+    const safeCount = Number.isInteger(numericCount)
+      ? Utils.clamp(numericCount, MIN_ROWS, MAX_ROWS)
+      : _state.kop.rows.length;
     const currentRows = _state.kop.rows;
 
     if (safeCount > currentRows.length) {
@@ -368,7 +371,10 @@ const State = (() => {
 
   /* ── Setter: zoom level ── */
   function setZoom(zoom) {
-    const safeZoom = Utils.clamp(zoom, 0.3, 2.5);
+    const numericZoom = Number(zoom);
+    const safeZoom = Number.isFinite(numericZoom)
+      ? Utils.clamp(numericZoom, 0.3, 2.5)
+      : 1;
     _state.ui.previewZoom = safeZoom;
     emit('ui:zoomChange', { zoom: safeZoom });
   }
