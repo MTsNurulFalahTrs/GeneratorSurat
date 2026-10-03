@@ -227,7 +227,9 @@ const State = (() => {
   function _normalizeKopRow(input, fallback) {
     const merged = Utils.deepMerge(fallback, input && typeof input === 'object' ? input : {});
     return {
-      id: typeof merged.id === 'string' && merged.id.trim() ? merged.id.trim() : fallback.id,
+      id: typeof merged.id === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(merged.id)
+        ? merged.id
+        : fallback.id,
       text: String(merged.text ?? ''),
       fontFamily: KOP_FONT_FAMILIES.includes(merged.fontFamily) ? merged.fontFamily : fallback.fontFamily,
       fontSize: Number.isFinite(Number(merged.fontSize)) ? Utils.clamp(Number(merged.fontSize), 7, 22) : fallback.fontSize,
@@ -343,7 +345,9 @@ const State = (() => {
   /* ── Setter: template aktif ── */
   function setActiveTemplate(templateId) {
     if (_state.activeTemplate === templateId) return;
-    _state.activeTemplate = templateId;
+    _state.activeTemplate = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(templateId)
+      ? templateId
+      : null;
     _state.ui.isDirty = true;
     emit('template:change', { templateId });
     emit('state:change', { field: 'activeTemplate' });
@@ -364,7 +368,10 @@ const State = (() => {
   function setKopRowCount(count) {
     const MIN_ROWS = 1;
     const MAX_ROWS = 10;
-    const safeCount = Utils.clamp(count, MIN_ROWS, MAX_ROWS);
+    const numericCount = Number(count);
+    const safeCount = Number.isInteger(numericCount)
+      ? Utils.clamp(numericCount, MIN_ROWS, MAX_ROWS)
+      : _state.kop.rows.length;
     const currentRows = _state.kop.rows;
 
     if (safeCount > currentRows.length) {
@@ -424,7 +431,10 @@ const State = (() => {
 
   /* ── Setter: zoom level ── */
   function setZoom(zoom) {
-    const safeZoom = Utils.clamp(zoom, 0.3, 2.5);
+    const numericZoom = Number(zoom);
+    const safeZoom = Number.isFinite(numericZoom)
+      ? Utils.clamp(numericZoom, 0.3, 2.5)
+      : 1;
     _state.ui.previewZoom = safeZoom;
     emit('ui:zoomChange', { zoom: safeZoom });
   }
@@ -741,7 +751,9 @@ const State = (() => {
     if (!savedData) return;
     try {
       if (savedData.activeTemplate !== undefined) {
-        _state.activeTemplate = savedData.activeTemplate;
+        _state.activeTemplate = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(savedData.activeTemplate)
+          ? savedData.activeTemplate
+          : null;
       }
       if (savedData.kop) {
         _state.kop = _normalizeKop(savedData.kop);
