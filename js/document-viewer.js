@@ -42,8 +42,9 @@ const DocumentViewer = (() => {
     document.getElementById('viewer-page-last')?.addEventListener('click', () => _goToPage(_getPageCount()));
 
     document.getElementById('viewer-page-current')?.addEventListener('change', (event) => {
-      const value = parseInt(event.target.value, 10);
-      if (Number.isFinite(value)) _goToPage(value);
+      const raw = String(event.target.value ?? '').trim();
+      const value = raw === '' ? NaN : Number(raw);
+      if (Number.isInteger(value)) _goToPage(value);
       else _sync();
     });
 
@@ -146,8 +147,9 @@ const DocumentViewer = (() => {
     const pages = _getPages();
     if (pages.length) return pages.length;
 
-    const count = parseInt(_preview.dataset.pageCount || '0', 10);
-    return Number.isFinite(count) ? Math.max(0, count) : 0;
+    const raw = String(_preview.dataset.pageCount || '').trim();
+    const count = raw === '' ? NaN : Number(raw);
+    return Number.isInteger(count) ? Math.max(0, count) : 0;
   }
 
   function _getCurrentPage() {
