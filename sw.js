@@ -15,6 +15,7 @@ const APP_SHELL = [
   './css/responsive.css',
   './css/workflow.css',
   './css/data-manager.css',
+  './css/platform.css',
   './css/document-viewer.css',
   './css/print.css',
   './js/utils.js',
