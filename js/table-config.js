@@ -566,6 +566,62 @@ const TableConfigManager = (() => {
   }
 
   /* ────────────────────────────────────────────────
+     8c. Ubah mode lebar seluruh kolom secara bulk
+  ──────────────────────────────────────────────── */
+  /**
+   * Ubah mode width semua kolom dalam satu tabel.
+   * Nilai manual yang sudah ada dipertahankan; kolom Auto yang belum
+   * memiliki nilai mendapat pembagian awal yang merata dalam persen.
+   */
+  function setAllColumnWidthMode(templateId, tableId, mode) {
+    if (!templateId || !tableId) return;
+    if (![WIDTH_MODE_AUTO, WIDTH_MODE_CUSTOM].includes(mode)) return;
+
+    const tableDef = TemplateRegistry.getTableDefinitions(templateId)
+      .find(t => t.id === tableId);
+    const columns = tableDef?.columns || [];
+    if (!columns.length) return;
+
+    const currentAll = State.getTableConfig(templateId);
+    const currentTable = currentAll[tableId] || {};
+    const currentByKey = currentTable.columnWidths?.byKey || {};
+    const equalPct = Math.round((100 / columns.length) * 100) / 100;
+    const byKey = {};
+
+    columns.forEach(col => {
+      const key = col?.key;
+      if (!key) return;
+
+      const current = currentByKey[key] || {};
+
+      if (mode === WIDTH_MODE_AUTO) {
+        // Pertahankan value/unit tersembunyi agar Auto → Manual dapat
+        // memulihkan nilai manual terakhir kolom tersebut.
+        byKey[key] = { ...current, mode: WIDTH_MODE_AUTO };
+        return;
+      }
+
+      const hasValue = Number.isFinite(Number(current.value))
+        && Number(current.value) > 0;
+      const unit = VALID_WIDTH_UNITS.includes(current.unit)
+        ? current.unit
+        : WIDTH_UNIT_PCT;
+
+      byKey[key] = {
+        ...current,
+        mode: WIDTH_MODE_CUSTOM,
+        value: hasValue ? Number(current.value) : equalPct,
+        unit: hasValue ? unit : WIDTH_UNIT_PCT,
+      };
+    });
+
+    State.setTableConfig(templateId, tableId, {
+      ...currentTable,
+      columnWidths: { byKey },
+    });
+  }
+
+  /* ────────────────────────────────────────────────
      8c. Reset lebar semua kolom di satu tabel ke auto
   ──────────────────────────────────────────────── */
   function resetColumnWidths(templateId, tableId) {
@@ -921,6 +977,7 @@ const TableConfigManager = (() => {
     getBodyCellColor,
     // Column width API
     updateColumnWidth,
+    setAllColumnWidthMode,
     resetColumnWidths,
     getTotalWidthPercent,
     hasAnyCustomWidth,
