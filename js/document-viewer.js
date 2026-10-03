@@ -101,7 +101,7 @@ const DocumentViewer = (() => {
       }
 
       if (event.key === '-' || event.key === '_') {
-        if (typeof PreviewRenderer?.setZoomMode !== 'function') return;
+        if (typeof PreviewRenderer === 'undefined' || typeof PreviewRenderer.setZoomMode !== 'function') return;
         event.preventDefault();
         const current = State.getUi().previewZoom || 1;
         State.setZoom(Math.max(0.3, Number((current - 0.1).toFixed(2))));
