@@ -40,8 +40,18 @@ const Storage = (() => {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      // Validasi schema version
-      if (!parsed || parsed.version !== SCHEMA_VERSION) {
+      // Validasi schema + metadata minimum. Record yang rusak harus dibuang,
+      // bukan diperlakukan sebagai data yang masih aktif tanpa TTL yang jelas.
+      if (
+        !parsed
+        || parsed.version !== SCHEMA_VERSION
+        || !Number.isFinite(parsed.lastSavedAt)
+        || !Number.isFinite(parsed.expiresAt)
+        || parsed.expiresAt < parsed.lastSavedAt
+        || !parsed.data
+        || typeof parsed.data !== 'object'
+        || Array.isArray(parsed.data)
+      ) {
         _clearRaw();
         return null;
       }
@@ -114,14 +124,6 @@ const Storage = (() => {
     _checkIntervalId = setInterval(() => {
       checkExpiry();
     }, CHECK_INTERVAL_MS);
-  }
-
-  /* ── 9. Stop interval checker ── */
-  function _stopIntervalCheck() {
-    if (_checkIntervalId) {
-      clearInterval(_checkIntervalId);
-      _checkIntervalId = null;
-    }
   }
 
   /* ── 10. Setup page visibility listener ── */
@@ -226,13 +228,13 @@ const Storage = (() => {
     };
   }
 
-  /* ── 15. Hapus semua data ── */
+  /* ── 14. Hapus semua data ── */
   function clear() {
     _clearRaw();
     return true;
   }
 
-  /* ── 16. Ambil info metadata storage ── */
+  /* ── 15. Ambil info metadata storage ── */
   function getMeta() {
     if (!_available) return null;
     const record = _readRaw();
@@ -246,7 +248,7 @@ const Storage = (() => {
     };
   }
 
-  /* ── 18. Cek apakah storage tersedia ── */
+  /* ── 17. Cek apakah storage tersedia ── */
   function isAvailable() {
     return _available;
   }
