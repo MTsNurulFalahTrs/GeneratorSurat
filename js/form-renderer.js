@@ -184,7 +184,7 @@ const FormRenderer = (() => {
 
     addBtn.addEventListener('click', () => {
       const current = State.getFormData(templateId);
-      const currentItems = current[dataKey] || [];
+      const currentItems = Array.isArray(current?.[dataKey]) ? current[dataKey] : [];
       const newItem = section.itemFactory(currentItems.length + 1);
       const updatedItems = [...currentItems, newItem];
 
@@ -474,7 +474,9 @@ const FormRenderer = (() => {
 
     inputEl.addEventListener(eventType, (e) => {
       let val = e.target.value;
-      if (fieldDef.type === 'number') val = Utils.safeFloat(val, 0);
+      if (fieldDef.type === 'number') {
+        val = e.target.value === '' ? '' : Utils.safeFloat(val, 0);
+      }
       debSave(val);
     });
 
