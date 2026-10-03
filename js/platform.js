@@ -21,6 +21,7 @@ const Platform = (() => {
   let _deferredInstallPrompt = null;
   let _registration = null;
   let _refreshingAfterUpdate = false;
+  let _hadControllerAtRegistration = false;
 
   function init() {
     if (_initialized) return;
@@ -122,7 +123,10 @@ const Platform = (() => {
     document.getElementById('btn-update-app')?.addEventListener('click', updateApp);
 
     navigator.serviceWorker?.addEventListener('controllerchange', () => {
-      if (_refreshingAfterUpdate) return;
+      // Reload otomatis hanya untuk pembaruan setelah halaman memang sudah
+      // dikendalikan service worker sebelumnya. Initial takeover tidak perlu
+      // memaksa reload.
+      if (!_hadControllerAtRegistration || _refreshingAfterUpdate) return;
       _refreshingAfterUpdate = true;
       window.location.reload();
     });
@@ -130,6 +134,7 @@ const Platform = (() => {
 
   async function _registerServiceWorker() {
     try {
+      _hadControllerAtRegistration = !!navigator.serviceWorker.controller;
       _registration = await navigator.serviceWorker.register('./sw.js', {
         scope: './',
         updateViaCache: 'none',
