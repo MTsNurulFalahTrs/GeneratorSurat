@@ -1878,11 +1878,31 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.tbl-cfg__width-toolbar-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
 .tbl-cfg__width-hint {
   font-size: 10px;
   color: var(--color-text-muted);
   flex: 1;
   min-width: 0;
+}
+
+.tbl-cfg__width-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tbl-cfg__width-bulk-actions .btn {
+  font-size: 10px !important;
+  padding: 3px var(--space-2) !important;
 }
 
 .tbl-cfg__width-reset-btn {
@@ -2077,6 +2097,29 @@
 
 /* ── Responsive ── */
 @media (max-width: 600px) {
+  .tbl-cfg__width-toolbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .tbl-cfg__width-toolbar-main {
+    width: 100%;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .tbl-cfg__width-bulk-actions {
+    width: 100%;
+  }
+
+  .tbl-cfg__width-bulk-actions .btn {
+    flex: 1;
+  }
+
+  .tbl-cfg__width-reset-btn {
+    margin-left: auto;
+  }
+
   .tbl-cfg__width-row {
     flex-wrap: wrap;
     padding: var(--space-2) var(--space-3);
