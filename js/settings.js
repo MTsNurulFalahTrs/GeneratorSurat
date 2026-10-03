@@ -590,14 +590,15 @@ const Settings = (() => {
         const hEl = document.getElementById('custom-height-input');
         const wRaw = Number.parseFloat(wEl?.value);
         const hRaw = Number.parseFloat(hEl?.value);
-        const wMm = _toMmFromUnit(
-          Number.isFinite(wRaw) ? wRaw : State.getSettings().paper.customWidth,
-          curUnit
-        );
-        const hMm = _toMmFromUnit(
-          Number.isFinite(hRaw) ? hRaw : State.getSettings().paper.customHeight,
-          curUnit
-        );
+        // customWidth/customHeight di State selalu dalam mm. Saat input
+        // display sedang kosong/tidak valid, gunakan nilai mm langsung dan
+        // jangan konversi dua kali memakai unit tampilan aktif.
+        const wMm = Number.isFinite(wRaw)
+          ? _toMmFromUnit(wRaw, curUnit)
+          : Number(s.paper.customWidth);
+        const hMm = Number.isFinite(hRaw)
+          ? _toMmFromUnit(hRaw, curUnit)
+          : Number(s.paper.customHeight);
         const wNew = _fromMm(wMm, unit);
         const hNew = _fromMm(hMm, unit);
 
