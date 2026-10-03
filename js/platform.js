@@ -145,19 +145,28 @@ const Platform = (() => {
         updateViaCache: 'none',
       });
 
+      const showWaitingUpdate = () => {
+        if (!navigator.serviceWorker.controller || !_registration?.waiting) return;
+        _showUpdateButton(true);
+        if (typeof UI !== 'undefined') {
+          UI.toast(UPDATE_MESSAGE, 'info', 6000);
+        }
+      };
+
       _registration.addEventListener('updatefound', () => {
         const worker = _registration.installing;
         if (!worker) return;
 
         worker.addEventListener('statechange', () => {
-          if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-            _showUpdateButton(true);
-            if (typeof UI !== 'undefined') {
-              UI.toast(UPDATE_MESSAGE, 'info', 6000);
-            }
+          if (worker.state === 'installed') {
+            showWaitingUpdate();
           }
         });
       });
+
+      // Worker dapat sudah berstatus waiting sebelum event updatefound
+      // dipasang (misalnya saat halaman dibuka kembali). Tangani kondisi ini.
+      showWaitingUpdate();
 
       // Cek pembaruan setiap kali aplikasi kembali ke foreground.
       document.addEventListener('visibilitychange', () => {
