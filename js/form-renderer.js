@@ -5,7 +5,6 @@
 const FormRenderer = (() => {
 
   let _containerEl = null;
-  const _debounced = new WeakMap();
 
   /* ── Inisialisasi ── */
   function init() {
@@ -338,7 +337,7 @@ const FormRenderer = (() => {
         group.innerHTML = labelHtml + `
           <input type="number" class="form-input"
             id="${fieldDomId}"
-            value="${value ?? ''}"
+            value="${Utils.escapeHtml(String(value ?? ''))}"
             min="${fieldDef.min ?? 0}"
             max="${fieldDef.max ?? 9999}"
             ${fieldDef.required ? 'required' : ''} />`;
