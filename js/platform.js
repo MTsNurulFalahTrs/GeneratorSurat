@@ -126,7 +126,12 @@ const Platform = (() => {
       // Reload otomatis hanya untuk pembaruan setelah halaman memang sudah
       // dikendalikan service worker sebelumnya. Initial takeover tidak perlu
       // memaksa reload.
-      if (!_hadControllerAtRegistration || _refreshingAfterUpdate) return;
+      if (_refreshingAfterUpdate) return;
+      if (!_hadControllerAtRegistration) {
+        // Pertama kali SW mengambil alih halaman setelah install.
+        _hadControllerAtRegistration = true;
+        return;
+      }
       _refreshingAfterUpdate = true;
       window.location.reload();
     });
