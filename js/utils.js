@@ -274,12 +274,7 @@ const Utils = (() => {
     }
   }
 
-  /* ── 11. Sanitize filename ── */
-  function sanitizeFilename(name) {
-    return name.replace(/[^a-zA-Z0-9_\-. ]/g, '_').trim();
-  }
-
-  /* ── 15. Hitung sisa waktu TTL ── */
+  /* ── 11. Hitung sisa waktu TTL ── */
   function getRemainingTime(expiresAt) {
     const remaining = expiresAt - Date.now();
     return Math.max(0, remaining);
@@ -318,7 +313,6 @@ const Utils = (() => {
     safeInt,
     safeFloat,
     isLocalStorageAvailable,
-    sanitizeFilename,
     getRemainingTime,
     buildStyleString,
   };
