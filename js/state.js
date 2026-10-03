@@ -594,7 +594,7 @@ const State = (() => {
     const row = Utils.deepMerge(DEFAULT_KOP_ROW(index), input || {});
     const allowedFonts = DOCUMENT_FONTS.map(font => font.value);
     const requestedFont = String(row.fontFamily || 'Times New Roman');
-    row.id = typeof row.id === 'string' && row.id.trim()
+    row.id = typeof row.id === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(row.id)
       ? row.id
       : Utils.generateId('kop-row');
     row.text = String(row.text ?? '');
