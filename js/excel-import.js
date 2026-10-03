@@ -518,6 +518,8 @@ const ExcelImport = (() => {
   }
 
   function toNumberOr(fallback, value) {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'string' && value.trim() === '') return fallback;
     const n = Number(value);
     return Number.isFinite(n) ? n : fallback;
   }
