@@ -270,10 +270,6 @@ const State = (() => {
     return Utils.deepClone(_state.ui);
   }
 
-  function getStorageMeta() {
-    return Utils.deepClone(_state.storage);
-  }
-
   /* ── Setter: template aktif ── */
   function setActiveTemplate(templateId) {
     if (_state.activeTemplate === templateId) return;
@@ -357,12 +353,6 @@ const State = (() => {
     }
   }
 
-  /* ── Setter: UI state ── */
-  function setUi(partial) {
-    _state.ui = { ..._state.ui, ...partial };
-    emit('ui:change', { ui: Utils.deepClone(_state.ui) });
-  }
-
   /* ── Setter: active tab ── */
   function setActiveTab(tab) {
     if (_state.ui.activeTab === tab) return;
@@ -444,9 +434,13 @@ const State = (() => {
     });
 
     settings.typography = settings.typography || {};
-    settings.typography.fontFamily = String(
+    const requestedFont = String(
       settings.typography.fontFamily || DEFAULT_SETTINGS().typography.fontFamily
     );
+    const allowedFonts = DOCUMENT_FONTS.map(font => font.value);
+    settings.typography.fontFamily = allowedFonts.includes(requestedFont)
+      ? requestedFont
+      : DEFAULT_SETTINGS().typography.fontFamily;
     settings.typography.fontSize = _toFiniteNumber(
       settings.typography.fontSize,
       DEFAULT_SETTINGS().typography.fontSize,
@@ -554,14 +548,6 @@ const State = (() => {
     emit('settings:change', { settings: Utils.deepClone(_state.settings) });
     emit('settings:reset', {});
     emit('state:change', { field: 'settings' });
-  }
-
-  /* ── Konversi satuan ke mm (internal selalu mm) ── */
-  function _toMm(value, unit) {
-    const n = parseFloat(value) || 0;
-    if (unit === 'cm')  return n * 10;
-    if (unit === 'in')  return n * 25.4;
-    return n; // mm default
   }
 
   /* ── Daftar font yang tersedia untuk isi surat ── */
@@ -689,7 +675,9 @@ const State = (() => {
     if (!savedData) return;
     try {
       if (savedData.activeTemplate !== undefined) {
-        _state.activeTemplate = savedData.activeTemplate;
+        _state.activeTemplate = typeof savedData.activeTemplate === 'string'
+          ? savedData.activeTemplate
+          : null;
       }
       if (savedData.kop) {
         _state.kop = Utils.deepMerge(DEFAULT_KOP_CONFIG(), savedData.kop);
@@ -697,10 +685,10 @@ const State = (() => {
       if (savedData.settings) {
         _state.settings = _normalizeSettings(savedData.settings);
       }
-      if (savedData.forms) {
+      if (savedData.forms && typeof savedData.forms === 'object' && !Array.isArray(savedData.forms)) {
         _state.forms = Utils.deepClone(savedData.forms);
       }
-      if (savedData.tables && typeof savedData.tables === 'object') {
+      if (savedData.tables && typeof savedData.tables === 'object' && !Array.isArray(savedData.tables)) {
         _state.tables = Utils.deepClone(savedData.tables);
       }
       _state.ui.isDirty = false;
@@ -734,7 +722,6 @@ const State = (() => {
     getActiveTemplate,
     getFormData,
     getUi,
-    getStorageMeta,
     getSettings,
     getPaperDimensions,
     getMarginMm,
@@ -750,7 +737,6 @@ const State = (() => {
     setKopLogo,
     setFormData,
     initFormData,
-    setUi,
     setActiveTab,
     setZoom,
     setStorageMeta,
