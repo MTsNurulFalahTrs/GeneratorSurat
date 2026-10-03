@@ -239,6 +239,9 @@ const App = (() => {
   /* ── Handler Reset ── */
   function _handleReset() {
     Storage.clear();
+    if (typeof DataManager !== 'undefined' && typeof DataManager.clearAllDrafts === 'function') {
+      DataManager.clearAllDrafts();
+    }
     State.reset();
 
     // Re-render template list tanpa active
