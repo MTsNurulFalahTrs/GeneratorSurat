@@ -1205,7 +1205,6 @@ const Settings = (() => {
   return {
     init,
     updateStorageStatus,
-    syncFromState: _syncAllFromState,
   };
 
 })();
