@@ -274,6 +274,7 @@ const DocumentViewer = (() => {
 
     const panel = document.getElementById('preview-panel');
     if (!panel || panel.hidden) return false;
+    if (panel.inert || panel.getAttribute('aria-hidden') === 'true') return false;
 
     return true;
   }
