@@ -496,9 +496,12 @@ const State = (() => {
     });
 
     settings.typography = settings.typography || {};
-    settings.typography.fontFamily = String(
+    const requestedFont = String(
       settings.typography.fontFamily || DEFAULT_SETTINGS().typography.fontFamily
     );
+    settings.typography.fontFamily = DOCUMENT_FONTS.some(font => font.value === requestedFont)
+      ? requestedFont
+      : DEFAULT_SETTINGS().typography.fontFamily;
     settings.typography.fontSize = _toFiniteNumber(
       settings.typography.fontSize,
       DEFAULT_SETTINGS().typography.fontSize,
@@ -529,9 +532,14 @@ const State = (() => {
     settings.preview = settings.preview || {};
     const previewZoom = settings.preview.zoom;
     const validZoomModes = ['auto', 'fit-page', 'fit-width', 'actual'];
-    if (!validZoomModes.includes(previewZoom)) {
-      settings.preview.zoom = 'actual';
-    }
+    settings.preview.zoom = validZoomModes.includes(previewZoom) ? previewZoom : 'actual';
+    settings.preview.showMarginGuide = _normalizeBoolean(settings.preview.showMarginGuide, false);
+    settings.preview.showPrintableArea = _normalizeBoolean(settings.preview.showPrintableArea, false);
+
+    const validPresets = [...Object.keys(DOCUMENT_PRESETS), 'custom'];
+    settings.activePreset = validPresets.includes(settings.activePreset)
+      ? settings.activePreset
+      : 'custom';
 
     return settings;
   }
