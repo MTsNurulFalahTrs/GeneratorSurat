@@ -281,7 +281,7 @@ const State = (() => {
 
   /* ── Setter: KOP config (partial update) ── */
   function setKop(partial) {
-    _state.kop = Utils.deepMerge(_state.kop, partial);
+    _state.kop = _normalizeKopConfig(Utils.deepMerge(_state.kop, partial));
     _state.ui.isDirty = true;
     emit('kop:change', { kop: Utils.deepClone(_state.kop) });
     emit('state:change', { field: 'kop' });
@@ -291,7 +291,7 @@ const State = (() => {
   function setKopRow(rowId, partial) {
     const idx = _state.kop.rows.findIndex(r => r.id === rowId);
     if (idx === -1) return;
-    _state.kop.rows[idx] = Utils.deepMerge(_state.kop.rows[idx], partial);
+    _state.kop.rows[idx] = _normalizeKopRow(Utils.deepMerge(_state.kop.rows[idx], partial), idx);
     _state.ui.isDirty = true;
     emit('kop:rowChange', { rowId, row: Utils.deepClone(_state.kop.rows[idx]) });
     emit('kop:change', { kop: Utils.deepClone(_state.kop) });
@@ -327,7 +327,7 @@ const State = (() => {
   function setKopLogo(side, partial) {
     if (side !== 'left' && side !== 'right') return;
     const key = side === 'left' ? 'logoLeft' : 'logoRight';
-    _state.kop[key] = Utils.deepMerge(_state.kop[key], partial);
+    _state.kop[key] = _normalizeKopLogo(Utils.deepMerge(_state.kop[key], partial));
     _state.ui.isDirty = true;
     emit('kop:logoChange', { side, logo: Utils.deepClone(_state.kop[key]) });
     emit('kop:change', { kop: Utils.deepClone(_state.kop) });
@@ -565,6 +565,66 @@ const State = (() => {
     { value: 'Courier New',        label: 'Courier New'        },
   ];
 
+  /* ── Sanitize imported/local KOP configuration ── */
+  function _normalizeKopLogo(input, fallback) {
+    const base = Utils.deepClone(fallback || {
+      dataUrl: null,
+      width: 65,
+      height: 65,
+      objectFit: 'contain',
+      verticalAlign: 'center',
+    });
+    const logo = Utils.deepMerge(base, input || {});
+    logo.dataUrl = typeof logo.dataUrl === 'string' && logo.dataUrl.startsWith('data:image/')
+      ? logo.dataUrl
+      : null;
+    logo.width = _toFiniteNumber(logo.width, base.width, 20, 200);
+    logo.height = _toFiniteNumber(logo.height, base.height, 20, 200);
+    logo.objectFit = ['contain', 'cover', 'fill', 'none', 'scale-down'].includes(logo.objectFit)
+      ? logo.objectFit
+      : 'contain';
+    logo.verticalAlign = ['top', 'center', 'bottom'].includes(logo.verticalAlign)
+      ? logo.verticalAlign
+      : 'center';
+    if ('enabled' in logo) logo.enabled = logo.enabled === true;
+    return logo;
+  }
+
+  function _normalizeKopRow(input, index = 0) {
+    const row = Utils.deepMerge(DEFAULT_KOP_ROW(index), input || {});
+    const allowedFonts = DOCUMENT_FONTS.map(font => font.value);
+    const requestedFont = String(row.fontFamily || 'Times New Roman');
+    row.id = typeof row.id === 'string' && row.id.trim()
+      ? row.id
+      : Utils.generateId('kop-row');
+    row.text = String(row.text ?? '');
+    row.fontFamily = allowedFonts.includes(requestedFont) ? requestedFont : 'Times New Roman';
+    row.fontSize = _toFiniteNumber(row.fontSize, DEFAULT_KOP_ROW(index).fontSize, 7, 22);
+    row.bold = row.bold === true;
+    row.italic = row.italic === true;
+    row.underline = row.underline === true;
+    row.textAlign = ['left', 'center', 'right'].includes(row.textAlign) ? row.textAlign : 'center';
+    row.lineHeight = _toFiniteNumber(row.lineHeight, 1.2, 0.5, 3);
+    row.color = /^#[0-9A-F]{6}$/i.test(String(row.color || ''))
+      ? String(row.color).toUpperCase()
+      : '#000000';
+    row.letterSpacing = _toFiniteNumber(row.letterSpacing, 0, -1, 3);
+    row.textTransform = ['none', 'uppercase', 'capitalize', 'lowercase'].includes(row.textTransform)
+      ? row.textTransform
+      : 'none';
+    return row;
+  }
+
+  function _normalizeKopConfig(input) {
+    const defaults = DEFAULT_KOP_CONFIG();
+    const merged = Utils.deepMerge(defaults, input || {});
+    merged.logoLeft = _normalizeKopLogo(merged.logoLeft, defaults.logoLeft);
+    merged.logoRight = _normalizeKopLogo(merged.logoRight, defaults.logoRight);
+    const rows = Array.isArray(merged.rows) ? merged.rows.slice(0, 10) : defaults.rows;
+    merged.rows = rows.map((row, index) => _normalizeKopRow(row, index));
+    return merged;
+  }
+
   /* ────────────────────────────────────────────────
      TABLE CONFIG GETTERS & SETTERS
   ──────────────────────────────────────────────── */
@@ -680,7 +740,7 @@ const State = (() => {
           : null;
       }
       if (savedData.kop) {
-        _state.kop = Utils.deepMerge(DEFAULT_KOP_CONFIG(), savedData.kop);
+        _state.kop = _normalizeKopConfig(Utils.deepMerge(DEFAULT_KOP_CONFIG(), savedData.kop));
       }
       if (savedData.settings) {
         _state.settings = _normalizeSettings(savedData.settings);
