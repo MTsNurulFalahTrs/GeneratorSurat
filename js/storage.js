@@ -96,8 +96,7 @@ const Storage = (() => {
 
   /* ── 5. Cek apakah data sudah expired ── */
   function _isExpired(record) {
-    if (!record) return false;
-    if (!record.expiresAt || typeof record.expiresAt !== 'number') return false;
+    if (!record || !Number.isFinite(record.expiresAt)) return false;
     return Date.now() >= record.expiresAt;
   }
 
