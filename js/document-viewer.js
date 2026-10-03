@@ -274,6 +274,10 @@ const DocumentViewer = (() => {
     const panel = document.getElementById('preview-panel');
     if (!panel || panel.hidden) return false;
 
+    // Saat preview disembunyikan di mobile, panel dibuat inert oleh UI.
+    // Shortcut viewer tidak boleh mengambil alih keyboard di editor.
+    if (panel.inert || panel.getAttribute('aria-hidden') === 'true') return false;
+
     return true;
   }
 
