@@ -748,26 +748,39 @@ const State = (() => {
 
   /* ── Restore state dari data tersimpan ── */
   function restore(savedData) {
-    if (!savedData) return;
+    if (!savedData || typeof savedData !== 'object' || Array.isArray(savedData)) return;
     try {
-      if (savedData.activeTemplate !== undefined) {
-        _state.activeTemplate = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(savedData.activeTemplate)
-          ? savedData.activeTemplate
-          : null;
-      }
-      if (savedData.kop) {
-        _state.kop = _normalizeKop(savedData.kop);
-      }
-      if (savedData.settings) {
-        _state.settings = _normalizeSettings(savedData.settings);
-      }
-      if (savedData.forms) {
-        _state.forms = Utils.deepClone(savedData.forms);
-      }
-      if (savedData.tables && typeof savedData.tables === 'object') {
-        _state.tables = Utils.deepClone(savedData.tables);
-      }
+      // Restore mengganti seluruh data dokumen agar backup/draft parsial tidak
+      // mewarisi form, tabel, KOP, atau settings dari dokumen sebelumnya.
+      const storageAvailable = _state.storage.available;
+      const activeTemplate = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(savedData.activeTemplate)
+        ? savedData.activeTemplate
+        : null;
+      const kop = savedData.kop
+        ? _normalizeKop(savedData.kop)
+        : DEFAULT_KOP_CONFIG();
+      const settings = savedData.settings
+        ? _normalizeSettings(savedData.settings)
+        : DEFAULT_SETTINGS();
+      const forms = savedData.forms && typeof savedData.forms === 'object' && !Array.isArray(savedData.forms)
+        ? Utils.deepClone(savedData.forms)
+        : {};
+      const tables = savedData.tables && typeof savedData.tables === 'object' && !Array.isArray(savedData.tables)
+        ? Utils.deepClone(savedData.tables)
+        : {};
+
+      _state.activeTemplate = activeTemplate;
+      _state.kop = kop;
+      _state.settings = settings;
+      _state.forms = forms;
+      _state.tables = tables;
+      _state.storage = {
+        lastSavedAt: null,
+        expiresAt: null,
+        available: storageAvailable,
+      };
       _state.ui.isDirty = false;
+
       emit('state:restore', { data: savedData });
       emit('state:change', { field: 'all' });
     } catch (err) {
