@@ -26,22 +26,7 @@ const Validation = (() => {
     return result(true);
   }
 
-  /* ── 2. Validasi panjang string ── */
-  function maxLength(value, max, fieldName = 'Field ini') {
-    if (typeof value === 'string' && value.length > max) {
-      return result(false, `${fieldName} maksimal ${max} karakter.`);
-    }
-    return result(true);
-  }
-
-  function minLength(value, min, fieldName = 'Field ini') {
-    if (typeof value === 'string' && value.trim().length < min) {
-      return result(false, `${fieldName} minimal ${min} karakter.`);
-    }
-    return result(true);
-  }
-
-  /* ── 3. Validasi font size KOP (7–22 pt) ── */
+  /* ── 2. Validasi font size KOP (7–22 pt) ── */
   function fontSize(value, fieldName = 'Ukuran font') {
     const num = parseFloat(value);
     if (isNaN(num)) {
@@ -85,38 +70,7 @@ const Validation = (() => {
     return result(true);
   }
 
-  /* ── 6. Validasi data URL gambar (base64) ── */
-  function imageDataUrl(dataUrl) {
-    if (!dataUrl || typeof dataUrl !== 'string') {
-      return result(false, 'Data gambar tidak valid.');
-    }
-    if (!dataUrl.startsWith('data:image/')) {
-      return result(false, 'Format data gambar tidak dikenali.');
-    }
-    return result(true);
-  }
-
-  /* ── 7. Validasi angka dalam rentang ── */
-  function numberRange(value, min, max, fieldName = 'Nilai') {
-    const num = parseFloat(value);
-    if (isNaN(num)) {
-      return result(false, `${fieldName} harus berupa angka.`);
-    }
-    if (num < min || num > max) {
-      return result(false, `${fieldName} harus antara ${min}–${max}.`);
-    }
-    return result(true);
-  }
-
-  /* ── 8. Validasi pilihan dari enum ── */
-  function enumValue(value, allowed, fieldName = 'Pilihan') {
-    if (!allowed.includes(value)) {
-      return result(false, `${fieldName} tidak valid. Pilihan: ${allowed.join(', ')}.`);
-    }
-    return result(true);
-  }
-
-  /* ── 9. Validasi format NISN (10 digit angka) ── */
+  /* ── 6. Validasi format NISN (10 digit angka) ── */
   function nisn(value) {
     if (!value) return result(true); // optional field
     const clean = value.toString().trim();
@@ -162,15 +116,7 @@ const Validation = (() => {
     return result(true);
   }
 
-  /* ── 12. Validasi ukuran logo (px) ── */
-  function logoSize(value, fieldName = 'Ukuran') {
-    const num = parseInt(value, 10);
-    if (isNaN(num)) return result(false, `${fieldName} harus angka.`);
-    if (num < 20 || num > 200) return result(false, `${fieldName} harus antara 20–200 px.`);
-    return result(true);
-  }
-
-  /* ── 13. Validasi KOP config secara menyeluruh ── */
+  /* ── 9. Validasi KOP config secara menyeluruh ── */
   function kopConfig(kop) {
     const errors = [];
 
@@ -201,7 +147,7 @@ const Validation = (() => {
     };
   }
 
-  /* ── 14. Validasi form DPU ── */
+  /* ── 10. Validasi form DPU ── */
   function formDpu(formData) {
     const errors = [];
 
@@ -271,7 +217,7 @@ const Validation = (() => {
     return { valid: errors.length === 0, errors };
   }
 
-  /* ── 15. Validasi form Mutasi Masuk / Siswa Baru ── */
+  /* ── 11. Validasi form Mutasi Masuk / Siswa Baru ── */
   function formSiswa(formData, templateId) {
     const errors = [];
 
@@ -337,7 +283,7 @@ const Validation = (() => {
     return { valid: errors.length === 0, errors };
   }
 
-  /* ── 16. Helper: tampilkan error pada elemen input ── */
+  /* ── 12. Helper: tampilkan error pada elemen input ── */
   function showFieldError(inputEl, message) {
     if (!inputEl) return;
     inputEl.classList.add('is-error');
@@ -354,7 +300,7 @@ const Validation = (() => {
     }
   }
 
-  /* ── 17. Helper: bersihkan error pada elemen input ── */
+  /* ── 13. Helper: bersihkan error pada elemen input ── */
   function clearFieldError(inputEl) {
     if (!inputEl) return;
     inputEl.classList.remove('is-error');
@@ -362,7 +308,7 @@ const Validation = (() => {
     if (errEl) errEl.remove();
   }
 
-  /* ── 18. Helper: validasi satu input dan tampilkan hasilnya ── */
+  /* ── 14. Helper: validasi satu input dan tampilkan hasilnya ── */
   function validateAndShow(inputEl, validationResult) {
     if (!validationResult.valid) {
       showFieldError(inputEl, validationResult.message);
@@ -376,18 +322,12 @@ const Validation = (() => {
   return {
     // Validators
     required,
-    maxLength,
-    minLength,
     fontSize,
     kopRowCount,
     imageFile,
-    imageDataUrl,
-    numberRange,
-    enumValue,
     nisn,
     nik,
     isoDate,
-    logoSize,
     kopConfig,
     formDpu,
     formSiswa,
