@@ -93,7 +93,7 @@ const TemplateSiswaBaru = (() => {
     };
   }
 
-  function _createSiswa(no = 1) {
+  function _createSiswa() {
     return {
       id: Utils.generateId('siswa'),
       nis: '',
