@@ -639,7 +639,6 @@ const DataManager = (() => {
     exportBackup,
     importBackup,
     clearAllDrafts,
-    getActiveDraftId: () => _activeDraftId,
   };
 
 })();
