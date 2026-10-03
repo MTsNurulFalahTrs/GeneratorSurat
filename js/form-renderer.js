@@ -356,7 +356,8 @@ const FormRenderer = (() => {
             value="${Utils.escapeHtml(String(value ?? ''))}"
             placeholder="${Utils.escapeHtml(fieldDef.placeholder || '')}"
             maxlength="${fieldDef.maxLength || 255}"
-            ${fieldDef.required ? 'required' : ''} />`;
+            ${fieldDef.required ? 'required' : ''}
+            ${fieldDef.inputAlign ? `style="text-align:${Utils.escapeHtml(fieldDef.inputAlign)};"` : ''} />`;
         _bindInput(group.querySelector('input'), fieldDef, templateId, itemId, sectionId);
         break;
 
@@ -367,7 +368,8 @@ const FormRenderer = (() => {
             value="${Utils.escapeHtml(String(value ?? ''))}"
             min="${fieldDef.min ?? 0}"
             max="${fieldDef.max ?? 9999}"
-            ${fieldDef.required ? 'required' : ''} />`;
+            ${fieldDef.required ? 'required' : ''}
+            ${fieldDef.inputAlign ? `style="text-align:${Utils.escapeHtml(fieldDef.inputAlign)};"` : ''} />`;
         _bindInput(group.querySelector('input'), fieldDef, templateId, itemId, sectionId);
         break;
 
@@ -389,7 +391,8 @@ const FormRenderer = (() => {
         }).join('');
         group.innerHTML = labelHtml + `
           <select class="form-select" id="${fieldDomId}"
-            ${fieldDef.required ? 'required' : ''}>${opts}</select>`;
+            ${fieldDef.required ? 'required' : ''}
+            ${fieldDef.inputAlign ? `style="text-align:${Utils.escapeHtml(fieldDef.inputAlign)};"` : ''}>${opts}</select>`;
         _bindInput(group.querySelector('select'), fieldDef, templateId, itemId, sectionId);
         break;
       }

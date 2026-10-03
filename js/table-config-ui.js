@@ -330,7 +330,23 @@ const TableConfigUI = (() => {
         <div class="tbl-cfg__section-body${isOpen ? ' is-open' : ''}"
           id="${sectionId}" role="region">
           <div class="tbl-cfg__width-toolbar">
-            <span class="tbl-cfg__width-hint">Lebar berlaku pada Header &amp; Isi tabel.</span>
+            <div class="tbl-cfg__width-toolbar-main">
+              <span class="tbl-cfg__width-hint">Lebar berlaku pada Header &amp; Isi tabel.</span>
+              <div class="tbl-cfg__width-bulk-actions" role="group" aria-label="Mode lebar semua kolom">
+                <button type="button"
+                  class="btn btn--sm btn--secondary"
+                  data-action="bulk-width-mode"
+                  data-table-id="${_esc(tableId)}"
+                  data-value="${TableConfigManager.WIDTH_MODE_AUTO}"
+                  title="Ubah semua kolom menjadi Auto">Semua Auto</button>
+                <button type="button"
+                  class="btn btn--sm btn--primary"
+                  data-action="bulk-width-mode"
+                  data-table-id="${_esc(tableId)}"
+                  data-value="${TableConfigManager.WIDTH_MODE_CUSTOM}"
+                  title="Ubah semua kolom menjadi Manual">Semua Manual</button>
+              </div>
+            </div>
             ${resetWidthBtn}
           </div>
           <div class="tbl-cfg__width-rows">
@@ -855,6 +871,21 @@ const TableConfigUI = (() => {
             const unitSel = row.querySelector('[data-action="col-width-unit"]');
             if (unitSel) unitSel.disabled = !isNowCustom;
           }
+        }
+        break;
+      }
+
+      /* ── Bulk mode semua kolom ── */
+      case 'bulk-width-mode': {
+        if (tableId && [TableConfigManager.WIDTH_MODE_AUTO, TableConfigManager.WIDTH_MODE_CUSTOM].includes(value)) {
+          TableConfigManager.setAllColumnWidthMode(templateId, tableId, value);
+          UI.toast(
+            value === TableConfigManager.WIDTH_MODE_AUTO
+              ? 'Semua kolom diubah ke mode Auto.'
+              : 'Semua kolom diubah ke mode Manual.',
+            'info',
+            1800
+          );
         }
         break;
       }
