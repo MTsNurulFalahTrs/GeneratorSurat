@@ -62,7 +62,10 @@ const TableRenderer = (() => {
 
     // Tentukan apakah ada custom column width
     const columnWidths = tableConfig?.columnWidths;
-    const hasCustom    = TableConfigManager?.hasAnyCustomWidth(columnWidths) ?? false;
+    const hasCustom = typeof TableConfigManager !== 'undefined'
+      && typeof TableConfigManager.hasAnyCustomWidth === 'function'
+      ? TableConfigManager.hasAnyCustomWidth(columnWidths)
+      : false;
 
     // Wrap Text hanya thay đổi perilaku teks di sel. Layout tabel tetap otomatis
     // kecuali user memilih lebar manual atau mode full-width.
@@ -71,7 +74,10 @@ const TableRenderer = (() => {
     // <colgroup> hanya diperlukan saat user mengatur lebar kolom manual.
     let colgroupHtml = '';
     if (hasCustom) {
-      colgroupHtml = TableConfigManager?.buildColGroupHtml(columns, columnWidths) ?? '';
+      if (typeof TableConfigManager !== 'undefined'
+          && typeof TableConfigManager.buildColGroupHtml === 'function') {
+        colgroupHtml = TableConfigManager.buildColGroupHtml(columns, columnWidths);
+      }
     }
 
     // Layout:
