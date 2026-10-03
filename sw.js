@@ -66,7 +66,9 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(
-      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      keys
+        .filter(key => key.startsWith('generator-surat-platform-') && key !== CACHE_NAME)
+        .map(key => caches.delete(key))
     );
     await self.clients.claim();
   })());
@@ -107,7 +109,11 @@ async function staleWhileRevalidate(request) {
     })
     .catch(() => null);
 
-  return cached || network || caches.match('./index.html');
+  const refreshed = await network;
+  return cached
+    || refreshed
+    || caches.match('./index.html')
+    || Response.error();
 }
 
 async function cacheFirst(request) {
