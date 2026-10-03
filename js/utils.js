@@ -84,12 +84,6 @@ const Utils = (() => {
 
   /* ── 5. String Helpers ── */
 
-  /** Truncate string dengan ellipsis */
-  function truncate(str, maxLen = 40) {
-    if (!str) return '';
-    return str.length > maxLen ? str.slice(0, maxLen - 1) + '…' : str;
-  }
-
   /** Escape HTML entities untuk mencegah XSS */
   function escapeHtml(str) {
     if (typeof str !== 'string') return String(str ?? '');
@@ -266,7 +260,6 @@ const Utils = (() => {
     formatDateTime,
     formatDuration,
     formatDateShort,
-    truncate,
     escapeHtml,
     readFileAsDataUrl,
     base64SizeBytes,
