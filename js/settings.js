@@ -791,7 +791,7 @@ const Settings = (() => {
         row?.classList.remove('hidden');
       } else {
         row?.classList.add('hidden');
-        State.setSettings({ print: { scale: parseInt(sel.value, 10) }, activePreset: 'custom' });
+        State.setSettings({ print: { scale: Number(sel.value) }, activePreset: 'custom' });
         _markPresetCustom();
       }
     });
