@@ -5,7 +5,6 @@
 const FormRenderer = (() => {
 
   let _containerEl = null;
-  const _debounced = new WeakMap();
 
   /* ── Inisialisasi ── */
   function init() {
@@ -161,8 +160,33 @@ const FormRenderer = (() => {
 
   /* ── Build repeatable section (daftar siswa/peserta) ── */
   function _buildRepeatableSection(section, formData, templateId, bodyEl) {
-    const dataKey   = section.id; // 'peserta' | 'siswa'
-    const items     = (formData[dataKey] || []);
+    const dataKey = section.id; // 'peserta' | 'siswa'
+    let items = Array.isArray(formData[dataKey]) ? formData[dataKey] : [];
+    let normalized = false;
+
+    items = items.map((item, index) => {
+      if (!item || typeof item !== 'object') {
+        normalized = true;
+        return typeof section.itemFactory === 'function'
+          ? section.itemFactory(index + 1)
+          : {};
+      }
+
+      if (!item.id || typeof item.id !== 'string') {
+        normalized = true;
+        return {
+          ...item,
+          id: Utils.generateId(section.id === 'peserta' ? 'peserta' : 'siswa'),
+        };
+      }
+
+      return item;
+    });
+
+    if (!Array.isArray(formData[dataKey]) || normalized) {
+      State.setFormData(templateId, { [dataKey]: items });
+      formData = State.getFormData(templateId) || formData;
+    }
     const listEl    = document.createElement('div');
     listEl.id       = `repeatable-list-${section.id}`;
 
@@ -185,7 +209,7 @@ const FormRenderer = (() => {
 
     addBtn.addEventListener('click', () => {
       const current = State.getFormData(templateId);
-      const currentItems = current[dataKey] || [];
+      const currentItems = Array.isArray(current?.[dataKey]) ? current[dataKey] : [];
       const newItem = section.itemFactory(currentItems.length + 1);
       const updatedItems = [...currentItems, newItem];
 
@@ -280,7 +304,8 @@ const FormRenderer = (() => {
         () => {
           const current = State.getFormData(templateId);
           const dataKey = section.id;
-          const newItems = current[dataKey].filter(it => it.id !== item.id);
+          const currentItems = Array.isArray(current?.[dataKey]) ? current[dataKey] : [];
+          const newItems = currentItems.filter(it => it.id !== item.id);
           State.setFormData(templateId, { [dataKey]: newItems });
           entry.remove();
           // Renumber entries
