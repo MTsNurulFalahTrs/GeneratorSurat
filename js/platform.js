@@ -235,7 +235,6 @@ const Platform = (() => {
     installApp,
     updateApp,
     getDiagnostics,
-    version: APP_VERSION,
   };
 
 })();
