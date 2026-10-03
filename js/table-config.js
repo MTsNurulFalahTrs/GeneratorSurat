@@ -778,11 +778,14 @@ const TableConfigManager = (() => {
     if ('bold' in obj)   out.bold   = _normalizeBoolean(obj.bold);
     if ('italic' in obj) out.italic = _normalizeBoolean(obj.italic);
     if ('fontSize' in obj) {
-      const n = parseFloat(obj.fontSize);
-      if (!isNaN(n)) {
-        out.fontSize = Utils.clamp(n, FONT_SIZE_MIN, FONT_SIZE_MAX);
-      } else if (obj.fontSize === null) {
+      if (obj.fontSize === null) {
         out.fontSize = null; // reset ke global
+      } else {
+        const raw = String(obj.fontSize).trim();
+        const n = raw === '' ? NaN : Number(raw);
+        if (Number.isFinite(n)) {
+          out.fontSize = Utils.clamp(n, FONT_SIZE_MIN, FONT_SIZE_MAX);
+        }
       }
     }
     // wrapText: true = wrap, false = nowrap.
@@ -805,18 +808,17 @@ const TableConfigManager = (() => {
         out.mode = obj.mode;
       }
     }
-    if ('unit' in obj) {
-      if (VALID_WIDTH_UNITS.includes(obj.unit)) {
-        out.unit = obj.unit;
-      }
+    if ('unit' in obj && VALID_WIDTH_UNITS.includes(obj.unit)) {
+      out.unit = obj.unit;
     }
     if ('value' in obj) {
       if (obj.value === null || obj.value === undefined) {
         // null = reset
       } else {
-        const n    = parseFloat(obj.value);
-        const unit = out.unit || obj.unit || WIDTH_UNIT_PCT;
-        if (!isNaN(n)) {
+        const raw = String(obj.value).trim();
+        const n = raw === '' ? NaN : Number(raw);
+        const unit = out.unit || WIDTH_UNIT_PCT;
+        if (Number.isFinite(n)) {
           if (unit === WIDTH_UNIT_MM) {
             out.value = Utils.clamp(n, WIDTH_MM_MIN, WIDTH_MM_MAX);
           } else {
