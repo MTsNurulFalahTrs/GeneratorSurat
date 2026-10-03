@@ -161,7 +161,7 @@ const FormRenderer = (() => {
   /* ── Build repeatable section (daftar siswa/peserta) ── */
   function _buildRepeatableSection(section, formData, templateId, bodyEl) {
     const dataKey   = section.id; // 'peserta' | 'siswa'
-    const items     = (formData[dataKey] || []);
+    const items     = Array.isArray(formData[dataKey]) ? formData[dataKey] : [];
     const listEl    = document.createElement('div');
     listEl.id       = `repeatable-list-${section.id}`;
 
@@ -279,7 +279,9 @@ const FormRenderer = (() => {
         () => {
           const current = State.getFormData(templateId);
           const dataKey = section.id;
-          const newItems = current[dataKey].filter(it => it.id !== item.id);
+          const newItems = Array.isArray(current?.[dataKey])
+            ? current[dataKey].filter(it => it.id !== item.id)
+            : [];
           State.setFormData(templateId, { [dataKey]: newItems });
           entry.remove();
           // Renumber entries
