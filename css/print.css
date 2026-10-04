@@ -343,6 +343,7 @@
 
   /* ── Tanda tangan: dua baris grid ── */
   .doc-ttd-section {
+    margin-top: 6pt !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
@@ -377,6 +378,10 @@
 
   .doc-ttd-col--catatan {
     text-align: left !important;
+  }
+
+  .doc-content--dpu > .doc-ttd-section--dpu {
+    margin-top: 8pt !important;
   }
 
   /* ── Rekap ── */

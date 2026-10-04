@@ -178,7 +178,7 @@
 }
 
 .doc-content--dpu > .doc-ttd-section--dpu {
-  margin-top: auto;
+  margin-top: 8pt;
 }
 
 .doc-content {
@@ -462,7 +462,7 @@
 
 /* ── 11. Doc Rekap (summary counts) ── */
 .doc-rekap {
-  margin-top: 6pt;
+  margin-top: 3pt;
   font-size: 9pt;
 }
 
@@ -482,7 +482,7 @@
 
 /* ── 12. Doc Tanda Tangan ── */
 .doc-ttd-section {
-  margin-top: 10pt;
+  margin-top: 6pt;
   break-inside: avoid;
   page-break-inside: avoid;
 }
