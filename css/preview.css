@@ -110,6 +110,24 @@
   min-height: 0;
 }
 
+/* ── Nomor halaman pada setiap halaman dokumen ── */
+.surat-page__footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4mm;
+  z-index: 3;
+  text-align: center;
+  font-family: var(--font-surat, serif);
+  font-size: 8pt;
+  line-height: 1.2;
+  font-weight: 400;
+  color: #000;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
 .surat-preview.orientation-landscape {
   width: 297mm;
   min-height: 210mm;

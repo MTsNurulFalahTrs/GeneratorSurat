@@ -842,12 +842,21 @@ const PreviewRenderer = (() => {
       pages.pop();
     }
 
+    const totalPages = pages.length;
+
     pages.forEach((pageState, index) => {
-      pageState.page.dataset.pageNumber = String(index + 1);
-      pageState.page.setAttribute('aria-label', 'Halaman ' + (index + 1));
+      const pageNumber = index + 1;
+      pageState.page.dataset.pageNumber = String(pageNumber);
+      pageState.page.setAttribute('aria-label', 'Halaman ' + pageNumber);
+
+      const footer = pageState.page.querySelector(':scope > .surat-page__footer');
+      if (footer) {
+        footer.textContent = `Halaman ${pageNumber} dari ${totalPages}`;
+        footer.removeAttribute('aria-hidden');
+      }
     });
 
-    _previewEl.dataset.pageCount = String(pages.length);
+    _previewEl.dataset.pageCount = String(totalPages);
     _previewEl.classList.add('surat-preview--document');
     _updatePageInfo(pages.length);
     _updateWrapperHeight(_currentZoom);
@@ -946,6 +955,13 @@ const PreviewRenderer = (() => {
     content.className = 'doc-content';
     if (baseStyle) content.setAttribute('style', baseStyle);
     page.appendChild(content);
+
+    // Footer nomor halaman dibuat di luar .doc-content agar tidak ikut
+    // memengaruhi pengukuran tinggi/pagination isi surat.
+    const footer = document.createElement('div');
+    footer.className = 'surat-page__footer';
+    footer.setAttribute('aria-hidden', 'true');
+    page.appendChild(footer);
 
     if (empty) content.innerHTML = '&nbsp;';
     return { page, content };
