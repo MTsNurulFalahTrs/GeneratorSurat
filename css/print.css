@@ -155,6 +155,24 @@
     color: #000 !important;
   }
 
+  /* DPU: signature block follows the remaining vertical content space
+     and rests against the configured bottom content margin. */
+  .doc-content--dpu {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100% !important;
+  }
+
+  .doc-content--dpu > * {
+    flex-shrink: 0 !important;
+  }
+
+  .doc-content--dpu > .doc-ttd-section--dpu {
+    margin-top: auto !important;
+  }
+
+
+
   /* ── KOP ── */
   .doc-kop {
     display: flex !important;
