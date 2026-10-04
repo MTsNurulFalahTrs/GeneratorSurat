@@ -360,6 +360,11 @@
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   }
 
+  .doc-ttd-grid--dpu {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    column-gap: 8mm !important;
+  }
+
   .doc-ttd-grid--secondary {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     margin-top: 10pt !important;
