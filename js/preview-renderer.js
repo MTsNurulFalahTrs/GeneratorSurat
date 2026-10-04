@@ -532,6 +532,8 @@ const PreviewRenderer = (() => {
       }
     }
 
+    _applyPageNumbering(pages);
+
     _previewEl.dataset.pageCount = String(pages.length);
 
     // Aktifkan mode dokumen setelah seluruh halaman selesai dipaginasi.
@@ -850,18 +852,7 @@ const PreviewRenderer = (() => {
 
     const totalPages = pages.length;
 
-    pages.forEach((pageState, index) => {
-      const pageNumber = index + 1;
-      pageState.page.dataset.pageNumber = String(pageNumber);
-      pageState.page.setAttribute('aria-label', 'Halaman ' + pageNumber);
-
-      // Footer berada di dalam .doc-content sebagai child langsungnya.
-      const footer = pageState.content.querySelector(':scope > .surat-page__footer');
-      if (footer) {
-        footer.textContent = `Halaman ${pageNumber} dari ${totalPages}`;
-        footer.removeAttribute('aria-hidden');
-      }
-    });
+    _applyPageNumbering(pages);
 
     _previewEl.dataset.pageCount = String(totalPages);
     _previewEl.classList.add('surat-preview--document');
@@ -882,6 +873,20 @@ const PreviewRenderer = (() => {
 
       if (sv.showPrintableArea) _reApplyPrintableArea(sv.showPrintableArea);
       else _reApplyPrintableArea(false);
+    });
+  }
+
+  function _applyPageNumbering(pages) {
+    const totalPages = Array.isArray(pages) ? pages.length : 0;
+    if (!totalPages) return;
+
+    pages.forEach((pageState, index) => {
+      if (!pageState?.page) return;
+
+      const pageNumber = index + 1;
+      pageState.page.dataset.pageNumber = String(pageNumber);
+      pageState.page.dataset.pageCount = String(totalPages);
+      pageState.page.setAttribute('aria-label', `Halaman ${pageNumber} dari ${totalPages}`);
     });
   }
 
@@ -963,15 +968,9 @@ const PreviewRenderer = (() => {
     if (baseStyle) content.setAttribute('style', baseStyle);
     page.appendChild(content);
 
-    // Footer ditempatkan di dalam .doc-content agar posisi dan area cetaknya
-    // benar-benar mengikuti bidang kertas setiap halaman. Karena footer
-    // diposisikan absolute, footer tidak ikut memengaruhi pagination isi surat.
-    const footer = document.createElement('div');
-    footer.className = 'surat-page__footer';
-    footer.setAttribute('aria-hidden', 'true');
-    content.appendChild(footer);
-
-    if (empty) content.insertAdjacentHTML('afterbegin', '&nbsp;');
+    // Nomor halaman dirender oleh CSS pseudo-element pada .surat-page.
+    // Tidak ada elemen footer fisik yang ikut dalam flow/pagination.
+    if (empty) content.innerHTML = '&nbsp;';
     return { page, content };
   }
 
