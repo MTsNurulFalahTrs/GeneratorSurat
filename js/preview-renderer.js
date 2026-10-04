@@ -56,7 +56,16 @@ const PreviewRenderer = (() => {
     State.on('kop:change',        debouncedRender);
     State.on('form:change',       debouncedRender);
     State.on('template:change',   debouncedRender);
-    State.on('settings:change',   debouncedRender);
+    State.on('settings:change',   (payload) => {
+      // Gaya footer nomor halaman tidak perlu menunggu pagination/render ulang.
+      // Sinkronkan langsung ke halaman yang sedang tampil agar perubahan UI
+      // terlihat seketika, lalu tetap jalankan render debounced untuk settings
+      // lain yang memang memerlukan layout ulang.
+      if (payload?.settings?.pageNumber) {
+        _syncPageNumberSettings(payload.settings.pageNumber);
+      }
+      debouncedRender();
+    });
     State.on('table:change',      debouncedRender); // ← pengaturan tabel berubah
     State.on('table:reset',       debouncedRender); // ← reset pengaturan tabel
     State.on('state:restore', () => {
@@ -875,16 +884,46 @@ const PreviewRenderer = (() => {
     });
   }
 
-  function _applyPageNumbering(pages) {
+  function _applyPageNumberStyles(page, pageNumberSettings, margin) {
+    if (!page) return;
+
+    const settings = pageNumberSettings || {};
+    const m = margin || State.getMarginMm();
+    const fontFamily = String(settings.fontFamily || 'Times New Roman')
+      .replace(/'/g, "\\'");
+
+    // Alignment kiri/kanan mengikuti tepat margin isi surat.
+    page.style.setProperty('--page-number-display', settings.enabled !== false ? 'block' : 'none');
+    page.style.setProperty('--page-number-left', `${Number(m.left ?? 25)}mm`);
+    page.style.setProperty('--page-number-right', `${Number(m.right ?? 25)}mm`);
+    page.style.setProperty('--page-number-bottom', `${Number(settings.bottomOffset ?? 5)}mm`);
+    page.style.setProperty('--page-number-font-family', `'${fontFamily}', serif`);
+    page.style.setProperty('--page-number-font-size', `${Number(settings.fontSize ?? 8)}pt`);
+    page.style.setProperty('--page-number-color', String(settings.color || '#000000'));
+    page.style.setProperty('--page-number-font-weight', settings.bold ? '700' : '400');
+    page.style.setProperty('--page-number-font-style', settings.italic ? 'italic' : 'normal');
+    page.style.setProperty('--page-number-text-decoration', settings.underline ? 'underline' : 'none');
+    page.style.setProperty('--page-number-text-align', ['left', 'right'].includes(settings.alignment)
+      ? settings.alignment
+      : 'center');
+  }
+
+  function _syncPageNumberSettings(pageNumberSettings = State.getSettings().pageNumber) {
+    if (!_previewEl || !pageNumberSettings) return;
+
+    const pages = Array.from(_previewEl.querySelectorAll(':scope > .surat-page[data-page-count]'));
+    if (!pages.length) return;
+
+    const margin = State.getMarginMm();
+    pages.forEach(page => _applyPageNumberStyles(page, pageNumberSettings, margin));
+  }
+
+  function _applyPageNumberNumbering(pages) {
     const totalPages = Array.isArray(pages) ? pages.length : 0;
     if (!totalPages) return;
 
-    const settings = State.getSettings();
-    const pageNumberSettings = settings.pageNumber || {};
+    const pageNumberSettings = State.getSettings().pageNumber || {};
     const margin = State.getMarginMm();
-
-    const fontFamily = String(pageNumberSettings.fontFamily || 'Times New Roman')
-      .replace(/'/g, "\\'");
 
     pages.forEach((pageState, index) => {
       if (!pageState?.page) return;
@@ -895,22 +934,13 @@ const PreviewRenderer = (() => {
       page.dataset.pageNumber = String(pageNumber);
       page.dataset.pageCount = String(totalPages);
       page.setAttribute('aria-label', `Halaman ${pageNumber} dari ${totalPages}`);
-
-      // Alignment kiri/kanan mengikuti tepat margin isi surat.
-      page.style.setProperty('--page-number-display', pageNumberSettings.enabled !== false ? 'block' : 'none');
-      page.style.setProperty('--page-number-left', `${margin.left}mm`);
-      page.style.setProperty('--page-number-right', `${margin.right}mm`);
-      page.style.setProperty('--page-number-bottom', `${Number(pageNumberSettings.bottomOffset ?? 5)}mm`);
-      page.style.setProperty('--page-number-font-family', `'${fontFamily}', serif`);
-      page.style.setProperty('--page-number-font-size', `${Number(pageNumberSettings.fontSize ?? 8)}pt`);
-      page.style.setProperty('--page-number-color', String(pageNumberSettings.color || '#000000'));
-      page.style.setProperty('--page-number-font-weight', pageNumberSettings.bold ? '700' : '400');
-      page.style.setProperty('--page-number-font-style', pageNumberSettings.italic ? 'italic' : 'normal');
-      page.style.setProperty('--page-number-text-decoration', pageNumberSettings.underline ? 'underline' : 'none');
-      page.style.setProperty('--page-number-text-align', ['left', 'right'].includes(pageNumberSettings.alignment)
-        ? pageNumberSettings.alignment
-        : 'center');
+      _applyPageNumberStyles(page, pageNumberSettings, margin);
     });
+  }
+
+  // Backward-compatible internal name used by the pagination pipeline.
+  function _applyPageNumbering(pages) {
+    _applyPageNumberNumbering(pages);
   }
 
   function _forceLayout(node) {
