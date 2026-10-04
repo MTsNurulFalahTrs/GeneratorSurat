@@ -111,6 +111,20 @@
     min-height: 0 !important;
   }
 
+  .surat-page__footer {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 4mm !important;
+    color: #000 !important;
+    font-family: var(--font-surat, serif) !important;
+    font-size: 8pt !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+    visibility: visible !important;
+  }
+
   .doc-ttd-section,
   .doc-pengesahan-row {
     break-inside: avoid !important;
