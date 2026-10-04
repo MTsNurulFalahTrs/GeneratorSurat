@@ -837,7 +837,13 @@ const PreviewRenderer = (() => {
      */
     while (pages.length > 1) {
       const last = pages[pages.length - 1];
-      if (last.content.children.length > 0) break;
+      const hasFlowContent = Array.from(last.content.children)
+        .some(child => !child.classList.contains('surat-page__footer'));
+
+      // Footer bukan bagian dari isi dokumen, jadi halaman yang hanya berisi
+      // footer tetap dianggap kosong dan boleh dihapus.
+      if (hasFlowContent) break;
+
       last.page.remove();
       pages.pop();
     }
@@ -849,7 +855,8 @@ const PreviewRenderer = (() => {
       pageState.page.dataset.pageNumber = String(pageNumber);
       pageState.page.setAttribute('aria-label', 'Halaman ' + pageNumber);
 
-      const footer = pageState.page.querySelector(':scope > .surat-page__footer');
+      // Footer berada di dalam .doc-content sebagai child langsungnya.
+      const footer = pageState.content.querySelector(':scope > .surat-page__footer');
       if (footer) {
         footer.textContent = `Halaman ${pageNumber} dari ${totalPages}`;
         footer.removeAttribute('aria-hidden');
