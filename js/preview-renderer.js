@@ -956,14 +956,15 @@ const PreviewRenderer = (() => {
     if (baseStyle) content.setAttribute('style', baseStyle);
     page.appendChild(content);
 
-    // Footer nomor halaman dibuat di luar .doc-content agar tidak ikut
-    // memengaruhi pengukuran tinggi/pagination isi surat.
+    // Footer ditempatkan di dalam .doc-content agar posisi dan area cetaknya
+    // benar-benar mengikuti bidang kertas setiap halaman. Karena footer
+    // diposisikan absolute, footer tidak ikut memengaruhi pagination isi surat.
     const footer = document.createElement('div');
     footer.className = 'surat-page__footer';
     footer.setAttribute('aria-hidden', 'true');
-    page.appendChild(footer);
+    content.appendChild(footer);
 
-    if (empty) content.innerHTML = '&nbsp;';
+    if (empty) content.insertAdjacentHTML('afterbegin', '&nbsp;');
     return { page, content };
   }
 
