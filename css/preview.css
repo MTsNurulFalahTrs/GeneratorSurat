@@ -165,6 +165,22 @@
 }
 
 /* ── 6. Document Content (dalam surat-preview) ── */
+/* DPU: isi halaman menjadi kolom penuh agar tanda tangan
+   dapat menempati ruang vertikal yang tersisa sampai margin bawah isi surat. */
+.doc-content--dpu {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.doc-content--dpu > * {
+  flex-shrink: 0;
+}
+
+.doc-content--dpu > .doc-ttd-section--dpu {
+  margin-top: auto;
+}
+
 .doc-content {
   /* Padding (margin surat) diatur via inline style oleh preview-renderer.js
      dari State.getMarginMm(). CSS ini hanya menyediakan font dan warna dasar. */
