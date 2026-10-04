@@ -113,7 +113,7 @@
 /* ── Nomor halaman pada setiap halaman dokumen ──
    Pseudo-element berada langsung pada .surat-page sehingga
    selalu terikat pada batas fisik kertas dan tidak masuk flow. */
-.surat-page::after {
+.surat-page[data-page-count]::after {
   content: "Halaman " attr(data-page-number) " dari " attr(data-page-count);
   position: absolute;
   left: 0;
