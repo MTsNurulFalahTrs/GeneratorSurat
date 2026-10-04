@@ -879,13 +879,37 @@ const PreviewRenderer = (() => {
     const totalPages = Array.isArray(pages) ? pages.length : 0;
     if (!totalPages) return;
 
+    const settings = State.getSettings();
+    const pageNumberSettings = settings.pageNumber || {};
+    const margin = State.getMarginMm();
+
+    const fontFamily = String(pageNumberSettings.fontFamily || 'Times New Roman')
+      .replace(/'/g, "\\'");
+
     pages.forEach((pageState, index) => {
       if (!pageState?.page) return;
 
       const pageNumber = index + 1;
-      pageState.page.dataset.pageNumber = String(pageNumber);
-      pageState.page.dataset.pageCount = String(totalPages);
-      pageState.page.setAttribute('aria-label', `Halaman ${pageNumber} dari ${totalPages}`);
+      const page = pageState.page;
+
+      page.dataset.pageNumber = String(pageNumber);
+      page.dataset.pageCount = String(totalPages);
+      page.setAttribute('aria-label', `Halaman ${pageNumber} dari ${totalPages}`);
+
+      // Alignment kiri/kanan mengikuti tepat margin isi surat.
+      page.style.setProperty('--page-number-display', pageNumberSettings.enabled !== false ? 'block' : 'none');
+      page.style.setProperty('--page-number-left', `${margin.left}mm`);
+      page.style.setProperty('--page-number-right', `${margin.right}mm`);
+      page.style.setProperty('--page-number-bottom', `${Number(pageNumberSettings.bottomOffset ?? 5)}mm`);
+      page.style.setProperty('--page-number-font-family', `'${fontFamily}', serif`);
+      page.style.setProperty('--page-number-font-size', `${Number(pageNumberSettings.fontSize ?? 8)}pt`);
+      page.style.setProperty('--page-number-color', String(pageNumberSettings.color || '#000000'));
+      page.style.setProperty('--page-number-font-weight', pageNumberSettings.bold ? '700' : '400');
+      page.style.setProperty('--page-number-font-style', pageNumberSettings.italic ? 'italic' : 'normal');
+      page.style.setProperty('--page-number-text-decoration', pageNumberSettings.underline ? 'underline' : 'none');
+      page.style.setProperty('--page-number-text-align', ['left', 'right'].includes(pageNumberSettings.alignment)
+        ? pageNumberSettings.alignment
+        : 'center');
     });
   }
 

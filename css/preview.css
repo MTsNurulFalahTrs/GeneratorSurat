@@ -116,17 +116,19 @@
 .surat-page[data-page-count]::after {
   content: "Halaman " attr(data-page-number) " dari " attr(data-page-count);
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 5mm;
+  left: var(--page-number-left, 25mm);
+  right: var(--page-number-right, 25mm);
+  bottom: var(--page-number-bottom, 5mm);
   z-index: 10;
-  display: block;
-  text-align: center;
-  font-family: var(--font-surat, serif);
-  font-size: 8pt;
+  display: var(--page-number-display, block);
+  text-align: var(--page-number-text-align, center);
+  font-family: var(--page-number-font-family, var(--font-surat, serif));
+  font-size: var(--page-number-font-size, 8pt);
   line-height: 1.2;
-  font-weight: 400;
-  color: #000;
+  font-weight: var(--page-number-font-weight, 400);
+  font-style: var(--page-number-font-style, normal);
+  text-decoration: var(--page-number-text-decoration, none);
+  color: var(--page-number-color, #000);
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
