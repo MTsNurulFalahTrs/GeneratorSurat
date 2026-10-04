@@ -436,7 +436,7 @@ const PreviewRenderer = (() => {
               </p>
               <p>NIP. ${_esc(ttd.katimKesiswaan?.nip) || '-'}</p>
             </div>
-            <div class="doc-pengesahan-col" style="text-align:center;">
+            <div class="doc-ttd-col" style="text-align:center;">
               <p>${_esc(kotaPalembang)}, ____________________</p>
               <p>Mengesahkan,</p>
               <p>Kepala Bidang Mapenda</p>
