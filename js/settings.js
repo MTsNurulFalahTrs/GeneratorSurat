@@ -41,11 +41,18 @@ const Settings = (() => {
     State.on('state:reset',   () => { if (_initialized) _syncAllFromState(); });
     State.on('settings:reset',() => { if (_initialized) _syncAllFromState(); });
     State.on('settings:change', ({ settings }) => {
-      if (!_initialized || !settings?.preview) return;
-      const mode = typeof settings.preview.zoom === 'string' ? settings.preview.zoom : 'actual';
-      document.getElementById('zoom-mode-seg')
-        ?.querySelectorAll('.seg-btn')
-        .forEach(btn => btn.classList.toggle('active', btn.dataset.zoom === mode));
+      if (!_initialized) return;
+
+      if (settings?.preview) {
+        const mode = typeof settings.preview.zoom === 'string' ? settings.preview.zoom : 'actual';
+        document.getElementById('zoom-mode-seg')
+          ?.querySelectorAll('.seg-btn')
+          .forEach(btn => btn.classList.toggle('active', btn.dataset.zoom === mode));
+      }
+
+      if (settings?.pageNumber) {
+        _syncPageNumberControls(settings.pageNumber);
+      }
     });
     State.on('settings:presetApplied', () => { if (_initialized) _syncAllFromState(); });
   }
@@ -298,6 +305,103 @@ const Settings = (() => {
         </div>
       </div>
 
+      <!-- ── FOOTER NOMOR HALAMAN ──────────────────── -->
+      <div class="settings-card" id="settings-card-page-number">
+        <div class="settings-card__header">
+          <span class="settings-card__icon">🔢</span>
+          <span class="settings-card__title">Footer Nomor Halaman</span>
+        </div>
+        <div class="settings-card__body">
+
+          <div class="settings-row settings-row--between">
+            <div>
+              <label class="settings-label" for="page-number-enabled">Tampilkan Footer</label>
+              <p class="settings-hint">Nomor halaman ditampilkan pada setiap halaman surat.</p>
+            </div>
+            <label class="toggle-switch" title="Tampilkan footer nomor halaman">
+              <input type="checkbox" class="toggle-switch__input" id="page-number-enabled" />
+              <span class="toggle-switch__track"></span>
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label">Alignment</label>
+            <div class="seg-control" id="page-number-align-seg" role="group" aria-label="Alignment footer nomor halaman">
+              <button type="button" class="seg-btn" data-align="left">Kiri</button>
+              <button type="button" class="seg-btn" data-align="center">Tengah</button>
+              <button type="button" class="seg-btn" data-align="right">Kanan</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label" for="page-number-font-family">Font</label>
+            <select class="form-select settings-select" id="page-number-font-family"
+              style="font-family: inherit;">
+              ${(State.DOCUMENT_FONTS || []).map(f =>
+                `<option value="${Utils.escapeHtml(f.value)}"
+                  style="font-family:'${Utils.escapeHtml(f.value)}';">
+                  ${Utils.escapeHtml(f.label)}
+                </option>`
+              ).join('')}
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label" for="page-number-font-size">Ukuran Font</label>
+            <div class="input-stepper" style="width:120px;">
+              <button type="button" class="input-stepper__btn" id="page-number-font-size-dec"
+                aria-label="Kurangi ukuran font footer">−</button>
+              <input type="number" class="input-stepper__input" id="page-number-font-size"
+                value="8" min="6" max="14" step="0.5"
+                aria-label="Ukuran font footer nomor halaman (pt)" />
+              <button type="button" class="input-stepper__btn" id="page-number-font-size-inc"
+                aria-label="Tambah ukuran font footer">+</button>
+            </div>
+            <span class="input-unit-badge" style="border-radius:var(--radius-md);
+              border:1px solid var(--color-border);padding:4px 8px;">pt</span>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label" for="page-number-color">Warna Font</label>
+            <div class="color-input-wrap">
+              <input type="color" id="page-number-color" value="#000000"
+                aria-label="Warna font footer nomor halaman" />
+              <input type="text" class="color-hex-input" id="page-number-color-hex"
+                value="#000000" maxlength="7" spellcheck="false"
+                aria-label="Kode warna footer nomor halaman" />
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label">Gaya Font</label>
+            <div class="seg-control" id="page-number-style-seg" role="group" aria-label="Gaya footer nomor halaman">
+              <button type="button" class="seg-btn" data-style="bold"><strong>B</strong></button>
+              <button type="button" class="seg-btn" data-style="italic"><em>I</em></button>
+              <button type="button" class="seg-btn" data-style="underline"><u>U</u></button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label" for="page-number-bottom-offset">Jarak dari bawah kertas</label>
+            <div class="input-with-unit">
+              <input type="number" class="form-input" id="page-number-bottom-offset"
+                min="1" max="20" step="0.5" value="5" style="width:90px;" />
+              <span class="input-unit-badge">mm</span>
+            </div>
+          </div>
+
+          <div class="settings-hint">
+            Alignment kiri/kanan otomatis mengikuti <strong>margin kiri/kanan isi surat</strong>.
+            Footer tidak memengaruhi pembagian halaman maupun tinggi tabel.
+          </div>
+
+          <div class="typo-preview" id="page-number-preview" aria-label="Pratinjau gaya footer nomor halaman">
+            <span>Halaman 1 dari 5</span>
+          </div>
+
+        </div>
+      </div>
+
       <!-- ── CETAK ─────────────────────────────────── -->
       <div class="settings-card" id="settings-card-print">
         <div class="settings-card__header">
@@ -525,6 +629,7 @@ const Settings = (() => {
     _bindMarginInputs();
     _bindPrintScale();
     _bindPreviewControls();
+    _bindPageNumberControls();
     _bindStorageActions();
     if (typeof DataManager !== 'undefined') {
       DataManager.mount(document.getElementById('data-manager-root'));
@@ -833,6 +938,131 @@ const Settings = (() => {
     });
   }
 
+  /* ── Footer nomor halaman ── */
+  function _bindPageNumberControls() {
+    const enabledEl = document.getElementById('page-number-enabled');
+    const alignSeg = document.getElementById('page-number-align-seg');
+    const fontSel = document.getElementById('page-number-font-family');
+    const sizeInput = document.getElementById('page-number-font-size');
+    const sizeDecBtn = document.getElementById('page-number-font-size-dec');
+    const sizeIncBtn = document.getElementById('page-number-font-size-inc');
+    const colorEl = document.getElementById('page-number-color');
+    const colorHexEl = document.getElementById('page-number-color-hex');
+    const styleSeg = document.getElementById('page-number-style-seg');
+    const bottomInput = document.getElementById('page-number-bottom-offset');
+
+    enabledEl?.addEventListener('change', (e) => {
+      State.setSettings({ pageNumber: { enabled: e.target.checked }, activePreset: 'custom' });
+    });
+
+    alignSeg?.querySelectorAll('.seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const alignment = btn.dataset.align;
+        State.setSettings({ pageNumber: { alignment }, activePreset: 'custom' });
+        _syncPageNumberControls(State.getSettings().pageNumber);
+      });
+    });
+
+    fontSel?.addEventListener('change', () => {
+      State.setSettings({ pageNumber: { fontFamily: fontSel.value }, activePreset: 'custom' });
+    });
+
+    const saveSize = () => {
+      const size = Utils.clamp(Utils.safeFloat(sizeInput?.value, 8), 6, 14);
+      if (sizeInput) sizeInput.value = size;
+      State.setSettings({ pageNumber: { fontSize: size }, activePreset: 'custom' });
+      _updatePageNumberPreview();
+    };
+
+    sizeDecBtn?.addEventListener('click', () => {
+      const cur = Utils.safeFloat(sizeInput?.value, 8);
+      if (sizeInput) sizeInput.value = Utils.clamp(cur - 0.5, 6, 14);
+      saveSize();
+    });
+    sizeIncBtn?.addEventListener('click', () => {
+      const cur = Utils.safeFloat(sizeInput?.value, 8);
+      if (sizeInput) sizeInput.value = Utils.clamp(cur + 0.5, 6, 14);
+      saveSize();
+    });
+    sizeInput?.addEventListener('input', Utils.debounce(saveSize, 250));
+    sizeInput?.addEventListener('change', saveSize);
+
+    const applyColor = (value) => {
+      const color = String(value || '').trim();
+      if (!/^#[0-9a-f]{6}$/i.test(color)) return;
+      const normalized = color.toUpperCase();
+      if (colorEl) colorEl.value = normalized;
+      if (colorHexEl) colorHexEl.value = normalized;
+      State.setSettings({ pageNumber: { color: normalized }, activePreset: 'custom' });
+      _updatePageNumberPreview();
+    };
+
+    colorEl?.addEventListener('input', () => applyColor(colorEl.value));
+    colorHexEl?.addEventListener('change', () => applyColor(colorHexEl.value));
+
+    styleSeg?.querySelectorAll('.seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.style;
+        const current = State.getSettings().pageNumber?.[key] === true;
+        State.setSettings({ pageNumber: { [key]: !current }, activePreset: 'custom' });
+        _syncPageNumberControls(State.getSettings().pageNumber);
+      });
+    });
+
+    const saveBottom = () => {
+      const value = Utils.clamp(Utils.safeFloat(bottomInput?.value, 5), 1, 20);
+      if (bottomInput) bottomInput.value = value;
+      State.setSettings({ pageNumber: { bottomOffset: value }, activePreset: 'custom' });
+      _updatePageNumberPreview();
+    };
+    bottomInput?.addEventListener('input', Utils.debounce(saveBottom, 250));
+    bottomInput?.addEventListener('change', saveBottom);
+  }
+
+  function _syncPageNumberControls(pageNumber = State.getSettings().pageNumber) {
+    if (!pageNumber) return;
+
+    const enabledEl = document.getElementById('page-number-enabled');
+    if (enabledEl) enabledEl.checked = !!pageNumber.enabled;
+
+    document.getElementById('page-number-align-seg')
+      ?.querySelectorAll('.seg-btn')
+      .forEach(btn => btn.classList.toggle('active', btn.dataset.align === pageNumber.alignment));
+
+    const fontSel = document.getElementById('page-number-font-family');
+    if (fontSel) fontSel.value = pageNumber.fontFamily;
+
+    const sizeInput = document.getElementById('page-number-font-size');
+    if (sizeInput) sizeInput.value = pageNumber.fontSize;
+
+    const colorEl = document.getElementById('page-number-color');
+    const colorHexEl = document.getElementById('page-number-color-hex');
+    if (colorEl) colorEl.value = pageNumber.color;
+    if (colorHexEl) colorHexEl.value = pageNumber.color;
+
+    document.getElementById('page-number-style-seg')
+      ?.querySelectorAll('.seg-btn')
+      .forEach(btn => btn.classList.toggle('active', pageNumber[btn.dataset.style] === true));
+
+    const bottomInput = document.getElementById('page-number-bottom-offset');
+    if (bottomInput) bottomInput.value = pageNumber.bottomOffset;
+
+    _updatePageNumberPreview(pageNumber);
+  }
+
+  function _updatePageNumberPreview(pageNumber = State.getSettings().pageNumber) {
+    const preview = document.getElementById('page-number-preview');
+    if (!preview || !pageNumber) return;
+
+    preview.style.textAlign = pageNumber.alignment;
+    preview.style.fontFamily = `'${pageNumber.fontFamily}', serif`;
+    preview.style.fontSize = `${pageNumber.fontSize}pt`;
+    preview.style.color = pageNumber.color;
+    preview.style.fontWeight = pageNumber.bold ? '700' : '400';
+    preview.style.fontStyle = pageNumber.italic ? 'italic' : 'normal';
+    preview.style.textDecoration = pageNumber.underline ? 'underline' : 'none';
+  }
+
   /* ── Storage / action buttons ── */
   function _bindStorageActions() {
     // Reset Pengaturan saja
@@ -911,6 +1141,9 @@ const Settings = (() => {
 
     // Apply zoom mode
     _applyZoomMode(s.preview.zoom);
+
+    // Footer nomor halaman
+    _syncPageNumberControls(s.pageNumber);
 
     // Storage status
     updateStorageStatus();
