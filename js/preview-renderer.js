@@ -839,11 +839,10 @@ const PreviewRenderer = (() => {
      */
     while (pages.length > 1) {
       const last = pages[pages.length - 1];
-      const hasFlowContent = Array.from(last.content.children)
-        .some(child => !child.classList.contains('surat-page__footer'));
+      const hasFlowContent = last.content.children.length > 0;
 
-      // Footer bukan bagian dari isi dokumen, jadi halaman yang hanya berisi
-      // footer tetap dianggap kosong dan boleh dihapus.
+      // Nomor halaman dirender sebagai pseudo-element di .surat-page,
+      // sehingga tidak menjadi bagian dari flow isi dokumen.
       if (hasFlowContent) break;
 
       last.page.remove();
