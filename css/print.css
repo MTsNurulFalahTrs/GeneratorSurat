@@ -323,13 +323,37 @@
     padding: 0 4pt !important;
   }
 
-  /* ── Tanda tangan ── */
+  /* ── Tanda tangan: dua baris grid ── */
   .doc-ttd-section {
+    break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
 
-  .doc-ttd-row {
-    display: flex !important;
+  .doc-ttd-grid {
+    display: grid !important;
+    width: 100% !important;
+    gap: 0 !important;
+    align-items: start !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .doc-ttd-grid--primary {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .doc-ttd-grid--secondary {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    margin-top: 10pt !important;
+  }
+
+  .doc-ttd-col {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+  }
+
+  .doc-ttd-col--catatan {
+    text-align: left !important;
   }
 
   /* ── Rekap ── */
