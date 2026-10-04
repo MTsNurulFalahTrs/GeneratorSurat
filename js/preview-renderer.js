@@ -216,7 +216,7 @@ const PreviewRenderer = (() => {
     const ttdHtml = _buildTtdDpu(ttd);
 
     return `
-      <div class="doc-content" style="${marginStyle}">
+      <div class="doc-content doc-content--dpu" style="${marginStyle}">
         ${kopHtml}
         <hr class="doc-kop-divider" />
         <hr class="doc-kop-divider-thin" />
@@ -235,7 +235,7 @@ const PreviewRenderer = (() => {
     const p3 = ttd.pihak3 || {};
 
     return `
-      <div class="doc-ttd-section">
+      <div class="doc-ttd-section doc-ttd-section--dpu">
         <div class="doc-ttd-grid doc-ttd-grid--primary">
           <div class="doc-ttd-col">
             <p class="doc-ttd-col__place">Mengetahui,</p>
@@ -606,6 +606,7 @@ const PreviewRenderer = (() => {
         paperHeightPx,
         baseStyle
       );
+      pageState.content.classList.add('doc-content--dpu');
       _previewEl.appendChild(pageState.page);
       pages.push(pageState);
       return pageState;
