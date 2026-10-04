@@ -391,7 +391,7 @@ const PreviewRenderer = (() => {
     return `
       <div class="doc-ttd-section">
         <!-- Baris 1: 4 pihak -->
-        <div class="doc-ttd-row">
+        <div class="doc-ttd-grid doc-ttd-grid--primary">
           <div class="doc-ttd-col">
             <p class="doc-ttd-col__place">${_esc(kp.label || 'Mengetahui,')}</p>
             <p class="doc-ttd-col__role">${_esc(kp.jabatan || 'Kasi Penmad / Pendis')}</p>
@@ -424,10 +424,10 @@ const PreviewRenderer = (() => {
 
         <!-- Baris 2: Catatan, Katim Kesiswaan, dan Kepala Bidang Mapenda -->
         <div class="doc-ttd-grid doc-ttd-grid--secondary">
-            <div class="doc-pengesahan-col doc-pengesahan-col--catatan">
+            <div class="doc-ttd-col doc-ttd-col--catatan">
               ${_buildCatatanHtml(catatan)}
             </div>
-            <div class="doc-pengesahan-col" style="text-align:center;">
+            <div class="doc-ttd-col" style="text-align:center;">
               <p>Mengesahkan,</p>
               <p>Katim Kesiswaan,</p>
               <br/><br/><br/>
@@ -436,7 +436,7 @@ const PreviewRenderer = (() => {
               </p>
               <p>NIP. ${_esc(ttd.katimKesiswaan?.nip) || '-'}</p>
             </div>
-            <div class="doc-pengesahan-col" style="text-align:center;">
+            <div class="doc-ttd-col" style="text-align:center;">
               <p>${_esc(kotaPalembang)}, ____________________</p>
               <p>Mengesahkan,</p>
               <p>Kepala Bidang Mapenda</p>
@@ -784,6 +784,77 @@ const PreviewRenderer = (() => {
   }
 
 
+  function _appendTtdSectionWithPagination(section, current, pages, paperWidthPx, paperHeightPx, baseStyle, renderToken) {
+    if (!section || !current || renderToken !== _renderToken) return current;
+
+    const rows = Array.from(section.children)
+      .filter(child => child.matches('.doc-ttd-grid'));
+
+    // Fallback untuk struktur lama atau section kosong.
+    if (!rows.length) {
+      current.content.appendChild(section);
+      _forceLayout(section);
+
+      if (_fitsOnPage(current.content, section) || current.content.children.length === 1) {
+        return current;
+      }
+
+      current.content.removeChild(section);
+      current = _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle);
+      current.content.appendChild(section);
+      _forceLayout(section);
+      return current;
+    }
+
+    rows.forEach((row, index) => {
+      if (renderToken !== _renderToken) return;
+
+      /*
+       * Setiap baris ditempatkan di wrapper .doc-ttd-section sendiri agar
+       * margin/layout tanda tangan tetap konsisten meskipun baris terpisah
+       * ke halaman berbeda.
+       *
+       * Baris pertama mempertahankan margin-top section. Untuk baris lanjutan,
+       * margin-top section dihilangkan karena .doc-ttd-grid--secondary sendiri
+       * sudah mempunyai jarak vertikal.
+       */
+      const rowSection = section.cloneNode(false);
+      if (index > 0) rowSection.style.marginTop = '0';
+      rowSection.appendChild(row);
+      current.content.appendChild(rowSection);
+
+      _forceLayout(row);
+      _forceLayout(rowSection);
+
+      if (_fitsOnPage(current.content, rowSection)) return;
+
+      current.content.removeChild(rowSection);
+
+      /*
+       * Bila baris lebih tinggi dari ruang satu halaman penuh, jangan putus
+       * grid menjadi bagian-bagian kecil. Pertahankan sebagai satu blok pada
+       * halaman baru agar tetap terbaca.
+       */
+      if (current.content.children.length === 0) {
+        current.content.appendChild(rowSection);
+        _forceLayout(rowSection);
+        return;
+      }
+
+      current = _appendNewPreviewPage(
+        pages,
+        paperWidthPx,
+        paperHeightPx,
+        baseStyle
+      );
+
+      current.content.appendChild(rowSection);
+      _forceLayout(rowSection);
+    });
+
+    return current;
+  }
+
   function _paginatePreviewGeneric(source, children, renderToken, paperWidthPx, paperHeightPx, baseStyle) {
     const pages = [];
     _previewEl.innerHTML = '';
@@ -813,6 +884,27 @@ const PreviewRenderer = (() => {
             renderToken
           );
           current = pages[pages.length - 1];
+          continue;
+        }
+
+        /*
+         * Tanda tangan Mutasi Siswa/Siswa Baru terdiri dari dua grid yang
+         * masing-masing harus dipaginasi sebagai blok atomik terpisah.
+         *
+         * Dengan cara ini, baris pertama (4 tanda tangan) tetap ditempatkan
+         * pada halaman saat ini selama masih muat. Hanya baris yang benar-benar
+         * tidak muat yang dipindahkan ke halaman berikutnya.
+         */
+        if (child.matches('.doc-ttd-section')) {
+          current = _appendTtdSectionWithPagination(
+            child,
+            current,
+            pages,
+            paperWidthPx,
+            paperHeightPx,
+            baseStyle,
+            renderToken
+          );
           continue;
         }
 
