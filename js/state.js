@@ -90,6 +90,17 @@ const State = (() => {
       showMarginGuide: false,
       showPrintableArea: false,
     },
+    pageNumber: {
+      enabled: true,
+      alignment: 'center',
+      fontFamily: 'Times New Roman',
+      fontSize: 8,
+      color: '#000000',
+      bold: false,
+      italic: false,
+      underline: false,
+      bottomOffset: 5,
+    },
     activePreset: 'a4-normal',
   });
 
@@ -545,6 +556,44 @@ const State = (() => {
     settings.preview.zoom = validZoomModes.includes(previewZoom) ? previewZoom : 'actual';
     settings.preview.showMarginGuide = _normalizeBoolean(settings.preview.showMarginGuide, false);
     settings.preview.showPrintableArea = _normalizeBoolean(settings.preview.showPrintableArea, false);
+
+    settings.pageNumber = settings.pageNumber || {};
+    settings.pageNumber.enabled = _normalizeBoolean(settings.pageNumber.enabled, true);
+    settings.pageNumber.alignment = ['left', 'center', 'right'].includes(settings.pageNumber.alignment)
+      ? settings.pageNumber.alignment
+      : DEFAULT_SETTINGS().pageNumber.alignment;
+
+    const pageFont = String(
+      settings.pageNumber.fontFamily || DEFAULT_SETTINGS().pageNumber.fontFamily
+    );
+    settings.pageNumber.fontFamily = DOCUMENT_FONTS.some(font => font.value === pageFont)
+      ? pageFont
+      : DEFAULT_SETTINGS().pageNumber.fontFamily;
+
+    settings.pageNumber.fontSize = _toFiniteNumber(
+      settings.pageNumber.fontSize,
+      DEFAULT_SETTINGS().pageNumber.fontSize,
+      6,
+      14
+    );
+
+    const pageColor = String(
+      settings.pageNumber.color || DEFAULT_SETTINGS().pageNumber.color
+    ).trim();
+    settings.pageNumber.color = /^#[0-9a-f]{6}$/i.test(pageColor)
+      ? pageColor.toUpperCase()
+      : DEFAULT_SETTINGS().pageNumber.color;
+
+    settings.pageNumber.bold = _normalizeBoolean(settings.pageNumber.bold, false);
+    settings.pageNumber.italic = _normalizeBoolean(settings.pageNumber.italic, false);
+    settings.pageNumber.underline = _normalizeBoolean(settings.pageNumber.underline, false);
+
+    settings.pageNumber.bottomOffset = _toFiniteNumber(
+      settings.pageNumber.bottomOffset,
+      DEFAULT_SETTINGS().pageNumber.bottomOffset,
+      1,
+      20
+    );
 
     const validPresets = [...Object.keys(DOCUMENT_PRESETS), 'custom'];
     settings.activePreset = validPresets.includes(settings.activePreset)
