@@ -236,7 +236,7 @@ const PreviewRenderer = (() => {
 
     return `
       <div class="doc-ttd-section doc-ttd-section--dpu">
-        <div class="doc-ttd-grid doc-ttd-grid--primary">
+        <div class="doc-ttd-grid doc-ttd-grid--dpu">
           <div class="doc-ttd-col">
             <p class="doc-ttd-col__place">Mengetahui,</p>
             <p class="doc-ttd-col__role">a.n. Kepala Kantor Wilayah Kemenag Prov. Sumsel</p>
