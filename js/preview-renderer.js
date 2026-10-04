@@ -884,19 +884,7 @@ const PreviewRenderer = (() => {
     const margin = State.getMarginMm();
 
     const fontFamily = String(pageNumberSettings.fontFamily || 'Times New Roman')
-      .replace(/['\\]/g, '\\  function _applyPageNumbering(pages) {
-    const totalPages = Array.isArray(pages) ? pages.length : 0;
-    if (!totalPages) return;
-
-    pages.forEach((pageState, index) => {
-      if (!pageState?.page) return;
-
-      const pageNumber = index + 1;
-      pageState.page.dataset.pageNumber = String(pageNumber);
-      pageState.page.dataset.pageCount = String(totalPages);
-      pageState.page.setAttribute('aria-label', `Halaman ${pageNumber} dari ${totalPages}`);
-    });
-  }');
+      .replace(/'/g, "\\'");
 
     pages.forEach((pageState, index) => {
       if (!pageState?.page) return;
