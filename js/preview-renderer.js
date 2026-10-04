@@ -236,7 +236,7 @@ const PreviewRenderer = (() => {
 
     return `
       <div class="doc-ttd-section">
-        <div class="doc-ttd-row">
+        <div class="doc-ttd-grid doc-ttd-grid--primary">
           <div class="doc-ttd-col">
             <p class="doc-ttd-col__place">Mengetahui,</p>
             <p class="doc-ttd-col__role">a.n. Kepala Kantor Wilayah Kemenag Prov. Sumsel</p>
@@ -422,9 +422,8 @@ const PreviewRenderer = (() => {
           </div>
         </div>
 
-        <!-- Pengesahan Palembang -->
-        <div class="doc-pengesahan-extra">
-          <div class="doc-pengesahan-row">
+        <!-- Baris 2: Catatan, Katim Kesiswaan, dan Kepala Bidang Mapenda -->
+        <div class="doc-ttd-grid doc-ttd-grid--secondary">
             <div class="doc-pengesahan-col doc-pengesahan-col--catatan">
               ${_buildCatatanHtml(catatan)}
             </div>
@@ -448,7 +447,6 @@ const PreviewRenderer = (() => {
               </p>
               <p>NIP. ${_esc(kbm.nip) || '-'}</p>
             </div>
-          </div>
         </div>
       </div>`;
   }

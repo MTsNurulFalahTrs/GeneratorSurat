@@ -467,20 +467,34 @@
 /* ── 12. Doc Tanda Tangan ── */
 .doc-ttd-section {
   margin-top: 10pt;
+  break-inside: avoid;
   page-break-inside: avoid;
 }
 
-.doc-ttd-row {
-  display: flex;
+.doc-ttd-grid {
+  display: grid;
   gap: 0;
-  justify-content: space-between;
+  width: 100%;
+  align-items: start;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.doc-ttd-grid--primary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.doc-ttd-grid--secondary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 10pt;
 }
 
 .doc-ttd-col {
-  flex: 1;
+  min-width: 0;
   text-align: center;
   font-size: 8pt;
   padding: 0 4pt;
+  box-sizing: border-box;
 }
 
 .doc-ttd-col:first-child {
@@ -489,6 +503,10 @@
 
 .doc-ttd-col:last-child {
   padding-right: 0;
+}
+
+.doc-ttd-col--catatan {
+  text-align: left;
 }
 
 .doc-ttd-col__place {
@@ -501,7 +519,7 @@
 }
 
 .doc-ttd-col__space {
-  height: 40pt; /* ruang tanda tangan */
+  height: 40pt;
 }
 
 .doc-ttd-col__name {
@@ -537,33 +555,7 @@
   margin-bottom: 1pt;
 }
 
-/* ── 14. Doc Pengesahan Extra (Palembang section) ── */
-.doc-pengesahan-extra {
-  margin-top: 12pt;
-  font-size: 8pt;
-}
-
-.doc-pengesahan-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  align-items: start;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.doc-pengesahan-col {
-  min-width: 0;
-  text-align: center;
-  padding: 0 4pt;
-  font-size: 8pt;
-  box-sizing: border-box;
-}
-
-.doc-pengesahan-col--catatan {
-  text-align: left;
-}
-
+/* ── 14. Legacy Pengesahan ── */
 /* ── 15. Empty cell placeholder ── */
 .doc-empty-row {
   background: #fafafa;
