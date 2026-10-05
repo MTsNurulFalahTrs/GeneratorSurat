@@ -14,14 +14,25 @@ const PdfExport = (() => {
   let _exporting = false;
 
   function _getLibrary() {
-    const html2canvasReady = typeof html2canvas === 'function';
-    const jsPdfCtor = window.jspdf?.jsPDF;
+    const html2pdfCtor = window.html2pdf;
 
-    if (!html2canvasReady || typeof jsPdfCtor !== 'function') {
+    if (typeof html2pdfCtor !== 'function') {
       return null;
     }
 
-    return { html2canvas, jsPDF: jsPdfCtor };
+    return { html2pdf: html2pdfCtor };
+  }
+
+  async function _waitForLibrary(timeoutMs = 8000) {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+      const library = _getLibrary();
+      if (library) return library;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    return null;
   }
 
   function _getFilename(templateId) {
@@ -186,9 +197,9 @@ const PdfExport = (() => {
       return;
     }
 
-    const library = _getLibrary();
+    const library = await _waitForLibrary();
     if (!library) {
-      UI.toast('Mesin ekspor PDF belum tersedia. Periksa koneksi internet lalu muat ulang aplikasi.', 'error', 5500);
+      UI.toast('Mesin ekspor PDF belum tersedia. Muat ulang aplikasi dan pastikan koneksi internet tersedia untuk pertama kali memuat mesin PDF.', 'error', 5500);
       return;
     }
 
@@ -221,18 +232,10 @@ const PdfExport = (() => {
         throw new Error('Dimensi kertas dokumen tidak valid.');
       }
 
-      const pdf = new library.jsPDF({
-        unit: 'mm',
-        format: [pageWidthMm, pageHeightMm],
-        orientation: pageWidthMm >= pageHeightMm ? 'landscape' : 'portrait',
-        compress: true,
-      });
-
-      for (let index = 0; index < pages.length; index += 1) {
-        const page = stage.children[index];
-        if (!page) continue;
-
-        const canvas = await library.html2canvas(page, {
+      const pdfOptions = {
+        margin: 0,
+        image: { type: 'jpeg', quality: 0.96 },
+        html2canvas: {
           scale: RENDER_SCALE,
           useCORS: true,
           allowTaint: false,
@@ -242,25 +245,49 @@ const PdfExport = (() => {
           removeContainer: true,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: Math.max(page.scrollWidth, page.clientWidth, 1),
-          windowHeight: Math.max(page.scrollHeight, page.clientHeight, 1),
-        });
+          windowWidth: Math.max(...pages.map(page => page.scrollWidth || page.clientWidth || 1), 1),
+          windowHeight: Math.max(...pages.map(page => page.scrollHeight || page.clientHeight || 1), 1),
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: [pageWidthMm, pageHeightMm],
+          orientation: pageWidthMm >= pageHeightMm ? 'landscape' : 'portrait',
+          compress: true,
+        },
+      };
 
-        if (index > 0) {
+      // html2pdf.js menyediakan html2canvas + jsPDF di dalam bundle dan
+      // mengekspos API resmi melalui window.html2pdf.
+      // Render canvas tiap halaman secara berurutan, lalu gabungkan ke satu
+      // instance jsPDF yang dihasilkan oleh worker halaman pertama.
+      let pdf = null;
+
+      for (let index = 0; index < pages.length; index += 1) {
+        const page = stage.children[index];
+        if (!page) continue;
+
+        const worker = library.html2pdf().set(pdfOptions).from(page).toCanvas();
+
+        if (!pdf) {
+          pdf = await worker.toPdf().get('pdf');
+        } else {
+          const canvas = await worker.get('canvas');
           pdf.addPage([pageWidthMm, pageHeightMm]);
+          pdf.addImage(
+            canvas.toDataURL('image/jpeg', 0.96),
+            'JPEG',
+            0,
+            0,
+            pageWidthMm,
+            pageHeightMm,
+            undefined,
+            'FAST'
+          );
         }
+      }
 
-        const image = canvas.toDataURL('image/jpeg', 0.96);
-        pdf.addImage(
-          image,
-          'JPEG',
-          0,
-          0,
-          pageWidthMm,
-          pageHeightMm,
-          undefined,
-          'FAST'
-        );
+      if (!pdf) {
+        throw new Error('Tidak ada halaman PDF yang dapat dibuat.');
       }
 
       pdf.save(_getFilename(templateId));
