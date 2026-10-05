@@ -226,11 +226,6 @@ const PdfExport = (() => {
     let stage = null;
 
     try {
-      stage = _createStage(pages, pageWidthPx, pageHeightPx);
-      await _waitForImages(stage);
-      if (document.fonts?.ready) await document.fonts.ready;
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
       const dimensions = State.getPaperDimensions();
       const pageWidthMm = Number(dimensions.widthMm);
       const pageHeightMm = Number(dimensions.heightMm);
@@ -238,6 +233,14 @@ const PdfExport = (() => {
       if (!(pageWidthMm > 0) || !(pageHeightMm > 0)) {
         throw new Error('Dimensi kertas dokumen tidak valid.');
       }
+
+      const pageWidthPx = pageWidthMm * 96 / 25.4;
+      const pageHeightPx = pageHeightMm * 96 / 25.4;
+
+      stage = _createStage(pages, pageWidthPx, pageHeightPx);
+      await _waitForImages(stage);
+      if (document.fonts?.ready) await document.fonts.ready;
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
       const pdfOptions = {
         margin: 0,
