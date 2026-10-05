@@ -298,11 +298,33 @@ const Workflow = (() => {
       return true;
     }
 
-    _showPrintIssues(errors);
+    _showDocumentIssues(errors, 'mencetak');
     return false;
   }
 
-  function _showPrintIssues(errors) {
+  function preparePdf() {
+    // Gunakan preflight yang sama seperti Cetak agar PDF tidak dibuat dari
+    // dokumen yang belum lengkap/valid.
+    if (typeof Utils.flushDebounces === 'function') {
+      Utils.flushDebounces();
+    }
+
+    const errors = _collectPrintChecks();
+
+    if (errors.length === 0) {
+      if (typeof PdfExport !== 'undefined' && typeof PdfExport.exportDocument === 'function') {
+        PdfExport.exportDocument();
+      } else {
+        UI.toast('Fitur ekspor PDF belum siap. Periksa koneksi internet lalu coba lagi.', 'error');
+      }
+      return true;
+    }
+
+    _showDocumentIssues(errors, 'mengekspor PDF');
+    return false;
+  }
+
+  function _showDocumentIssues(errors, actionLabel) {
     const first = errors[0];
     const previewErrors = errors.slice(0, 6);
     const more = errors.length > previewErrors.length
@@ -314,10 +336,10 @@ const Workflow = (() => {
     ).join('');
 
     UI.showModal({
-      title: 'Periksa Sebelum Mencetak',
+      title: actionLabel === 'mencetak' ? 'Periksa Sebelum Mencetak' : 'Periksa Sebelum Ekspor PDF',
       body: `
         <div class="workflow-validation">
-          <p>Surat belum siap dicetak. Perbaiki bagian berikut terlebih dahulu:</p>
+          <p>Surat belum siap ${Utils.escapeHtml(actionLabel)}. Perbaiki bagian berikut terlebih dahulu:</p>
           <ul>${list}</ul>
           ${more}
         </div>`,
@@ -431,6 +453,7 @@ const Workflow = (() => {
     init,
     update,
     preparePrint,
+    preparePdf,
   };
 
 })();
