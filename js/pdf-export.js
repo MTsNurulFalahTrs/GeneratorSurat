@@ -75,7 +75,7 @@ const PdfExport = (() => {
     stage.setAttribute('aria-hidden', 'true');
     Object.assign(stage.style, {
       position: 'fixed',
-      left: '-100000px',
+      left: '0',
       top: '0',
       width: paperWidthPx + 'px',
       minHeight: paperHeightPx + 'px',
@@ -255,8 +255,12 @@ const PdfExport = (() => {
           removeContainer: true,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: Math.max(...pages.map(page => page.scrollWidth || page.clientWidth || 1), 1),
-          windowHeight: Math.max(...pages.map(page => page.scrollHeight || page.clientHeight || 1), 1),
+          x: 0,
+          y: 0,
+          width: pageWidthPx,
+          height: pageHeightPx,
+          windowWidth: Math.max(pageWidthPx, document.documentElement.clientWidth || 1),
+          windowHeight: Math.max(pageHeightPx, document.documentElement.clientHeight || 1),
         },
         jsPDF: {
           unit: 'mm',
