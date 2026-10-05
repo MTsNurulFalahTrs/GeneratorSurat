@@ -95,6 +95,11 @@ const App = (() => {
     /* 12. Bind header action buttons */
     _bindHeaderButtons();
 
+    /* 12a. Init About / tampilkan informasi wajib pada kunjungan pertama */
+    if (typeof About !== 'undefined') {
+      About.init();
+    }
+
     /* 13. Update storage info display */
     if (wasRestored) {
       const meta = Storage.getMeta();
