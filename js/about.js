@@ -313,22 +313,29 @@ const About = (() => {
 
   function _bindAccordionBehavior() {
     const root = document.querySelector('#modal-body .about-modal-content');
-    if (!root || root.dataset.accordionBound === 'true') return;
-    root.dataset.accordionBound = 'true';
+    if (!root) return;
 
-    root.addEventListener('toggle', (event) => {
-      const opened = event.target;
-      if (!(opened instanceof HTMLDetailsElement) || !opened.open) return;
+    const accordions = Array.from(root.querySelectorAll('details'));
+    accordions.forEach((accordion) => {
+      if (!(accordion instanceof HTMLDetailsElement)) return;
 
-      // Satu accordion terbuka per kelompok sibling.
-      // FAQ memiliki container sendiri, sehingga hanya satu FAQ yang terbuka
-      // tanpa menutup accordion FAQ induknya.
-      const parent = opened.parentElement;
-      if (!parent) return;
+      // Hindari listener ganda bila fungsi dipanggil kembali pada modal yang sama.
+      if (accordion.dataset.accordionBound === 'true') return;
+      accordion.dataset.accordionBound = 'true';
 
-      Array.from(parent.children).forEach(sibling => {
-        if (sibling === opened || !(sibling instanceof HTMLDetailsElement)) return;
-        sibling.open = false;
+      // Event "toggle" pada <details> tidak mengandalkan bubbling.
+      // Listener dipasang langsung pada setiap accordion agar perubahan
+      // melalui klik maupun perubahan programatik tetap tersinkron.
+      accordion.addEventListener('toggle', () => {
+        if (!accordion.open) return;
+
+        const parent = accordion.parentElement;
+        if (!parent) return;
+
+        Array.from(parent.children).forEach((sibling) => {
+          if (sibling === accordion || !(sibling instanceof HTMLDetailsElement)) return;
+          if (sibling.open) sibling.open = false;
+        });
       });
     });
   }
