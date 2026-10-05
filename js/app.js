@@ -201,6 +201,15 @@ const App = (() => {
     // Simpan
     document.getElementById('btn-save')?.addEventListener('click', _handleSave);
 
+    // Ekspor PDF langsung
+    document.getElementById('btn-export-pdf')?.addEventListener('click', () => {
+      if (typeof Workflow !== "undefined" && typeof Workflow.preparePdf === "function") {
+        Workflow.preparePdf();
+      } else if (typeof PdfExport !== "undefined" && typeof PdfExport.exportDocument === "function") {
+        PdfExport.exportDocument();
+      }
+    });
+
     // Cetak
     document.getElementById('btn-print')?.addEventListener('click', () => {
       if (typeof Workflow !== "undefined" && typeof Workflow.preparePrint === "function") {
