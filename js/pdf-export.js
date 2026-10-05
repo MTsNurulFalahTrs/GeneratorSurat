@@ -66,7 +66,7 @@ const PdfExport = (() => {
     return [preview];
   }
 
-  function _createStage(pageElements) {
+  function _createStage(pageElements, paperWidthPx, paperHeightPx) {
     const oldStage = document.getElementById(STAGE_ID);
     oldStage?.remove();
 
@@ -77,8 +77,8 @@ const PdfExport = (() => {
       position: 'fixed',
       left: '-100000px',
       top: '0',
-      width: '1px',
-      minHeight: '1px',
+      width: paperWidthPx + 'px',
+      minHeight: paperHeightPx + 'px',
       overflow: 'visible',
       opacity: '0.01',
       pointerEvents: 'none',
@@ -97,6 +97,13 @@ const PdfExport = (() => {
       page.style.margin = '0';
       page.style.boxShadow = 'none';
       page.style.background = '#fff';
+      page.style.width = paperWidthPx + 'px';
+      page.style.height = paperHeightPx + 'px';
+      page.style.minWidth = paperWidthPx + 'px';
+      page.style.minHeight = paperHeightPx + 'px';
+      page.style.maxWidth = paperWidthPx + 'px';
+      page.style.maxHeight = paperHeightPx + 'px';
+      page.style.flex = '0 0 auto';
 
       // Preview memakai pseudo-element untuk nomor halaman. Sembunyikan
       // pseudo-element pada clone dan buat footer nyata agar html2canvas
@@ -219,7 +226,7 @@ const PdfExport = (() => {
     let stage = null;
 
     try {
-      stage = _createStage(pages);
+      stage = _createStage(pages, pageWidthPx, pageHeightPx);
       await _waitForImages(stage);
       if (document.fonts?.ready) await document.fonts.ready;
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
