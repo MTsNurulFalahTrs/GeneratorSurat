@@ -11,6 +11,10 @@ const PdfExport = (() => {
   const BUTTON_ID = 'btn-export-pdf';
   const RENDER_SCALE = 2;
 
+  // Fitur ekspor PDF dinonaktifkan sementara sampai hasil rendering
+  // PDF benar-benar konsisten dengan Preview Surat pada seluruh template.
+  const ENABLED = false;
+
   let _exporting = false;
 
   function _getLibrary() {
@@ -192,6 +196,15 @@ const PdfExport = (() => {
   }
 
   async function exportDocument() {
+    if (!ENABLED) {
+      UI.toast(
+        'Ekspor PDF dinonaktifkan sementara. Gunakan tombol Cetak untuk mencetak atau menyimpan surat sebagai PDF melalui dialog sistem.',
+        'info',
+        5000
+      );
+      return false;
+    }
+
     if (_exporting) return;
 
     if (typeof Utils.flushDebounces === 'function') {
