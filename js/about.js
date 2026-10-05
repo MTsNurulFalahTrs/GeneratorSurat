@@ -116,33 +116,45 @@ const About = (() => {
             </div>
           </div>
           <div class="about-support-grid">
-            <div class="about-support-card">
-              <span class="about-support-card__icon">💝</span>
-              <div>
-                <strong>Dukungan &amp; Donasi</strong>
-                <p>
-                  Pengguna yang ingin mendukung pengembangan aplikasi dapat berdonasi melalui
-                  <strong>DANA</strong>, <strong>ShopeePay</strong>, atau <strong>GoPay</strong>.
-                  Untuk detail tujuan/nomor donasi, silakan hubungi pengembang melalui WhatsApp.
+            <section class="about-support-card about-donation-card" aria-labelledby="about-donation-title">
+              <div class="about-support-card__icon about-support-card__icon--donation" aria-hidden="true">♥</div>
+              <div class="about-support-card__main">
+                <div class="about-support-card__eyebrow">DUKUNG PENGEMBANGAN</div>
+                <strong id="about-donation-title" class="about-support-card__title">Dukungan &amp; Donasi</strong>
+                <p class="about-support-card__desc">
+                  Dukungan pengguna membantu pemeliharaan, penyempurnaan fitur, dan penambahan
+                  template surat agar aplikasi tetap bermanfaat bagi kebutuhan administrasi madrasah.
                 </p>
-                <a class="about-inline-link" href="${WA_URL}" target="_blank" rel="noopener noreferrer">
-                  Hubungi pengembang via WhatsApp →
-                </a>
+                <div class="about-payment-methods" aria-label="Metode donasi yang tersedia">
+                  <span class="about-payment-chip"><b>DANA</b><small>e-Wallet</small></span>
+                  <span class="about-payment-chip"><b>ShopeePay</b><small>e-Wallet</small></span>
+                  <span class="about-payment-chip"><b>GoPay</b><small>e-Wallet</small></span>
+                </div>
+                <div class="about-support-card__footer">
+                  <span class="about-support-card__note">Detail tujuan/nomor donasi diberikan melalui WhatsApp.</span>
+                  <a class="about-support-cta" href="${WA_URL}" target="_blank" rel="noopener noreferrer">
+                    Hubungi pengembang <span aria-hidden="true">→</span>
+                  </a>
+                </div>
               </div>
-            </div>
-            <div class="about-support-card">
-              <span class="about-support-card__icon">🧩</span>
-              <div>
-                <strong>Request Template Surat</strong>
-                <p>
-                  Memiliki format/template surat sendiri yang belum tersedia? Anda dapat meminta
-                  format tersebut ditambahkan ke aplikasi dengan menghubungi pengembang via WhatsApp.
+            </section>
+            <section class="about-support-card about-template-request-card" aria-labelledby="about-template-request-title">
+              <div class="about-support-card__icon about-support-card__icon--template" aria-hidden="true">▦</div>
+              <div class="about-support-card__main">
+                <div class="about-support-card__eyebrow">KONTRIBUSI PENGGUNA</div>
+                <strong id="about-template-request-title" class="about-support-card__title">Request Template Surat</strong>
+                <p class="about-support-card__desc">
+                  Memiliki format/template surat sendiri yang belum tersedia? Kirim contoh formatnya
+                  kepada pengembang agar dapat dipertimbangkan untuk ditambahkan ke aplikasi.
                 </p>
-                <a class="about-inline-link" href="${WA_URL}" target="_blank" rel="noopener noreferrer">
-                  Ajukan request template →
-                </a>
+                <div class="about-support-card__footer">
+                  <span class="about-support-card__note">Format/template sebaiknya disertakan saat menghubungi pengembang.</span>
+                  <a class="about-support-cta" href="${WA_URL}" target="_blank" rel="noopener noreferrer">
+                    Ajukan request <span aria-hidden="true">→</span>
+                  </a>
+                </div>
               </div>
-            </div>
+            </section>
           </div>
           <p class="about-note">
             Aplikasi dapat terus dikembangkan berdasarkan kebutuhan administrasi madrasah dan masukan pengguna.
@@ -278,6 +290,8 @@ const About = (() => {
       },
     });
 
+    _bindAccordionBehavior();
+
     const modalFooter = document.getElementById('modal-footer');
     const closeBtn = modalFooter?.querySelector('button');
     const consent = document.getElementById('about-consent-checkbox');
@@ -295,6 +309,28 @@ const About = (() => {
 
   function open() {
     _show({ firstVisit: false });
+  }
+
+  function _bindAccordionBehavior() {
+    const root = document.querySelector('#modal-body .about-modal-content');
+    if (!root || root.dataset.accordionBound === 'true') return;
+    root.dataset.accordionBound = 'true';
+
+    root.addEventListener('toggle', (event) => {
+      const opened = event.target;
+      if (!(opened instanceof HTMLDetailsElement) || !opened.open) return;
+
+      // Satu accordion terbuka per kelompok sibling.
+      // FAQ memiliki container sendiri, sehingga hanya satu FAQ yang terbuka
+      // tanpa menutup accordion FAQ induknya.
+      const parent = opened.parentElement;
+      if (!parent) return;
+
+      Array.from(parent.children).forEach(sibling => {
+        if (sibling === opened || !(sibling instanceof HTMLDetailsElement)) return;
+        sibling.open = false;
+      });
+    });
   }
 
   function _bindButton() {
