@@ -68,7 +68,16 @@ const UI = (() => {
     };
   }
 
-  function showModal({ title, body, footer, onClose }) {
+  function showModal({
+    title,
+    body,
+    footer,
+    onClose,
+    closeOnBackdrop = true,
+    closeOnEscape = true,
+    showCloseButton = true,
+    initialFocusSelector = null,
+  }) {
     const { overlay, title: titleEl, body: bodyEl, footer: footerEl, closeBtn } = _getModalEls();
     if (!overlay) return;
 
@@ -87,11 +96,16 @@ const UI = (() => {
     bodyEl.innerHTML     = typeof body === 'string' ? body : '';
     footerEl.innerHTML   = '';
 
+    closeBtn.hidden = !showCloseButton;
+    closeBtn.tabIndex = showCloseButton ? 0 : -1;
+    closeBtn.setAttribute('aria-hidden', String(!showCloseButton));
+
     if (footer && Array.isArray(footer)) {
       footer.forEach(btnConfig => {
         const btn = document.createElement('button');
         btn.className   = `btn ${btnConfig.class || 'btn--secondary'}`;
         btn.textContent = btnConfig.label || '';
+        if (btnConfig.disabled === true) btn.disabled = true;
         btn.addEventListener('click', () => {
           if (typeof btnConfig.onClick === 'function') btnConfig.onClick();
           if (btnConfig.closeOnClick !== false) hideModal();
@@ -110,17 +124,33 @@ const UI = (() => {
     };
 
     closeBtn.onclick = handleClose;
-    overlay.onclick  = (e) => { if (e.target === overlay) handleClose(); };
+    overlay.onclick  = (e) => {
+      if (e.target === overlay && closeOnBackdrop) handleClose();
+    };
 
     // ESC key
-    const escHandler = (e) => {
-      if (e.key === 'Escape') handleClose();
-    };
-    _modalEscHandler = escHandler;
-    document.addEventListener('keydown', escHandler);
+    if (closeOnEscape) {
+      const escHandler = (e) => {
+        if (e.key === 'Escape') handleClose();
+      };
+      _modalEscHandler = escHandler;
+      document.addEventListener('keydown', escHandler);
+    }
 
-    // Focus ke modal
-    setTimeout(() => closeBtn.focus(), 50);
+    // Fokus ke elemen yang relevan pada modal.
+    setTimeout(() => {
+      const initial = initialFocusSelector
+        ? bodyEl.querySelector(initialFocusSelector)
+        : null;
+      if (initial && typeof initial.focus === 'function') {
+        initial.focus();
+        return;
+      }
+      const fallback = showCloseButton
+        ? closeBtn
+        : footerEl.querySelector('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)');
+      if (fallback && typeof fallback.focus === 'function') fallback.focus();
+    }, 50);
   }
 
   function hideModal() {
@@ -423,11 +453,13 @@ const UI = (() => {
     if (!overlay || overlay.classList.contains('hidden')) return;
     if (e.key !== 'Tab') return;
 
-    const focusable = overlay.querySelectorAll(
+    const focusable = Array.from(overlay.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
+    )).filter(el => !el.disabled && !el.hidden && el.offsetParent !== null);
     const first = focusable[0];
     const last  = focusable[focusable.length - 1];
+
+    if (!first || !last) return;
 
     if (e.shiftKey) {
       if (document.activeElement === first) { e.preventDefault(); last.focus(); }
