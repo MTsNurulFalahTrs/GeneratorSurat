@@ -2,7 +2,7 @@
    sw.js — Phase 5 Platform Service Worker
    ============================================================= */
 
-const CACHE_NAME = 'generator-surat-platform-v3';
+const CACHE_NAME = 'generator-surat-platform-v4';
 const APP_SHELL = [
   './',
   './index.html',
@@ -43,8 +43,6 @@ const APP_SHELL = [
   './js/app.js',
   './assets/icons/logo.svg',
   './assets/icons/favicon.svg',
-  './vendor/html2pdf.bundle.min.js',
-  './vendor/html2pdf.bundle.min.js.LICENSE.txt',
   'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'
 ];
 
