@@ -1,19 +1,16 @@
 /* =============================================================
    pdf-export.js — Ekspor surat langsung menjadi PDF
    =============================================================
-   Mengambil halaman yang sudah dipaginasi oleh PreviewRenderer lalu
-   merasterisasi setiap halaman ke PDF di browser. Tidak membuka dialog Print.
-*/
+   Mengambil halaman yang SUDAH dirender oleh PreviewRenderer sebagai
+   sumber kebenaran tunggal. Setiap .surat-page ditangkap langsung oleh
+   html2canvas melalui API html2pdf, lalu digabungkan ke satu PDF.
+   Tidak membuat clone/staging DOM sehingga layout PDF mengikuti Preview.
+============================================================= */
 
 const PdfExport = (() => {
 
-  const STAGE_ID = 'pdf-export-stage';
   const BUTTON_ID = 'btn-export-pdf';
   const RENDER_SCALE = 2;
-
-  // Fitur ekspor PDF dinonaktifkan sementara sampai hasil rendering
-  // PDF benar-benar konsisten dengan Preview Surat pada seluruh template.
-  const ENABLED = false;
 
   let _exporting = false;
 
@@ -45,7 +42,7 @@ const PdfExport = (() => {
       : null;
     const label = template?.meta?.name || templateId || 'Surat';
     const safeLabel = String(label)
-      .replace(/[\\\\/:*?"<>|]+/g, ' ')
+      .replace(/[\\/:*?"<>|]+/g, ' ')
       .replace(/\\s+/g, ' ')
       .trim();
 
@@ -66,104 +63,14 @@ const PdfExport = (() => {
     const pages = Array.from(preview.querySelectorAll(':scope > .surat-page'));
     if (pages.length) return pages;
 
-    // Fallback untuk dokumen satu halaman lama/non-multi-page.
+    // Fallback satu halaman lama/non-multi-page.
     return [preview];
   }
 
-  function _createStage(pageElements, paperWidthPx, paperHeightPx) {
-    const oldStage = document.getElementById(STAGE_ID);
-    oldStage?.remove();
-
-    const stage = document.createElement('div');
-    stage.id = STAGE_ID;
-    stage.setAttribute('aria-hidden', 'true');
-    Object.assign(stage.style, {
-      position: 'fixed',
-      left: '0',
-      top: '0',
-      width: paperWidthPx + 'px',
-      minHeight: paperHeightPx + 'px',
-      overflow: 'visible',
-      opacity: '0.01',
-      pointerEvents: 'none',
-      zIndex: '-1',
-      background: '#fff',
+  function _waitForNextPaint() {
+    return new Promise(resolve => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
     });
-
-    pageElements.forEach((sourcePage, index) => {
-      const page = sourcePage.cloneNode(true);
-      page.classList.add('pdf-export-page');
-      page.dataset.pdfPageNumber = String(index + 1);
-      page.dataset.pdfPageCount = String(pageElements.length);
-
-      // Hapus efek visual khusus preview; ukuran fisik halaman tetap sama.
-      page.style.transform = 'none';
-      page.style.margin = '0';
-      page.style.boxShadow = 'none';
-      page.style.background = '#fff';
-      page.style.width = paperWidthPx + 'px';
-      page.style.height = paperHeightPx + 'px';
-      page.style.minWidth = paperWidthPx + 'px';
-      page.style.minHeight = paperHeightPx + 'px';
-      page.style.maxWidth = paperWidthPx + 'px';
-      page.style.maxHeight = paperHeightPx + 'px';
-      page.style.flex = '0 0 auto';
-
-      // Preview memakai pseudo-element untuk nomor halaman. Sembunyikan
-      // pseudo-element pada clone dan buat footer nyata agar html2canvas
-      // tidak bergantung pada dukungan pseudo-element/attr().
-      page.style.setProperty('--page-number-display', 'none', 'important');
-      _appendRealPageNumber(page, index + 1, pageElements.length);
-
-      stage.appendChild(page);
-    });
-
-    document.body.appendChild(stage);
-    void stage.offsetHeight;
-    return stage;
-  }
-
-  function _appendRealPageNumber(page, pageNumber, totalPages) {
-    const settings = State.getSettings().pageNumber || {};
-    if (settings.enabled === false) return;
-
-    const margin = State.getMarginMm();
-    const footer = document.createElement('div');
-    footer.className = 'pdf-export-page-number';
-    footer.textContent = 'Halaman ' + pageNumber + ' dari ' + totalPages;
-
-    const alignment = ['left', 'center', 'right'].includes(settings.alignment)
-      ? settings.alignment
-      : 'center';
-    const fontSize = Number(settings.fontSize ?? 8);
-    const bottom = Number(settings.bottomOffset ?? 5);
-    const left = Number(margin.left ?? 25);
-    const right = Number(margin.right ?? 25);
-    const fontFamily = String(settings.fontFamily || 'Times New Roman')
-      .replace(/[\\\\"]/g, '');
-
-    Object.assign(footer.style, {
-      position: 'absolute',
-      left: left + 'mm',
-      right: right + 'mm',
-      bottom: bottom + 'mm',
-      zIndex: '20',
-      display: 'block',
-      boxSizing: 'border-box',
-      textAlign: alignment,
-      whiteSpace: 'nowrap',
-      fontFamily: "'" + fontFamily + "', serif",
-      fontSize: fontSize + 'pt',
-      lineHeight: '1.2',
-      fontWeight: settings.bold ? '700' : '400',
-      fontStyle: settings.italic ? 'italic' : 'normal',
-      textDecoration: settings.underline ? 'underline' : 'none',
-      color: String(settings.color || '#000000'),
-      pointerEvents: 'none',
-      userSelect: 'none',
-    });
-
-    page.appendChild(footer);
   }
 
   async function _waitForImages(root) {
@@ -195,17 +102,41 @@ const PdfExport = (() => {
     if (label) label.textContent = isExporting ? 'Membuat PDF…' : 'Ekspor PDF';
   }
 
-  async function exportDocument() {
-    if (!ENABLED) {
-      UI.toast(
-        'Ekspor PDF dinonaktifkan sementara. Gunakan tombol Cetak untuk mencetak atau menyimpan surat sebagai PDF melalui dialog sistem.',
-        'info',
-        5000
-      );
-      return false;
-    }
+  function _buildPdfOptions(pageWidthMm, pageHeightMm, pageWidthPx, pageHeightPx) {
+    return {
+      margin: 0,
+      image: {
+        type: 'jpeg',
+        quality: 0.96,
+      },
+      html2canvas: {
+        scale: RENDER_SCALE,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        imageTimeout: 15000,
+        logging: false,
+        removeContainer: true,
+        scrollX: 0,
+        scrollY: 0,
+        x: 0,
+        y: 0,
+        width: pageWidthPx,
+        height: pageHeightPx,
+        windowWidth: Math.max(pageWidthPx, document.documentElement.clientWidth || 1),
+        windowHeight: Math.max(pageHeightPx, document.documentElement.clientHeight || 1),
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: [pageWidthMm, pageHeightMm],
+        orientation: pageWidthMm >= pageHeightMm ? 'landscape' : 'portrait',
+        compress: true,
+      },
+    };
+  }
 
-    if (_exporting) return;
+  async function exportDocument() {
+    if (_exporting) return false;
 
     if (typeof Utils.flushDebounces === 'function') {
       Utils.flushDebounces();
@@ -214,86 +145,103 @@ const PdfExport = (() => {
     const templateId = State.getActiveTemplate();
     if (!templateId) {
       UI.toast('Pilih template surat terlebih dahulu.', 'warning');
-      return;
+      return false;
     }
 
     const library = await _waitForLibrary();
     if (!library) {
-      UI.toast('Mesin ekspor PDF belum tersedia. Muat ulang aplikasi dan pastikan koneksi internet tersedia untuk pertama kali memuat mesin PDF.', 'error', 5500);
-      return;
+      UI.toast(
+        'Mesin ekspor PDF belum tersedia. Muat ulang aplikasi dan coba lagi.',
+        'error',
+        5500
+      );
+      return false;
     }
 
-    if (typeof PreviewRenderer !== 'undefined' && typeof PreviewRenderer.waitForReady === 'function') {
+    if (typeof PreviewRenderer !== 'undefined'
+        && typeof PreviewRenderer.waitForReady === 'function') {
       await PreviewRenderer.waitForReady();
     }
 
     const pages = _getPageElements();
     if (!pages.length || pages.every(page => !page || !page.children.length)) {
       UI.toast('Preview surat belum siap untuk diekspor.', 'warning');
-      return;
+      return false;
     }
 
     _exporting = true;
     _setExportState(true);
 
-    let stage = null;
+    const dimensions = State.getPaperDimensions();
+    const pageWidthMm = Number(dimensions.widthMm);
+    const pageHeightMm = Number(dimensions.heightMm);
+
+    if (!(pageWidthMm > 0) || !(pageHeightMm > 0)) {
+      _setExportState(false);
+      _exporting = false;
+      UI.toast('Dimensi kertas dokumen tidak valid.', 'error');
+      return false;
+    }
+
+    const pageWidthPx = pageWidthMm * 96 / 25.4;
+    const pageHeightPx = pageHeightMm * 96 / 25.4;
+
+    const wrapper = document.getElementById('preview-canvas-wrapper');
+    const previousWrapperTransform = wrapper?.style.transform || '';
+    const previousWrapperTransition = wrapper?.style.transition || '';
+    const pageStyleSnapshots = pages.map(page => ({
+      boxShadow: page.style.boxShadow,
+      transition: page.style.transition,
+    }));
 
     try {
-      const dimensions = State.getPaperDimensions();
-      const pageWidthMm = Number(dimensions.widthMm);
-      const pageHeightMm = Number(dimensions.heightMm);
-
-      if (!(pageWidthMm > 0) || !(pageHeightMm > 0)) {
-        throw new Error('Dimensi kertas dokumen tidak valid.');
+      /*
+       * Preview zoom hanya mempengaruhi tampilan. Untuk proses capture,
+       * lepaskan transform pada wrapper agar html2canvas menerima ukuran
+       * halaman fisik 1:1 yang sama dengan PreviewRenderer.
+       */
+      if (wrapper) {
+        wrapper.style.transition = 'none';
+        wrapper.style.transform = 'none';
       }
 
-      const pageWidthPx = pageWidthMm * 96 / 25.4;
-      const pageHeightPx = pageHeightMm * 96 / 25.4;
+      // Hilangkan bayangan visual kertas selama capture; bayangan Preview
+      // adalah elemen UI dan bukan bagian dari dokumen yang dicetak.
+      pages.forEach(page => {
+        page.style.boxShadow = 'none';
+        page.style.transition = 'none';
+      });
 
-      stage = _createStage(pages, pageWidthPx, pageHeightPx);
-      await _waitForImages(stage);
+      await _waitForImages(document.getElementById('surat-preview') || document);
       if (document.fonts?.ready) await document.fonts.ready;
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await _waitForNextPaint();
 
-      const pdfOptions = {
-        margin: 0,
-        image: { type: 'jpeg', quality: 0.96 },
-        html2canvas: {
-          scale: RENDER_SCALE,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: '#ffffff',
-          imageTimeout: 15000,
-          logging: false,
-          removeContainer: true,
-          scrollX: 0,
-          scrollY: 0,
-          x: 0,
-          y: 0,
-          width: pageWidthPx,
-          height: pageHeightPx,
-          windowWidth: Math.max(pageWidthPx, document.documentElement.clientWidth || 1),
-          windowHeight: Math.max(pageHeightPx, document.documentElement.clientHeight || 1),
-        },
-        jsPDF: {
-          unit: 'mm',
-          format: [pageWidthMm, pageHeightMm],
-          orientation: pageWidthMm >= pageHeightMm ? 'landscape' : 'portrait',
-          compress: true,
-        },
-      };
-
-      // html2pdf.js menyediakan html2canvas + jsPDF di dalam bundle dan
-      // mengekspos API resmi melalui window.html2pdf.
-      // Render canvas tiap halaman secara berurutan, lalu gabungkan ke satu
-      // instance jsPDF yang dihasilkan oleh worker halaman pertama.
+      /*
+       * Tangkap halaman Preview secara langsung, tanpa clone atau staging.
+       * Ini memastikan CSS descendant, inherited style, table wrapping,
+       * KOP, tanda tangan, dan nomor halaman identik dengan Preview.
+       */
       let pdf = null;
 
       for (let index = 0; index < pages.length; index += 1) {
-        const page = stage.children[index];
+        const page = pages[index];
         if (!page) continue;
 
-        const worker = library.html2pdf().set(pdfOptions).from(page).toCanvas();
+        const rect = page.getBoundingClientRect();
+        const actualWidthPx = page.offsetWidth || Math.round(rect.width);
+        const actualHeightPx = page.offsetHeight || Math.round(rect.height);
+
+        const options = _buildPdfOptions(
+          pageWidthMm,
+          pageHeightMm,
+          actualWidthPx || pageWidthPx,
+          actualHeightPx || pageHeightPx
+        );
+
+        const worker = library.html2pdf()
+          .set(options)
+          .from(page)
+          .toCanvas();
 
         if (!pdf) {
           pdf = await worker.toPdf().get('pdf');
@@ -319,6 +267,7 @@ const PdfExport = (() => {
 
       pdf.save(_getFilename(templateId));
       UI.toast('PDF berhasil dibuat: ' + pages.length + ' halaman.', 'success', 4500);
+      return true;
     } catch (error) {
       console.error('[PdfExport] Gagal membuat PDF:', error);
       UI.toast(
@@ -326,8 +275,19 @@ const PdfExport = (() => {
         'error',
         5000
       );
+      return false;
     } finally {
-      stage?.remove();
+      pages.forEach((page, index) => {
+        const snapshot = pageStyleSnapshots[index];
+        page.style.boxShadow = snapshot?.boxShadow || '';
+        page.style.transition = snapshot?.transition || '';
+      });
+
+      if (wrapper) {
+        wrapper.style.transition = previousWrapperTransition;
+        wrapper.style.transform = previousWrapperTransform;
+      }
+
       _setExportState(false);
       _exporting = false;
     }
