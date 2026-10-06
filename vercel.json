@@ -72,5 +72,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/export-pdf.js": {
+      "maxDuration": 60
+    }
+  }
 }
