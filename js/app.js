@@ -201,17 +201,14 @@ const App = (() => {
     // Simpan
     document.getElementById('btn-save')?.addEventListener('click', _handleSave);
 
-    // Ekspor PDF dinonaktifkan sementara.
-    // Tombol tetap ditampilkan sebagai disabled agar pengguna mengetahui
-    // bahwa fitur ini sedang tidak tersedia, sementara implementasinya
-    // tetap dipertahankan untuk diaktifkan kembali setelah validasi selesai.
-    const pdfExportButton = document.getElementById('btn-export-pdf');
-    if (pdfExportButton) {
-      pdfExportButton.disabled = true;
-      pdfExportButton.setAttribute('aria-disabled', 'true');
-      pdfExportButton.setAttribute('title', 'Ekspor PDF dinonaktifkan sementara');
-      pdfExportButton.setAttribute('aria-label', 'Ekspor PDF dinonaktifkan sementara');
-    }
+    // Ekspor PDF langsung
+    document.getElementById('btn-export-pdf')?.addEventListener('click', () => {
+      if (typeof Workflow !== "undefined" && typeof Workflow.preparePdf === "function") {
+        Workflow.preparePdf();
+      } else if (typeof PdfExport !== "undefined" && typeof PdfExport.exportDocument === "function") {
+        PdfExport.exportDocument();
+      }
+    });
 
     // Cetak
     document.getElementById('btn-print')?.addEventListener('click', () => {
