@@ -146,7 +146,8 @@ const FormRenderer = (() => {
       header.setAttribute('aria-expanded', String(!isOpen));
     });
     header.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); header.click(); }
+      const ke = /** @type {KeyboardEvent} */ (e);
+      if (ke.key === 'Enter' || ke.key === ' ') { ke.preventDefault(); /** @type {HTMLElement} */ (header).click(); }
     });
 
     if (isRepeatable) {
@@ -283,12 +284,12 @@ const FormRenderer = (() => {
     };
 
     header.addEventListener('click', (e) => {
-      if (deleteBtn.contains(e.target)) return;
+      if (deleteBtn.contains(/** @type {Node} */ (e.target))) return;
       toggleEntry();
     });
 
-    header.addEventListener('keydown', (e) => {
-      if (deleteBtn.contains(e.target)) return;
+    header.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+      if (deleteBtn.contains(/** @type {Node} */ (e.target))) return;
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         toggleEntry();
@@ -416,7 +417,7 @@ const FormRenderer = (() => {
               ${checked ? 'checked' : ''} />
             <span>${checked ? (fieldDef.labelTrue || 'Ya') : (fieldDef.labelFalse || 'Tidak')}</span>
           </label>`;
-        const cbInput = group.querySelector('input[type="checkbox"]');
+        const cbInput = /** @type {HTMLInputElement} */ (group.querySelector('input[type="checkbox"]'));
         const cbLabel = group.querySelector('.form-check span');
         cbInput.addEventListener('change', () => {
           const val = cbInput.checked;
