@@ -25,6 +25,7 @@ const App = (() => {
     TemplateRegistry.init();
 
     /* 2. Inisialisasi storage dan cek TTL */
+    // @ts-ignore — Storage here is the custom IIFE module (storage.js), not the DOM Storage interface
     const storageResult = Storage.init({
       onExpired: _handleDataExpired,
     });
@@ -34,12 +35,14 @@ const App = (() => {
     /* 3. Restore data dari storage (jika ada dan belum expired) */
     let wasRestored = false;
     if (storageResult.available && storageResult.hasData && !storageResult.expired) {
+      // @ts-ignore — Storage here is the custom IIFE module (storage.js), not the DOM Storage interface
       const saved = Storage.load();
       if (saved) {
         State.restore(saved);
         wasRestored = true;
 
         // Sync storage meta ke state
+        // @ts-ignore
         const meta = Storage.getMeta();
         if (meta) {
           State.setStorageMeta({
@@ -55,6 +58,7 @@ const App = (() => {
     UI.initTabs();
     UI.initPanelResizer();
     UI.initMobilePreviewToggle();
+    UI.initHeaderOverflowMenu();
 
     // Beri peringatan saat aplikasi dibuka pada viewport mobile.
     _showMobileWarning();
@@ -100,8 +104,19 @@ const App = (() => {
       About.init();
     }
 
+    /* 12b. Init Theme toggle */
+    if (typeof Theme !== 'undefined') {
+      Theme.init();
+    }
+
+    /* 12c. Init Export/Import JSON data */
+    if (typeof DataIO !== 'undefined') {
+      DataIO.init();
+    }
+
     /* 13. Update storage info display */
     if (wasRestored) {
+      // @ts-ignore
       const meta = Storage.getMeta();
       UI.updateStorageInfo(meta);
       if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
@@ -138,7 +153,13 @@ const App = (() => {
       }
     });
 
+    /* 17. Bind undo/redo tombol & keyboard shortcut */
+    _bindUndoRedo();
+
     console.info('[App] Aplikasi siap.');
+
+    // Saran 9: Sembunyikan skeleton loader setelah app siap
+    _hideSkeleton();
   }
 
   /* ── Peringatan untuk perangkat mobile ── */
@@ -164,6 +185,10 @@ const App = (() => {
       UI.switchTab('kop');
       return;
     }
+
+    // Sembunyikan empty state preview saat template dipilih
+    const emptyMsg = document.getElementById('preview-empty-msg');
+    if (emptyMsg) emptyMsg.remove();
 
     State.setActiveTemplate(templateId);
 
@@ -231,16 +256,19 @@ const App = (() => {
 
   /* ── Handler Simpan ── */
   function _handleSave() {
+    // @ts-ignore
     if (!Storage.isAvailable()) {
       UI.toast('Penyimpanan lokal tidak tersedia di browser ini.', 'error');
       return;
     }
 
     const serialized = State.serialize();
+    // @ts-ignore
     const result = Storage.save(serialized);
 
     if (result.success) {
       State.markSaved(result);
+      // @ts-ignore
       const meta = Storage.getMeta();
       UI.updateStorageInfo(meta);
       if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
@@ -252,6 +280,7 @@ const App = (() => {
 
   /* ── Handler Reset ── */
   function _handleReset() {
+    // @ts-ignore
     Storage.clear();
     if (typeof DataManager !== 'undefined' && typeof DataManager.clearAllDrafts === 'function') {
       DataManager.clearAllDrafts();
@@ -311,10 +340,136 @@ const App = (() => {
       if (State.isDirty()) {
         UI.markStorageDirty();
       } else {
+        // @ts-ignore
         const meta = Storage.getMeta();
         UI.updateStorageInfo(meta);
       }
     }, 250);
+  }
+
+  /* ── Bind undo/redo ── */
+  function _bindUndoRedo() {
+    const btnUndo = document.getElementById('btn-undo');
+    const btnRedo = document.getElementById('btn-redo');
+
+    function _performUndo() {
+      const done = State.undo();
+      if (!done) {
+        UI.toast('Tidak ada perubahan yang bisa dibatalkan.', 'info', 2000);
+        return;
+      }
+      // Re-render setelah undo
+      _reRenderAfterHistory();
+      UI.toast('Perubahan dibatalkan.', 'info', 2000);
+    }
+
+    function _performRedo() {
+      const done = State.redo();
+      if (!done) {
+        UI.toast('Tidak ada perubahan yang bisa diulangi.', 'info', 2000);
+        return;
+      }
+      _reRenderAfterHistory();
+      UI.toast('Perubahan diulangi.', 'info', 2000);
+    }
+
+    if (btnUndo) btnUndo.addEventListener('click', _performUndo);
+    if (btnRedo) btnRedo.addEventListener('click', _performRedo);
+
+    // Keyboard shortcut: Ctrl+Z (undo), Ctrl+Y / Ctrl+Shift+Z (redo)
+    document.addEventListener('keydown', (e) => {
+      // Abaikan jika fokus ada di input/textarea untuk tidak mengganggu pengetikan
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (!ctrl) return;
+
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        _performUndo();
+      } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        _performRedo();
+      }
+    });
+
+    // Update tombol enabled/disabled saat history berubah.
+    // Hanya subscribe ke state:undo dan state:redo — keduanya sudah
+    // memanggil emit('state:change') juga, tapi kita subscribe langsung
+    // untuk menghindari double-trigger via state:change.
+    State.on('state:undo',  _updateUndoRedoButtons);
+    State.on('state:redo',  _updateUndoRedoButtons);
+    State.on('state:reset', _updateUndoRedoButtons);
+    // state:change di-subscribe untuk menangkap perubahan dari setter biasa
+    // (bukan undo/redo). Filter agar tidak double-trigger saat undo/redo.
+    State.on('state:change', ({ field }) => {
+      // undo/redo sudah emit state:undo/state:redo yang kita handle di atas.
+      // Keduanya juga emit state:change dengan field 'all' — lewati agar tidak
+      // memanggil _updateUndoRedoButtons dua kali dalam satu operasi undo/redo.
+      if (field === 'all') return;
+      _updateUndoRedoButtons();
+    });
+  }
+
+  /** Update enabled state tombol undo/redo berdasarkan history */
+  function _updateUndoRedoButtons() {
+    const info = State.getHistoryInfo();
+    const btnUndo = document.getElementById('btn-undo');
+    const btnRedo = document.getElementById('btn-redo');
+    // @ts-ignore
+    if (btnUndo) btnUndo.disabled = !info.canUndo;
+    // @ts-ignore
+    if (btnRedo) btnRedo.disabled = !info.canRedo;
+  }
+
+  /** Re-render komponen utama setelah undo/redo */
+  function _reRenderAfterHistory() {
+    const activeId = State.getActiveTemplate();
+
+    // Re-render template list
+    TemplateRegistry.renderTemplateList(
+      document.getElementById('template-list'),
+      activeId,
+      _handleTemplateSelect
+    );
+
+    if (activeId) {
+      TemplateRegistry.updateActiveCard(
+        document.getElementById('template-list'),
+        activeId
+      );
+      // Re-render form via FormRenderer — FormRenderer sudah subscribe event
+      // state:restore yang di-emit oleh undo/redo, sehingga biasanya akan
+      // re-render sendiri. Panggil eksplisit hanya jika FormRenderer tidak
+      // subscribe otomatis (fallback aman).
+      if (typeof FormRenderer !== 'undefined') FormRenderer.render(activeId);
+      // KopEditor TIDAK di-init ulang di sini — KopEditor.init() mendaftarkan
+      // event listener baru setiap kali dipanggil, menyebabkan memory leak
+      // (event handler menumpuk). KopEditor subscribe ke state:kop:change
+      // dan state:restore untuk update tampilannya sendiri.
+    }
+
+    _updateUndoRedoButtons();
+  }
+
+  /* ── Sembunyikan skeleton loader setelah app selesai boot ── */
+  function _hideSkeleton() {
+    // Skeleton template list
+    const skeletonList = document.getElementById('template-list-skeleton');
+    if (skeletonList) skeletonList.remove();
+
+    // Skeleton preview
+    const skeletonPreview = document.getElementById('preview-skeleton');
+    if (skeletonPreview) skeletonPreview.remove();
+
+    // Tampilkan pesan empty state preview (hanya jika belum ada template aktif)
+    const emptyMsg = document.getElementById('preview-empty-msg');
+    if (emptyMsg && !State.getActiveTemplate()) {
+      emptyMsg.style.display = '';
+    } else if (emptyMsg) {
+      emptyMsg.remove();
+    }
   }
 
   /* ── Fatal error fallback ── */
