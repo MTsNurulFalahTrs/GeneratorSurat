@@ -197,6 +197,7 @@ const DataManager = (() => {
   }
 
   function saveDraft(name, draftId = null) {
+    // @ts-ignore
     if (!Storage.isAvailable()) {
       return { success: false, reason: 'Penyimpanan lokal tidak tersedia di browser ini.' };
     }
@@ -266,8 +267,8 @@ const DataManager = (() => {
         {
           label: current ? 'Perbarui Draft' : 'Simpan Draft',
           class: 'btn--primary',
-          onClick: () => {
-            const input = document.getElementById('dm-draft-name');
+          action: () => {
+            const input = /** @type {HTMLInputElement|null} */ (document.getElementById('dm-draft-name'));
             const result = saveDraft(input?.value || '', current?.id || null);
             if (!result.success) UI.toast(result.reason, 'error', 5000);
             else UI.toast(`Draft "${result.draft.name}" berhasil disimpan.`, 'success');
@@ -277,13 +278,13 @@ const DataManager = (() => {
     });
 
     setTimeout(() => {
-      const input = document.getElementById('dm-draft-name');
+      const input = /** @type {HTMLInputElement|null} */ (document.getElementById('dm-draft-name'));
       input?.focus();
       input?.select();
       input?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
-          document.querySelector('#modal-footer .btn--primary')?.click();
+          /** @type {HTMLElement | null} */ (document.querySelector('#modal-footer .btn--primary'))?.click();
         }
       });
     }, 60);
@@ -323,13 +324,13 @@ const DataManager = (() => {
       document.querySelectorAll('[data-dm-load]').forEach(btn => {
         btn.addEventListener('click', () => {
           UI.hideModal();
-          loadDraft(btn.dataset.dmLoad);
+          loadDraft(/** @type {HTMLElement} */ (btn).dataset.dmLoad);
         });
       });
       document.querySelectorAll('[data-dm-delete]').forEach(btn => {
         btn.addEventListener('click', () => {
           UI.hideModal();
-          confirmDeleteDraft(btn.dataset.dmDelete);
+          confirmDeleteDraft(/** @type {HTMLElement} */ (btn).dataset.dmDelete);
         });
       });
     }, 50);
@@ -500,13 +501,16 @@ const DataManager = (() => {
   }
 
   function _persistActiveState() {
+    // @ts-ignore — Storage here is the custom IIFE module, not the built-in Storage interface
     if (!Storage.isAvailable()) {
       return { success: false, reason: 'Penyimpanan lokal tidak tersedia di browser ini.' };
     }
 
+    // @ts-ignore — Storage here is the custom IIFE module, not the built-in Storage interface
     const result = Storage.save(State.serialize());
     if (result.success) {
       State.markSaved(result);
+      // @ts-ignore — Storage here is the custom IIFE module, not the built-in Storage interface
       const meta = Storage.getMeta();
       UI.updateStorageInfo(meta);
       if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
@@ -570,6 +574,7 @@ const DataManager = (() => {
   }
 
   function _readDrafts() {
+    // @ts-ignore — Storage here is the custom IIFE module, not the built-in Storage interface
     if (!Storage.isAvailable()) return [];
     try {
       const raw = localStorage.getItem(DRAFTS_KEY);
@@ -587,6 +592,7 @@ const DataManager = (() => {
   }
 
   function _writeDrafts(drafts) {
+    // @ts-ignore — Storage here is the custom IIFE module, not the built-in Storage interface
     if (!Storage.isAvailable()) {
       return { success: false, reason: 'Penyimpanan lokal tidak tersedia di browser ini.' };
     }
@@ -609,6 +615,7 @@ const DataManager = (() => {
   }
 
   function _readActiveDraftId() {
+    // @ts-ignore — Storage here is the custom IIFE module, not the built-in Storage interface
     if (!Storage.isAvailable()) return null;
     try {
       return localStorage.getItem(ACTIVE_DRAFT_KEY) || null;
@@ -618,6 +625,7 @@ const DataManager = (() => {
   }
 
   function _writeActiveDraftId(id) {
+    // @ts-ignore — Storage here is the custom IIFE module, not the built-in Storage interface
     if (!Storage.isAvailable()) return;
     try {
       if (id) localStorage.setItem(ACTIVE_DRAFT_KEY, id);
