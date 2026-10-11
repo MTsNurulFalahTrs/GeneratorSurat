@@ -42,7 +42,7 @@ const DocumentViewer = (() => {
     document.getElementById('viewer-page-last')?.addEventListener('click', () => _goToPage(_getPageCount()));
 
     document.getElementById('viewer-page-current')?.addEventListener('change', (event) => {
-      const raw = String(event.target.value ?? '').trim();
+      const raw = String(/** @type {HTMLInputElement} */ (event.target).value ?? '').trim();
       const value = raw === '' ? NaN : Number(raw);
       if (Number.isInteger(value)) _goToPage(value);
       else _sync();
@@ -208,7 +208,7 @@ const DocumentViewer = (() => {
   }
 
   function _setCurrentPageField(page) {
-    const input = document.getElementById('viewer-page-current');
+    const input = /** @type {HTMLInputElement|null} */ (document.getElementById('viewer-page-current'));
     if (!input) return;
     input.value = page > 0 ? String(page) : '';
     input.max = page > 0 ? String(_getPageCount()) : '1';
@@ -216,10 +216,10 @@ const DocumentViewer = (() => {
 
   function _updateNavigationButtons(current, total) {
     const disabled = total <= 1;
-    const first = document.getElementById('viewer-page-first');
-    const prev = document.getElementById('viewer-page-prev');
-    const next = document.getElementById('viewer-page-next');
-    const last = document.getElementById('viewer-page-last');
+    const first = /** @type {HTMLButtonElement | null} */ (document.getElementById('viewer-page-first'));
+    const prev = /** @type {HTMLButtonElement | null} */ (document.getElementById('viewer-page-prev'));
+    const next = /** @type {HTMLButtonElement | null} */ (document.getElementById('viewer-page-next'));
+    const last = /** @type {HTMLButtonElement | null} */ (document.getElementById('viewer-page-last'));
 
     if (first) first.disabled = disabled || current <= 1;
     if (prev) prev.disabled = disabled || current <= 1;
@@ -259,7 +259,7 @@ const DocumentViewer = (() => {
     const hasDocument = Boolean(State.getActiveTemplate());
     const controls = document.querySelectorAll('#preview-panel .viewer-document-control');
     controls.forEach(control => {
-      control.disabled = !hasDocument;
+      /** @type {HTMLButtonElement|HTMLInputElement} */ (control).disabled = !hasDocument;
     });
   }
 
