@@ -2,6 +2,8 @@
    about.js — Informasi aplikasi, panduan, privasi, S&K, FAQ
    ============================================================= */
 
+/* global UI */
+
 const About = (() => {
 
   const CONSENT_KEY = 'generator-surat-about-consent-v1';
@@ -267,6 +269,7 @@ const About = (() => {
   }
 
   function _show({ firstVisit = false } = {}) {
+    // @ts-ignore
     UI.showModal({
       title: firstVisit ? 'Selamat Datang di Generator Surat' : 'Tentang / About',
       body: _buildBody({ firstVisit }),
@@ -294,7 +297,7 @@ const About = (() => {
 
     const modalFooter = document.getElementById('modal-footer');
     const closeBtn = modalFooter?.querySelector('button');
-    const consent = document.getElementById('about-consent-checkbox');
+    const consent = /** @type {HTMLInputElement|null} */ (document.getElementById('about-consent-checkbox'));
 
     if (firstVisit && closeBtn && consent) {
       closeBtn.disabled = !consent.checked;
