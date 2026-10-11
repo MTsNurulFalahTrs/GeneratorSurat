@@ -91,6 +91,89 @@
   --z-toast:   60;
 }
 
+/* ── 1b. Dark Mode — CSS Custom Properties Override ── */
+/* Aktif via class .dark-mode pada <html>, ATAU otomatis via prefers-color-scheme */
+
+/* Auto dark: ikuti preferensi sistem jika pengguna belum memilih eksplisit */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-mode):not(.dark-mode) {
+    /* Colors */
+    --color-primary:        #3b82f6;
+    --color-primary-hover:  #60a5fa;
+    --color-primary-light:  #1e3a5f;
+    --color-secondary:      #9ca3af;
+    --color-secondary-hover:#d1d5db;
+    --color-danger:         #f87171;
+    --color-danger-hover:   #fca5a5;
+    --color-danger-light:   #3b1515;
+    --color-success:        #4ade80;
+    --color-success-light:  #052e16;
+    --color-warning:        #fbbf24;
+    --color-warning-light:  #2d1a00;
+    --color-info:           #22d3ee;
+    --color-info-light:     #0c2a33;
+
+    /* Neutral */
+    --color-bg:             #0f172a;
+    --color-surface:        #1e293b;
+    --color-surface-2:      #334155;
+    --color-border:         #334155;
+    --color-border-strong:  #475569;
+    --color-text:           #f1f5f9;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted:     #64748b;
+    --color-text-inverse:   #0f172a;
+
+    /* Shadows — lebih subtle di dark mode */
+    --shadow-sm:  0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.4);
+    --shadow-md:  0 4px 6px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.35);
+    --shadow-lg:  0 10px 15px rgba(0,0,0,.35), 0 4px 6px rgba(0,0,0,.3);
+    --shadow-xl:  0 20px 25px rgba(0,0,0,.45), 0 8px 10px rgba(0,0,0,.35);
+  }
+}
+
+/* Class .dark-mode pada <html> selalu menang atas media query */
+html.dark-mode {
+  --color-primary:        #3b82f6;
+  --color-primary-hover:  #60a5fa;
+  --color-primary-light:  #1e3a5f;
+  --color-secondary:      #9ca3af;
+  --color-secondary-hover:#d1d5db;
+  --color-danger:         #f87171;
+  --color-danger-hover:   #fca5a5;
+  --color-danger-light:   #3b1515;
+  --color-success:        #4ade80;
+  --color-success-light:  #052e16;
+  --color-warning:        #fbbf24;
+  --color-warning-light:  #2d1a00;
+  --color-info:           #22d3ee;
+  --color-info-light:     #0c2a33;
+
+  --color-bg:             #0f172a;
+  --color-surface:        #1e293b;
+  --color-surface-2:      #334155;
+  --color-border:         #334155;
+  --color-border-strong:  #475569;
+  --color-text:           #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted:     #64748b;
+  --color-text-inverse:   #0f172a;
+
+  --shadow-sm:  0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.4);
+  --shadow-md:  0 4px 6px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.35);
+  --shadow-lg:  0 10px 15px rgba(0,0,0,.35), 0 4px 6px rgba(0,0,0,.3);
+  --shadow-xl:  0 20px 25px rgba(0,0,0,.45), 0 8px 10px rgba(0,0,0,.35);
+}
+
+/* Light mode eksplisit — menimpa media query dark */
+html.light-mode {
+  color-scheme: light;
+}
+
+html.dark-mode {
+  color-scheme: dark;
+}
+
 /* ── 2. Reset & Base ── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -574,4 +657,145 @@ a:hover {
   .app-header__actions {
     gap: var(--space-1);
   }
+}
+
+/* ── Dark Mode: overrides tambahan untuk elemen yang butuh lebih dari variables ── */
+html.dark-mode body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Scrollbar dark */
+html.dark-mode ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.dark-mode ::-webkit-scrollbar-track {
+  background: var(--color-surface-2);
+}
+html.dark-mode ::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 4px;
+}
+html.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Input, select, textarea di dark mode */
+html.dark-mode input,
+html.dark-mode select,
+html.dark-mode textarea {
+  background-color: var(--color-surface-2);
+  color: var(--color-text);
+  border-color: var(--color-border);
+  color-scheme: dark;
+}
+
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Preview surat tetap putih (dokumen fisik selalu terang) */
+html.dark-mode .surat-page {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Preview viewport gelap agar kontras dengan surat putih */
+html.dark-mode #preview-viewport {
+  background-color: #1a1a2e;
+}
+
+/* Theme toggle button — indikator tema aktif */
+#btn-theme-toggle[data-theme="dark"] .icon-sun  { display: none; }
+#btn-theme-toggle[data-theme="dark"] .icon-moon { display: block; }
+#btn-theme-toggle[data-theme="light"] .icon-sun  { display: block; }
+#btn-theme-toggle[data-theme="light"] .icon-moon { display: none; }
+#btn-theme-toggle[data-theme="auto"] .icon-sun  { display: none; }
+#btn-theme-toggle[data-theme="auto"] .icon-moon { display: none; }
+#btn-theme-toggle .icon-auto { display: none; }
+#btn-theme-toggle[data-theme="auto"] .icon-auto { display: block; }
+
+/* ── Skeleton Loading Animation ── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.skeleton {
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 25%,
+    var(--color-border)    50%,
+    var(--color-surface-2) 75%
+  );
+  background-size: 800px 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-block {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 25%,
+    var(--color-border)    50%,
+    var(--color-surface-2) 75%
+  );
+  background-size: 800px 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+/* Skeleton khusus untuk kartu template */
+.template-card-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.template-card-skeleton__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+}
+
+.template-card-skeleton__title {
+  height: 14px;
+  width: 70%;
+}
+
+.template-card-skeleton__desc {
+  height: 11px;
+  width: 90%;
+}
+
+.template-card-skeleton__desc-2 {
+  height: 11px;
+  width: 60%;
+}
+
+/* Skeleton preview halaman */
+.preview-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  width: 100%;
+  height: 100%;
+}
+
+.preview-skeleton__page {
+  width: min(100%, 600px);
+  aspect-ratio: 210 / 297;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
 }
