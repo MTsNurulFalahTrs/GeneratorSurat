@@ -1,0 +1,489 @@
+/* =============================================================
+   dark-mode.css — Override warna hardcoded untuk dark mode
+   Mencakup semua elemen UI yang menggunakan warna literal
+   (bukan CSS variable) sehingga tidak ter-adapt otomatis.
+
+   Pola: setiap rule ditulis dua kali:
+     1. html.dark-mode …      → user memilih dark eksplisit
+     2. @media prefers-dark … → ikuti preferensi sistem
+   ============================================================= */
+
+/* ================================================================
+   A. ui-modern.css
+   ================================================================ */
+
+/* ── A1. Header & toolbar: rgba(255,255,255,.96) → surface gelap ── */
+html.dark-mode .app-header {
+  background: rgba(30, 41, 59, .97) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.25) !important;
+}
+html.dark-mode .preview-toolbar {
+  background: rgba(30, 41, 59, .97) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,.25) !important;
+}
+html.dark-mode .workflow-actions {
+  background: rgba(30, 41, 59, .97) !important;
+  box-shadow: 0 -3px 12px rgba(0,0,0,.25) !important;
+}
+
+/* ── A2. Panel resizer ── */
+html.dark-mode .panel-resizer {
+  background: var(--color-border) !important;
+}
+
+/* ── A3. Editor tab hover ── */
+html.dark-mode .editor-tab:hover {
+  background: rgba(255, 255, 255, .07) !important;
+}
+
+/* ── A4. Template cards ── */
+html.dark-mode .template-card:hover {
+  border-color: var(--color-border-strong) !important;
+}
+html.dark-mode .template-card.active {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary-light) !important;
+}
+
+/* ── A5. Form section / row-entry hovers ── */
+html.dark-mode .form-section__header:hover {
+  background: var(--color-surface-2) !important;
+}
+html.dark-mode .row-entry__header:hover {
+  background: var(--color-border) !important;
+}
+html.dark-mode .row-entry__num {
+  background: var(--color-primary-light) !important;
+  color: var(--color-primary) !important;
+}
+
+/* ── A6. Form inputs ── */
+html.dark-mode .form-input,
+html.dark-mode .form-select,
+html.dark-mode .form-textarea {
+  border-color: var(--color-border-strong) !important;
+}
+html.dark-mode .form-input:hover,
+html.dark-mode .form-select:hover,
+html.dark-mode .form-textarea:hover {
+  border-color: var(--color-border-strong) !important;
+}
+
+/* ── A7. btn-icon hover ── */
+html.dark-mode .btn-icon:hover {
+  background: var(--color-surface-2) !important;
+  border-color: var(--color-border-strong) !important;
+}
+
+/* ── A8. Seg control ── */
+html.dark-mode .seg-control {
+  border-color: var(--color-border-strong) !important;
+}
+
+/* ── A9. Settings paper info ── */
+html.dark-mode .settings-paper-info {
+  border-color: var(--color-border-strong) !important;
+}
+
+/* ── A10. Table config even rows ── */
+html.dark-mode .tbl-cfg__col-card:nth-child(even),
+html.dark-mode .tbl-cfg__width-row:nth-child(even) {
+  background: var(--color-surface-2) !important;
+}
+
+/* ── A11. Preview viewport ── */
+html.dark-mode .preview-viewport {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(100,116,139,.14) 1px, transparent 0) 0 0 / 16px 16px,
+    var(--color-bg) !important;
+  scrollbar-color: var(--color-border-strong) transparent !important;
+}
+
+/* ── A12. Expired banner ── */
+html.dark-mode .expired-banner {
+  background: var(--color-warning-light) !important;
+  border-bottom-color: var(--color-warning) !important;
+}
+
+/* ── A13. Settings card header hover ── */
+html.dark-mode .settings-card__header:hover {
+  background: var(--color-surface-2) !important;
+}
+
+/* ── A14. Mobile preview toggle ── */
+html.dark-mode .mobile-preview-toggle:hover {
+  border-color: var(--color-primary) !important;
+}
+html.dark-mode .mobile-preview-toggle[aria-expanded="false"] {
+  border-color: var(--color-primary) !important;
+}
+
+/* ── A15. Editor tabs scrollbar ── */
+html.dark-mode .editor-tabs {
+  scrollbar-color: var(--color-border-strong) transparent !important;
+}
+
+/* ── A16. Storage info dirty ── */
+html.dark-mode .storage-info--dirty {
+  border-color: var(--color-warning) !important;
+  color: var(--color-warning) !important;
+}
+
+/* ================================================================
+   B. workflow.css
+   ================================================================ */
+
+html.dark-mode .editor-tab.workflow-attention:not(.active) {
+  color: var(--color-warning) !important;
+}
+html.dark-mode .workflow-actions__status[data-state="attention"] {
+  color: var(--color-warning) !important;
+}
+html.dark-mode .workflow-actions__status[data-state="complete"] {
+  color: var(--color-success) !important;
+}
+
+/* ================================================================
+   C. about.css
+   ================================================================ */
+
+html.dark-mode .about-hero {
+  background: linear-gradient(135deg, var(--color-surface-2), var(--color-surface) 65%) !important;
+}
+html.dark-mode .about-support-card {
+  background: var(--color-surface) !important;
+}
+html.dark-mode .about-support-card__icon--donation {
+  background: #3b1a0a !important;
+  color: #fb923c !important;
+}
+html.dark-mode .about-support-card__icon--template {
+  background: var(--color-primary-light) !important;
+  color: var(--color-primary) !important;
+}
+html.dark-mode .about-support-cta {
+  background: var(--color-primary-light) !important;
+  border-color: var(--color-border-strong) !important;
+}
+html.dark-mode .about-support-cta:hover {
+  background: var(--color-surface-2) !important;
+  border-color: var(--color-primary) !important;
+  text-decoration: none;
+}
+html.dark-mode .about-callout {
+  background: var(--color-warning-light) !important;
+  border-color: var(--color-warning) !important;
+  color: var(--color-warning) !important;
+}
+html.dark-mode .about-consent-box {
+  background: var(--color-primary-light) !important;
+  border-color: var(--color-border-strong) !important;
+}
+html.dark-mode .about-acknowledged {
+  background: var(--color-success-light) !important;
+  border-color: var(--color-success) !important;
+  color: var(--color-success) !important;
+}
+html.dark-mode .about-acknowledged__icon {
+  background: var(--color-surface-2) !important;
+}
+
+/* ================================================================
+   D. main.css — expired banner teks & tombol close
+   ================================================================ */
+
+html.dark-mode .expired-banner,
+html.dark-mode .expired-banner__close {
+  color: var(--color-warning) !important;
+}
+
+/* ================================================================
+   E. components.css — toast & info box
+   ================================================================ */
+
+html.dark-mode .toast--success {
+  background: var(--color-success-light) !important;
+  border-color: var(--color-success) !important;
+  color: var(--color-success) !important;
+}
+html.dark-mode .toast--error {
+  background: var(--color-danger-light) !important;
+  border-color: var(--color-danger) !important;
+  color: var(--color-danger) !important;
+}
+html.dark-mode .toast--warning {
+  background: var(--color-warning-light) !important;
+  border-color: var(--color-warning) !important;
+  color: var(--color-warning) !important;
+}
+html.dark-mode .toast--info {
+  background: var(--color-info-light) !important;
+  border-color: var(--color-info) !important;
+  color: var(--color-info) !important;
+}
+
+html.dark-mode .info-box--info {
+  background: var(--color-info-light) !important;
+  border-color: var(--color-info) !important;
+  color: var(--color-info) !important;
+}
+html.dark-mode .info-box--warning {
+  background: var(--color-warning-light) !important;
+  border-color: var(--color-warning) !important;
+  color: var(--color-warning) !important;
+}
+html.dark-mode .info-box--success {
+  background: var(--color-success-light) !important;
+  border-color: var(--color-success) !important;
+  color: var(--color-success) !important;
+}
+
+/* ================================================================
+   F. kop-editor.css — elemen UI (bukan dokumen cetak)
+   ================================================================ */
+
+html.dark-mode .kop-row-item__text-input,
+html.dark-mode .kop-font-select,
+html.dark-mode .kop-transform-select,
+html.dark-mode .kop-logo-size__input {
+  background: var(--color-surface-2) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border-strong) !important;
+}
+html.dark-mode .kop-logo-upload {
+  background: var(--color-surface-2) !important;
+  border-color: var(--color-border-strong) !important;
+}
+html.dark-mode .kop-logo-preview__img-wrap {
+  background: var(--color-surface-2) !important;
+  border-color: var(--color-border) !important;
+}
+
+/* ================================================================
+   G. Header overflow menu (dropdown mobile)
+   ================================================================ */
+
+html.dark-mode .header-overflow-group {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border-strong) !important;
+}
+
+/* ================================================================
+   H. document-viewer.css — page input
+   ================================================================ */
+
+html.dark-mode .viewer-page-input {
+  background: var(--color-surface-2) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border-strong) !important;
+}
+
+/* ================================================================
+   I. Platform status dot ring (visible di dark bg)
+   ================================================================ */
+
+html.dark-mode .platform-status__dot {
+  box-shadow: 0 0 0 2px var(--color-surface) !important;
+}
+
+/* ================================================================
+   J. Semua item yang sama, untuk auto dark (system preference)
+      Diulang agar prefers-color-scheme juga tertangani.
+   ================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-mode):not(.dark-mode) .app-header {
+    background: rgba(30, 41, 59, .97) !important;
+    box-shadow: 0 1px 0 rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.25) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .preview-toolbar {
+    background: rgba(30, 41, 59, .97) !important;
+    box-shadow: 0 1px 0 rgba(0,0,0,.25) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .workflow-actions {
+    background: rgba(30, 41, 59, .97) !important;
+    box-shadow: 0 -3px 12px rgba(0,0,0,.25) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .panel-resizer {
+    background: var(--color-border) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .editor-tab:hover {
+    background: rgba(255, 255, 255, .07) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .template-card:hover {
+    border-color: var(--color-border-strong) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .template-card.active {
+    border-color: var(--color-primary) !important;
+    background: var(--color-primary-light) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .form-section__header:hover {
+    background: var(--color-surface-2) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .row-entry__header:hover {
+    background: var(--color-border) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .row-entry__num {
+    background: var(--color-primary-light) !important;
+    color: var(--color-primary) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .form-input,
+  :root:not(.light-mode):not(.dark-mode) .form-select,
+  :root:not(.light-mode):not(.dark-mode) .form-textarea {
+    border-color: var(--color-border-strong) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .btn-icon:hover {
+    background: var(--color-surface-2) !important;
+    border-color: var(--color-border-strong) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .seg-control {
+    border-color: var(--color-border-strong) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .tbl-cfg__col-card:nth-child(even),
+  :root:not(.light-mode):not(.dark-mode) .tbl-cfg__width-row:nth-child(even) {
+    background: var(--color-surface-2) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .preview-viewport {
+    background:
+      radial-gradient(circle at 1px 1px, rgba(100,116,139,.14) 1px, transparent 0) 0 0 / 16px 16px,
+      var(--color-bg) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .expired-banner {
+    background: var(--color-warning-light) !important;
+    border-bottom-color: var(--color-warning) !important;
+    color: var(--color-warning) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .expired-banner__close {
+    color: var(--color-warning) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .settings-card__header:hover {
+    background: var(--color-surface-2) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .mobile-preview-toggle:hover,
+  :root:not(.light-mode):not(.dark-mode) .mobile-preview-toggle[aria-expanded="false"] {
+    border-color: var(--color-primary) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .storage-info--dirty {
+    border-color: var(--color-warning) !important;
+    color: var(--color-warning) !important;
+  }
+
+  /* workflow */
+  :root:not(.light-mode):not(.dark-mode) .editor-tab.workflow-attention:not(.active),
+  :root:not(.light-mode):not(.dark-mode) .workflow-actions__status[data-state="attention"] {
+    color: var(--color-warning) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .workflow-actions__status[data-state="complete"] {
+    color: var(--color-success) !important;
+  }
+
+  /* about */
+  :root:not(.light-mode):not(.dark-mode) .about-hero {
+    background: linear-gradient(135deg, var(--color-surface-2), var(--color-surface) 65%) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .about-support-card {
+    background: var(--color-surface) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .about-support-card__icon--donation {
+    background: #3b1a0a !important;
+    color: #fb923c !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .about-support-card__icon--template {
+    background: var(--color-primary-light) !important;
+    color: var(--color-primary) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .about-support-cta {
+    background: var(--color-primary-light) !important;
+    border-color: var(--color-border-strong) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .about-callout {
+    background: var(--color-warning-light) !important;
+    border-color: var(--color-warning) !important;
+    color: var(--color-warning) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .about-consent-box {
+    background: var(--color-primary-light) !important;
+    border-color: var(--color-border-strong) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .about-acknowledged {
+    background: var(--color-success-light) !important;
+    border-color: var(--color-success) !important;
+    color: var(--color-success) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .about-acknowledged__icon {
+    background: var(--color-surface-2) !important;
+  }
+
+  /* toasts */
+  :root:not(.light-mode):not(.dark-mode) .toast--success {
+    background: var(--color-success-light) !important;
+    border-color: var(--color-success) !important;
+    color: var(--color-success) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .toast--error {
+    background: var(--color-danger-light) !important;
+    border-color: var(--color-danger) !important;
+    color: var(--color-danger) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .toast--warning {
+    background: var(--color-warning-light) !important;
+    border-color: var(--color-warning) !important;
+    color: var(--color-warning) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .toast--info {
+    background: var(--color-info-light) !important;
+    border-color: var(--color-info) !important;
+    color: var(--color-info) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .info-box--info {
+    background: var(--color-info-light) !important;
+    border-color: var(--color-info) !important;
+    color: var(--color-info) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .info-box--warning {
+    background: var(--color-warning-light) !important;
+    border-color: var(--color-warning) !important;
+    color: var(--color-warning) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .info-box--success {
+    background: var(--color-success-light) !important;
+    border-color: var(--color-success) !important;
+    color: var(--color-success) !important;
+  }
+
+  /* kop editor */
+  :root:not(.light-mode):not(.dark-mode) .kop-row-item__text-input,
+  :root:not(.light-mode):not(.dark-mode) .kop-font-select,
+  :root:not(.light-mode):not(.dark-mode) .kop-transform-select,
+  :root:not(.light-mode):not(.dark-mode) .kop-logo-size__input {
+    background: var(--color-surface-2) !important;
+    color: var(--color-text) !important;
+    border-color: var(--color-border-strong) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .kop-logo-upload {
+    background: var(--color-surface-2) !important;
+    border-color: var(--color-border-strong) !important;
+  }
+  :root:not(.light-mode):not(.dark-mode) .kop-logo-preview__img-wrap {
+    background: var(--color-surface-2) !important;
+    border-color: var(--color-border) !important;
+  }
+
+  /* header dropdown */
+  :root:not(.light-mode):not(.dark-mode) .header-overflow-group {
+    background: var(--color-surface) !important;
+    border-color: var(--color-border-strong) !important;
+  }
+
+  /* viewer page input */
+  :root:not(.light-mode):not(.dark-mode) .viewer-page-input {
+    background: var(--color-surface-2) !important;
+    color: var(--color-text) !important;
+    border-color: var(--color-border-strong) !important;
+  }
+
+  /* platform status dot */
+  :root:not(.light-mode):not(.dark-mode) .platform-status__dot {
+    box-shadow: 0 0 0 2px var(--color-surface) !important;
+  }
+}
