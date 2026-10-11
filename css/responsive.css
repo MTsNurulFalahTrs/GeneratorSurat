@@ -512,3 +512,194 @@
     min-height: 58px;
   }
 }
+
+/* =============================================================
+   Header Mobile — Overflow Menu
+   ============================================================= */
+
+/* ── Tombol "More" (⋮): hanya tampil di mobile ── */
+.header-more-btn {
+  display: none;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* ── Grup overflow: layout default (desktop) ── */
+.header-overflow-group {
+  display: contents; /* semua anak muncul inline di flex container */
+}
+
+/* ── Di mobile, sembunyikan label teks tombol primer ── */
+@media screen and (max-width: 767px) {
+  /* Tampilkan tombol "More" */
+  .header-more-btn {
+    display: inline-flex;
+    min-width: var(--mobile-control-size);
+    min-height: var(--mobile-control-size);
+  }
+
+  /* Sembunyikan storage-info & platform-status di header (sudah ada di overflow) */
+  .app-header .platform-status {
+    display: none;
+  }
+
+  /* Tombol primer: hanya icon, tanpa label teks */
+  .header-btn-primary .btn-label {
+    display: none;
+  }
+  .header-btn-primary {
+    padding: 0;
+    min-width: var(--mobile-control-size);
+    min-height: var(--mobile-control-size);
+    flex-shrink: 0;
+  }
+
+  /* Grup overflow: berubah menjadi dropdown panel */
+  .header-overflow-group {
+    display: none; /* tersembunyi secara default */
+    position: absolute;
+    top: calc(100% + 4px);
+    right: var(--mobile-side-padding);
+    z-index: calc(var(--z-header) + 1);
+
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-2);
+
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 200px;
+    max-width: min(280px, calc(100vw - 2 * var(--mobile-side-padding)));
+    overflow-y: auto;
+    max-height: calc(100dvh - var(--header-height) - 16px);
+
+    animation: headerMenuIn 150ms ease;
+  }
+
+  @keyframes headerMenuIn {
+    from { opacity: 0; transform: translateY(-6px) scale(.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Saat terbuka */
+  .header-overflow-group.is-open {
+    display: flex;
+  }
+
+  /* Tombol di dalam dropdown: full-width, berteks, rata kiri */
+  .header-overflow-group .btn {
+    width: 100%;
+    justify-content: flex-start;
+    min-height: var(--mobile-control-size);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .header-overflow-group .btn:hover {
+    background: var(--color-surface-2);
+    border-color: transparent;
+  }
+
+  .header-overflow-group .btn--danger-outline {
+    color: var(--color-danger);
+    background: var(--color-danger-light);
+  }
+
+  .header-overflow-group .btn--danger-outline:hover {
+    background: var(--color-danger-light);
+    opacity: 0.85;
+  }
+
+  /* Label dalam dropdown selalu tampil — timpa aturan hide dari ui-modern.css & platform.css */
+  .header-overflow-group .btn-label,
+  .header-overflow-group .btn span.btn-label,
+  .header-overflow-group .platform-action .btn-label {
+    display: inline !important;
+  }
+
+  /* Pastikan SVG tombol di dalam dropdown tidak ter-shrink atau hilang */
+  .header-overflow-group .btn svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Divider pemisah visual di dropdown */
+  .header-overflow-divider {
+    display: block;
+    height: 1px;
+    background: var(--color-border);
+    margin: var(--space-1) 0;
+  }
+
+  /* Header app harus position relative agar dropdown bisa absolute di dalamnya */
+  .app-header {
+    position: sticky; /* sudah ada — pastikan tidak di-override */
+    overflow: visible !important;
+  }
+}
+
+/* Divider tetap tersembunyi di desktop */
+.header-overflow-divider {
+  display: none;
+}
+
+/* ── Platform status di dalam overflow menu (mobile only) ── */
+.platform-status--menu {
+  display: none; /* tersembunyi di desktop */
+}
+
+@media screen and (max-width: 767px) {
+  .platform-status--menu {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    border-radius: var(--radius-md);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* Dot indikator status di dalam menu */
+  .platform-status--menu .platform-status__dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: var(--color-success);
+    box-shadow: 0 0 0 2px var(--color-success-light);
+  }
+
+  .platform-status--menu[data-state="offline"] .platform-status__dot {
+    background: var(--color-warning);
+    box-shadow: 0 0 0 2px var(--color-warning-light);
+  }
+
+  .platform-status-mobile__label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+}
+
+/* ── Izinkan dropdown header keluar dari batas app-container di mobile ── */
+@media screen and (max-width: 767px) {
+  .app-container {
+    overflow: visible;
+  }
+
+  /* body & html sudah di-set overflow-x: hidden di atas,
+     tapi overflow-y perlu tetap bisa scroll */
+  body {
+    overflow: visible;
+  }
+}
