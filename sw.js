@@ -2,7 +2,7 @@
    sw.js — Phase 5 Platform Service Worker
    ============================================================= */
 
-const CACHE_NAME = 'generator-surat-platform-v4';
+const CACHE_NAME = 'generator-surat-platform-v6';
 const APP_SHELL = [
   './',
   './index.html',
@@ -25,6 +25,11 @@ const APP_SHELL = [
   './templates/dpu.js',
   './templates/mutasi-masuk.js',
   './templates/siswa-baru.js',
+  './templates/ijop-permohonan.js',
+  './templates/ijop-sptjm-satpen.js',
+  './templates/ijop-rekomendasi-pengawas.js',
+  './templates/ijop-rekomendasi-kankemenag.js',
+  './templates/ijop-sptjm-kankemenag.js',
   './js/template-registry.js',
   './js/ui.js',
   './js/kop-editor.js',
@@ -35,15 +40,19 @@ const APP_SHELL = [
   './js/table-config-ui.js',
   './js/preview-renderer.js',
   './js/print.js',
+  './js/pdf-export.js',
   './js/data-manager.js',
   './js/settings.js',
   './js/workflow.js',
   './js/document-viewer.js',
   './js/platform.js',
+  './js/about.js',
+  './js/theme.js',
+  './js/data-io.js',
   './js/app.js',
+  './js/vendor/xlsx.full.min.js',
   './assets/icons/logo.svg',
   './assets/icons/favicon.svg',
-  'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js'
 ];
 
 self.addEventListener('install', event => {
