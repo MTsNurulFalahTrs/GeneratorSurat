@@ -163,6 +163,22 @@ const TemplateRegistry = (() => {
     if (typeof TemplateSiswaBaru !== 'undefined') {
       register(TemplateSiswaBaru);
     }
+    // ── Template IJOP (Izin Operasional) ──
+    if (typeof TemplateIjopPermohonan !== 'undefined') {
+      register(TemplateIjopPermohonan);
+    }
+    if (typeof TemplateIjopSptjmSatpen !== 'undefined') {
+      register(TemplateIjopSptjmSatpen);
+    }
+    if (typeof TemplateIjopRekomendasiPengawas !== 'undefined') {
+      register(TemplateIjopRekomendasiPengawas);
+    }
+    if (typeof TemplateIjopRekomendasiKankemenag !== 'undefined') {
+      register(TemplateIjopRekomendasiKankemenag);
+    }
+    if (typeof TemplateIjopSptjmKankemenag !== 'undefined') {
+      register(TemplateIjopSptjmKankemenag);
+    }
 
     /*
      * ── CARA MENAMBAH TEMPLATE BARU ──
@@ -171,6 +187,7 @@ const TemplateRegistry = (() => {
      * 3. Load file tersebut di index.html sebelum <script src="js/template-registry.js">
      * 4. Tambahkan baris di bawah ini:
      *    if (typeof TemplateNamaBaru !== 'undefined') register(TemplateNamaBaru);
+     * 5. Tambahkan renderer di preview-renderer.js (_buildDocumentHtml dispatch + fungsi _render*)
      */
 
     console.info(`[TemplateRegistry] ${count()} template terdaftar.`);
