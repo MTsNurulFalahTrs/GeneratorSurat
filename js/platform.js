@@ -223,7 +223,7 @@ const Platform = (() => {
 
   function _isStandalone() {
     return window.matchMedia?.('(display-mode: standalone)').matches === true
-      || window.navigator.standalone === true;
+      || /** @type {any} */ (window.navigator).standalone === true;
   }
 
   function getDiagnostics() {
