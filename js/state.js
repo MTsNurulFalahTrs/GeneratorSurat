@@ -356,11 +356,15 @@ const State = (() => {
   /* ── Setter: template aktif ── */
   function setActiveTemplate(templateId) {
     if (_state.activeTemplate === templateId) return;
-    _state.activeTemplate = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(templateId)
-      ? templateId
-      : null;
+
+    const isKnown = typeof TemplateRegistry !== 'undefined'
+      ? TemplateRegistry.get(templateId) !== null
+      : false;
+
+    _historyPush();
+    _state.activeTemplate = isKnown ? templateId : null;
     _state.ui.isDirty = true;
-    emit('template:change', { templateId });
+    emit('template:change', { templateId: _state.activeTemplate });
     emit('state:change', { field: 'activeTemplate' });
   }
 
@@ -368,6 +372,7 @@ const State = (() => {
   function setKopRow(rowId, partial) {
     const idx = _state.kop.rows.findIndex(r => r.id === rowId);
     if (idx === -1) return;
+    _historyPush();
     _state.kop.rows[idx] = Utils.deepMerge(_state.kop.rows[idx], partial);
     _state.ui.isDirty = true;
     emit('kop:rowChange', { rowId, row: Utils.deepClone(_state.kop.rows[idx]) });
@@ -384,6 +389,9 @@ const State = (() => {
       ? Utils.clamp(numericCount, MIN_ROWS, MAX_ROWS)
       : _state.kop.rows.length;
     const currentRows = _state.kop.rows;
+
+    if (safeCount === currentRows.length) return; // tidak ada perubahan
+    _historyPush();
 
     if (safeCount > currentRows.length) {
       // Tambah baris baru
@@ -407,6 +415,7 @@ const State = (() => {
   function setKopLogo(side, partial) {
     if (side !== 'left' && side !== 'right') return;
     const key = side === 'left' ? 'logoLeft' : 'logoRight';
+    _historyPush();
     _state.kop[key] = Utils.deepMerge(_state.kop[key], partial);
     _state.ui.isDirty = true;
     emit('kop:logoChange', { side, logo: Utils.deepClone(_state.kop[key]) });
@@ -418,6 +427,7 @@ const State = (() => {
   function setFormData(templateId, partial) {
     const id = templateId || _state.activeTemplate;
     if (!id) return;
+    _historyPush();
     if (!_state.forms[id]) _state.forms[id] = {};
     _state.forms[id] = Utils.deepMerge(_state.forms[id], partial);
     _state.ui.isDirty = true;
@@ -612,6 +622,7 @@ const State = (() => {
 
   /** Update settings secara partial, lalu emit event */
   function setSettings(partial) {
+    _historyPush();
     _state.settings = _normalizeSettings(Utils.deepMerge(_state.settings, partial));
     _state.ui.isDirty = true;
     emit('settings:change', { settings: Utils.deepClone(_state.settings) });
@@ -654,6 +665,7 @@ const State = (() => {
   function applyDocumentPreset(presetKey) {
     const preset = DOCUMENT_PRESETS[presetKey];
     if (!preset) return;
+    _historyPush();
     _state.settings = Utils.deepMerge(_state.settings, {
       paper:       { size: preset.paper.size, unit: preset.paper.unit || 'mm' },
       orientation: preset.orientation,
@@ -761,8 +773,121 @@ const State = (() => {
     }
   }
 
+  /* ──────────────────────────────────────────────
+     UNDO / REDO — History Stack
+     ──────────────────────────────────────────────
+     Hanya data dokumen yang disimpan dalam history
+     (kop, settings, forms, tables, activeTemplate).
+     UI state (zoom, tab aktif) tidak ikut di-undo.
+
+     Cara kerja:
+     - Setiap setter "bermakna" memanggil _historyPush() SEBELUM mutasi.
+     - undo() mengembalikan snapshot sebelumnya; state saat ini dipindah ke redo stack.
+     - redo() menerapkan snapshot dari redo stack; state saat ini ke undo stack.
+     - Setiap perubahan baru (selain undo/redo) membersihkan redo stack.
+  ────────────────────────────────────────────── */
+
+  const MAX_HISTORY = 30;
+
+  /** @type {Array<{activeTemplate: string|null, kop: object, settings: object, forms: object, tables: object}>} */
+  const _undoStack = [];
+
+  /** @type {Array<{activeTemplate: string|null, kop: object, settings: object, forms: object, tables: object}>} */
+  const _redoStack = [];
+
+  /** Buat snapshot data dokumen saat ini (tanpa UI state) */
+  function _historySnapshot() {
+    return Utils.deepClone({
+      activeTemplate: _state.activeTemplate,
+      kop:            _state.kop,
+      settings:       _state.settings,
+      forms:          _state.forms,
+      tables:         _state.tables,
+    });
+  }
+
+  /**
+   * Simpan snapshot saat ini ke undo stack sebelum mutasi.
+   * Dipanggil oleh setter yang ingin mendukung undo.
+   */
+  function _historyPush() {
+    _undoStack.push(_historySnapshot());
+    if (_undoStack.length > MAX_HISTORY) _undoStack.shift();
+    // Setiap perubahan baru membatalkan redo stack
+    _redoStack.length = 0;
+  }
+
+  /** Bersihkan seluruh history (dipanggil saat reset / restore) */
+  function _historyClear() {
+    _undoStack.length = 0;
+    _redoStack.length = 0;
+  }
+
+  /** Terapkan snapshot ke state (tanpa emit history events) */
+  function _applySnapshot(snapshot) {
+    _state.activeTemplate = snapshot.activeTemplate ?? null;
+    _state.kop            = _normalizeKop(snapshot.kop);
+    _state.settings       = _normalizeSettings(snapshot.settings);
+    _state.forms          = Utils.deepClone(snapshot.forms  || {});
+    _state.tables         = Utils.deepClone(snapshot.tables || {});
+    _state.ui.isDirty     = true;
+  }
+
+  /**
+   * Batalkan perubahan terakhir (undo).
+   * @returns {boolean} true jika berhasil
+   */
+  function undo() {
+    if (_undoStack.length === 0) return false;
+
+    // Simpan state saat ini ke redo stack sebelum mundur
+    _redoStack.push(_historySnapshot());
+
+    const prev = _undoStack.pop();
+    _applySnapshot(prev);
+
+    emit('state:undo', { undoCount: _undoStack.length, redoCount: _redoStack.length });
+    emit('state:restore', { data: prev });
+    emit('state:change', { field: 'all' });
+    return true;
+  }
+
+  /**
+   * Ulangi perubahan yang dibatalkan (redo).
+   * @returns {boolean} true jika berhasil
+   */
+  function redo() {
+    if (_redoStack.length === 0) return false;
+
+    // Simpan state saat ini ke undo stack sebelum maju
+    _undoStack.push(_historySnapshot());
+
+    const next = _redoStack.pop();
+    _applySnapshot(next);
+
+    emit('state:redo', { undoCount: _undoStack.length, redoCount: _redoStack.length });
+    emit('state:restore', { data: next });
+    emit('state:change', { field: 'all' });
+    return true;
+  }
+
+  /**
+   * Kembalikan info history saat ini.
+   * @returns {{ canUndo: boolean, canRedo: boolean, undoCount: number, redoCount: number }}
+   */
+  function getHistoryInfo() {
+    return {
+      canUndo:    _undoStack.length > 0,
+      canRedo:    _redoStack.length > 0,
+      undoCount:  _undoStack.length,
+      redoCount:  _redoStack.length,
+    };
+  }
+
   /* ── Reset state (setelah data expired atau user reset) ── */
   function reset() {
+    // Reset juga membersihkan history undo/redo
+    _historyClear();
     _state = {
       activeTemplate: null,
       kop: DEFAULT_KOP_CONFIG(),
@@ -802,9 +927,16 @@ const State = (() => {
       // Restore mengganti seluruh data dokumen agar backup/draft parsial tidak
       // mewarisi form, tabel, KOP, atau settings dari dokumen sebelumnya.
       const storageAvailable = _state.storage.available;
-      const activeTemplate = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(savedData.activeTemplate)
-        ? savedData.activeTemplate
-        : null;
+
+      // Validasi template ID menggunakan TemplateRegistry agar semua template
+      // yang terdaftar (termasuk yang baru ditambahkan) dapat di-restore.
+      let activeTemplate = null;
+      if (savedData.activeTemplate) {
+        const isKnown = typeof TemplateRegistry !== 'undefined'
+          ? TemplateRegistry.get(savedData.activeTemplate) !== null
+          : ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(savedData.activeTemplate);
+        activeTemplate = isKnown ? savedData.activeTemplate : null;
+      }
       const kop = savedData.kop
         ? _normalizeKop(savedData.kop)
         : DEFAULT_KOP_CONFIG();
@@ -829,6 +961,10 @@ const State = (() => {
         available: storageAvailable,
       };
       _state.ui.isDirty = false;
+
+      // Bersihkan history undo/redo setelah restore — history dari sesi
+      // sebelumnya tidak relevan dan bisa membingungkan pengguna.
+      _historyClear();
 
       emit('state:restore', { data: savedData });
       emit('state:change', { field: 'all' });
@@ -889,6 +1025,9 @@ const State = (() => {
     serialize,
     restore,
     markSaved,
+    undo,
+    redo,
+    getHistoryInfo,
 
     // Events
     on,
