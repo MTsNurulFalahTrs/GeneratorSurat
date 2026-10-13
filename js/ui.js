@@ -329,6 +329,92 @@ const UI = (() => {
   }
 
 
+  /* ── Mobile: Header overflow menu (tombol "More" / ⋮) ── */
+  function initHeaderOverflowMenu() {
+    const btn   = document.getElementById('btn-header-more');
+    const group = document.getElementById('header-overflow-group');
+    if (!btn || !group) return;
+
+    const media  = window.matchMedia?.('(max-width: 767px)');
+    const isMobile = () => media?.matches === true;
+
+    function openMenu() {
+      group.classList.add('is-open');
+      btn.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeMenu() {
+      group.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleMenu() {
+      if (group.classList.contains('is-open')) closeMenu();
+      else openMenu();
+    }
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMenu();
+    });
+
+    // Tutup menu saat klik di luar
+    document.addEventListener('click', (e) => {
+      if (!isMobile()) return;
+      if (!group.contains(e.target) && e.target !== btn) closeMenu();
+    });
+
+    // Tutup menu saat tombol di dalam menu diklik
+    group.addEventListener('click', () => {
+      // Sedikit delay agar aksi tombol sempat dijalankan
+      setTimeout(closeMenu, 150);
+    });
+
+    // Tutup menu saat ESC ditekan
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && group.classList.contains('is-open')) {
+        closeMenu();
+        btn.focus();
+      }
+    });
+
+    // Saat resize ke desktop, pastikan group tidak terjebak dalam keadaan open
+    if (media) {
+      const onResize = (e) => {
+        if (!e.matches) closeMenu();
+      };
+      if (typeof media.addEventListener === 'function') {
+        media.addEventListener('change', onResize);
+      } else if (typeof media.addListener === 'function') {
+        media.addListener(onResize);
+      }
+    }
+
+    // Sinkronisasi state platform-status ke versi mobile di dalam menu
+    _syncPlatformStatusToMenu();
+  }
+
+  function _syncPlatformStatusToMenu() {
+    const src  = document.getElementById('platform-status');
+    const dest = document.getElementById('platform-status-mobile');
+    const destLabel = dest?.querySelector('.platform-status-mobile__label');
+    if (!src || !dest || !destLabel) return;
+
+    // Gunakan MutationObserver agar sync tetap berjalan saat state berubah
+    const sync = () => {
+      const state = src.dataset.state;
+      const label = document.getElementById('platform-status-label')?.textContent || '';
+      dest.dataset.state = state;
+      destLabel.textContent = label;
+    };
+
+    sync();
+    new MutationObserver(sync).observe(src, {
+      attributes: true, attributeFilter: ['data-state'],
+      subtree: true, childList: true, characterData: true,
+    });
+  }
+
   /* ── Mobile: tampil/sembunyikan preview ── */
   let _mobilePreviewVisible = true;
 
@@ -483,6 +569,7 @@ const UI = (() => {
     switchTab,
     initPanelResizer,
     initMobilePreviewToggle,
+    initHeaderOverflowMenu,
   };
 
 })();
