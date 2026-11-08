@@ -5,6 +5,8 @@
 const App = (() => {
 
   let _initialized = false;
+  let _bootComplete = false;
+  let _pendingExpiryNotice = false;
 
   /* ── Boot sequence ── */
   function init() {
@@ -158,8 +160,15 @@ const App = (() => {
 
     console.info('[App] Aplikasi siap.');
 
-    // Saran 9: Sembunyikan skeleton loader setelah app siap
+    // Sembunyikan skeleton loader setelah app siap.
     _hideSkeleton();
+    _bootComplete = true;
+
+    // Storage.init dapat mendeteksi expiry sebelum komponen UI selesai dibuat.
+    // Tampilkan pemberitahuan setelah boot tanpa mereset data yang sedang aktif.
+    if (_pendingExpiryNotice || Storage.getRecovery()) {
+      _showExpiredStorageNotice();
+    }
   }
 
   /* ── Peringatan untuk perangkat mobile ── */
@@ -307,20 +316,89 @@ const App = (() => {
 
   /* ── Handler data expired ── */
   function _handleDataExpired() {
-    State.reset();
+    _pendingExpiryNotice = true;
 
-    TemplateRegistry.renderTemplateList(
-      document.getElementById('template-list'),
-      null,
-      _handleTemplateSelect
-    );
+    // Jangan reset State: pengguna mungkin masih mengedit dokumen ketika TTL
+    // tercapai. Snapshot tersimpan tetap tersedia untuk dipulihkan secara manual.
+    if (_bootComplete) _showExpiredStorageNotice();
+  }
 
-    UI.switchTab('template');
-    UI.updateStorageInfo(null);
+  function _showExpiredStorageNotice() {
+    const recovery = Storage.getRecovery();
+    const message = recovery
+      ? 'Penyimpanan cepat telah kedaluwarsa. Data kerja yang sedang terbuka tetap dipertahankan; snapshot terakhir dapat dipulihkan selama 30 hari.'
+      : 'Penyimpanan cepat telah kedaluwarsa. Data kerja yang sedang terbuka tetap dipertahankan, tetapi tidak ditemukan snapshot pemulihan.';
+
     UI.showExpiredBanner(
-      'Data lokal telah kedaluwarsa (lebih dari 2 jam sejak penyimpanan terakhir) dan dihapus otomatis.'
+      message,
+      recovery ? { label: 'Pulihkan Snapshot', onClick: _restoreRecovery } : null
     );
+
     if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
+  }
+
+  function _restoreRecovery() {
+    const recovery = Storage.getRecovery();
+    if (!recovery) {
+      UI.toast('Snapshot pemulihan tidak ditemukan atau masa pemulihannya telah berakhir.', 'error', 5000);
+      UI.hideExpiredBanner();
+      return;
+    }
+
+    UI.confirm(
+      'Pulihkan Snapshot',
+      'Snapshot terakhir akan menggantikan dokumen yang sedang terbuka. Simpan atau ekspor perubahan aktif terlebih dahulu bila masih diperlukan. Lanjutkan?',
+      () => {
+        if (typeof Utils.flushDebounces === 'function') Utils.flushDebounces();
+
+        // Simpan hasil pulihan sebagai quick-save baru sebelum menghapus arsip.
+        const persisted = Storage.save(recovery.data, { replaceExpired: true });
+        State.restore(recovery.data);
+
+        if (persisted.success) {
+          Storage.removeRecovery(recovery.id);
+          State.markSaved(persisted);
+        } else {
+          // Data tetap dibuka dalam memori dan arsip pemulihan tidak dihapus.
+          State.markDirty();
+        }
+
+        const activeId = State.getActiveTemplate();
+        TemplateRegistry.renderTemplateList(
+          document.getElementById('template-list'),
+          activeId,
+          _handleTemplateSelect
+        );
+
+        if (activeId) {
+          TemplateRegistry.updateActiveCard(
+            document.getElementById('template-list'),
+            activeId
+          );
+          FormRenderer.render(activeId);
+          UI.switchTab('form');
+        } else {
+          UI.switchTab('template');
+        }
+
+        if (persisted.success) {
+          UI.updateStorageInfo(Storage.getMeta());
+          UI.toast('Snapshot berhasil dipulihkan dan disimpan kembali.', 'success', 5000);
+          _pendingExpiryNotice = false;
+          UI.hideExpiredBanner();
+        } else {
+          UI.markStorageDirty();
+          UI.toast(
+            'Snapshot berhasil dibuka, tetapi belum dapat disimpan kembali. Arsip pemulihan tetap dipertahankan; gunakan Export Backup.',
+            'warning',
+            7000
+          );
+          _showExpiredStorageNotice();
+        }
+
+        if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
+      }
+    );
   }
 
   /* ── On state change (auto-save indicator) ── */
