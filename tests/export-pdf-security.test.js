@@ -32,10 +32,19 @@ describe('PDF export security helpers', () => {
     })).toBe(true);
   });
 
-  it('uses a valid forwarded client IP and falls back to a validated address', () => {
+  it('prefers Vercel edge client IP headers and falls back to a validated address', () => {
     expect(getClientIp({
       'x-forwarded-for': '203.0.113.5, 10.0.0.1',
       'x-real-ip': '198.51.100.2',
+    })).toBe('198.51.100.2');
+
+    expect(getClientIp({
+      'x-vercel-forwarded-for': '192.0.2.25',
+      'x-forwarded-for': '203.0.113.5',
+    })).toBe('192.0.2.25');
+
+    expect(getClientIp({
+      'x-forwarded-for': '203.0.113.5, 10.0.0.1',
     })).toBe('203.0.113.5');
 
     expect(getClientIp({
