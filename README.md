@@ -13,7 +13,7 @@ Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesi
 - [Deploy ke Vercel](#deploy-ke-vercel)
 - [Template Surat yang Tersedia](#template-surat-yang-tersedia)
 - [Cara Menggunakan Aplikasi](#cara-menggunakan-aplikasi)
-- [Sistem Penyimpanan Lokal dan TTL 2 Jam](#sistem-penyimpanan-lokal-dan-ttl-2-jam)
+- [Sistem Penyimpanan Lokal, TTL, dan Pemulihan Data](#sistem-penyimpanan-lokal-ttl-dan-pemulihan-data)
 - [Cara Menambahkan Template Surat Baru](#cara-menambahkan-template-surat-baru)
 - [Arsitektur Kode](#arsitektur-kode)
 - [Catatan Pengembang](#catatan-pengembang)
@@ -27,8 +27,8 @@ Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesi
 - **Tab Pengaturan** — kontrol penuh atas ukuran kertas, orientasi, margin, skala cetak, dan tampilan preview
 - **Live Preview** surat secara real-time dengan kontrol zoom
 - **Cetak / Print** langsung dari browser dengan format halaman yang tepat sesuai pengaturan
-- **Penyimpanan Lokal** dengan TTL 2 jam sejak pengguna menekan Simpan; data yang belum disimpan tidak otomatis dipersistenkan
-- **Ekspor PDF langsung** melalui endpoint serverless Vercel dengan Chromium; HTML/CSS preview dikirim ke server untuk proses rendering
+- **Penyimpanan Lokal** dengan TTL cepat 2 jam, snapshot pemulihan hingga 30 hari, serta draft bernama tanpa TTL; perubahan yang belum disimpan tetap perlu disimpan atau diekspor pengguna
+- **Ekspor PDF langsung** melalui endpoint serverless Vercel dengan Chromium; origin divalidasi, ukuran payload dibatasi, JavaScript dan akses jaringan eksternal dinonaktifkan saat rendering
 - **Extensible** — template baru dapat ditambahkan tanpa mengubah arsitektur inti
 - **Advanced Data Management** — draft bernama tanpa TTL, kelola draft, serta ekspor/impor backup JSON
 - **Responsif** — editor dan preview beradaptasi pada desktop, tablet, dan smartphone
