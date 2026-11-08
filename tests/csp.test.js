@@ -6,16 +6,16 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'
 describe('CSP compatibility guards', () => {
   it('does not contain inline script blocks or inline event attributes in the HTML shell', () => {
     const html = read('index.html');
-    const scriptTags = [...html.matchAll(/<script\\b([^>]*)>/gi)];
-    const inlineScripts = scriptTags.filter(([, attributes]) => !/\\bsrc\\s*=/i.test(attributes));
+    const scriptTags = [...html.matchAll(/<script\b([^>]*)>/gi)];
+    const inlineScripts = scriptTags.filter(([, attributes]) => !/\bsrc\s*=/i.test(attributes));
 
     expect(inlineScripts).toHaveLength(0);
-    expect(html).not.toMatch(/\\bon[a-z]+\\s*=/i);
+    expect(html).not.toMatch(/\bon[a-z]+\s*=/i);
   });
 
   it('does not generate inline click handlers in application empty/error states', () => {
-    expect(read('js/app.js')).not.toMatch(/\\bonclick\\s*=/i);
-    expect(read('js/form-renderer.js')).not.toMatch(/\\bonclick\\s*=/i);
+    expect(read('js/app.js')).not.toMatch(/\bonclick\s*=/i);
+    expect(read('js/form-renderer.js')).not.toMatch(/\bonclick\s*=/i);
   });
 
   it('loads the early theme bootstrap as a same-origin external script', () => {
