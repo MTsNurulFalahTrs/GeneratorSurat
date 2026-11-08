@@ -76,6 +76,23 @@ describe('Validation.formTemplate', () => {
     expect(result.errors.map(error => error.field)).toEqual(['surat.tanggal', 'surat.jenis']);
   });
 
+  it('does not require an empty repeatable section unless its definition says required', () => {
+    const Validation = loadValidation();
+    const template = {
+      formSections: [
+        { id: 'opsional', type: 'repeatable', fields: [{ key: 'judul', label: 'Judul', required: true }] },
+        { id: 'wajib', type: 'repeatable', required: true, itemLabel: 'Lampiran', fields: [{ key: 'judul', label: 'Judul', required: true }] },
+      ],
+    };
+
+    const result = Validation.formTemplate({ opsional: [], wajib: [] }, template);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual([
+      { field: 'wajib', message: 'Minimal satu Lampiran harus ditambahkan.' },
+    ]);
+  });
+
   it('validates repeatable sections and respects showIf conditions', () => {
     const Validation = loadValidation();
     const template = {
