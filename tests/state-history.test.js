@@ -44,11 +44,13 @@ describe('State undo/redo coverage', () => {
 
   it('records resetSettings so document settings can be restored with undo', () => {
     const State = createState();
+    const defaultMarginLeft = State.getSettings().margin.left;
+
     State.setSettings({ margin: { left: 40 } });
     State.markSaved();
 
     State.resetSettings();
-    expect(State.getSettings().margin.left).toBe(20);
+    expect(State.getSettings().margin.left).toBe(defaultMarginLeft);
     expect(State.undo()).toBe(true);
     expect(State.getSettings().margin.left).toBe(40);
   });
