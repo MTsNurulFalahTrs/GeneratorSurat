@@ -319,8 +319,12 @@ const App = (() => {
     _pendingExpiryNotice = true;
 
     // Jangan reset State: pengguna mungkin masih mengedit dokumen ketika TTL
-    // tercapai. Snapshot tersimpan tetap tersedia untuk dipulihkan secara manual.
-    if (_bootComplete) _showExpiredStorageNotice();
+    // tercapai. Tandai data yang tetap terbuka sebagai belum tersimpan agar
+    // beforeunload dan indikator penyimpanan melindunginya.
+    if (_bootComplete) {
+      if (!State.isDirty()) State.markDirty();
+      _showExpiredStorageNotice();
+    }
   }
 
   function _showExpiredStorageNotice() {
@@ -329,6 +333,8 @@ const App = (() => {
       ? 'Penyimpanan cepat telah kedaluwarsa. Data kerja yang sedang terbuka tetap dipertahankan; snapshot terakhir dapat dipulihkan selama 30 hari.'
       : 'Penyimpanan cepat telah kedaluwarsa. Data kerja yang sedang terbuka tetap dipertahankan, tetapi tidak ditemukan snapshot pemulihan.';
 
+    UI.updateStorageInfo(null);
+    if (State.isDirty()) UI.markStorageDirty();
     UI.showExpiredBanner(
       message,
       recovery ? { label: 'Pulihkan Snapshot', onClick: _restoreRecovery } : null
