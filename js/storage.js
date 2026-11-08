@@ -300,6 +300,17 @@ const Storage = (() => {
     return _writeRecoveryList(items);
   }
 
+  function clearRecovery() {
+    if (!_available) return false;
+    try {
+      localStorage.removeItem(RECOVERY_KEY);
+      return true;
+    } catch (err) {
+      console.warn('[Storage] Gagal menghapus snapshot pemulihan:', err?.name || 'Error');
+      return false;
+    }
+  }
+
   function clear() {
     _clearRaw();
     if (_available) {
@@ -336,6 +347,7 @@ const Storage = (() => {
     checkExpiry,
     getRecovery,
     removeRecovery,
+    clearRecovery,
     TTL_DURATION_MS,
     RECOVERY_RETENTION_MS,
   };
