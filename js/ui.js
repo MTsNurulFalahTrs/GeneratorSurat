@@ -194,25 +194,38 @@ const UI = (() => {
   }
 
   /* ── Expired Banner ── */
-  function showExpiredBanner(message) {
-    const banner  = document.getElementById('expired-banner');
-    const textEl  = document.getElementById('expired-banner-text');
+  function showExpiredBanner(message, recoveryAction = null) {
+    const banner = document.getElementById('expired-banner');
+    const textEl = document.getElementById('expired-banner-text');
     const closeEl = document.getElementById('expired-banner-close');
+    const restoreEl = document.getElementById('expired-banner-restore');
 
     if (!banner) return;
-    if (textEl) textEl.textContent = message || 'Data lokal telah kedaluwarsa dan dihapus otomatis.';
+    if (textEl) {
+      textEl.textContent = message || 'Penyimpanan cepat telah kedaluwarsa. Data snapshot masih dapat dipulihkan.';
+    }
     banner.classList.remove('hidden');
 
-    if (closeEl) {
-      closeEl.onclick = () => banner.classList.add('hidden');
+    if (restoreEl) {
+      restoreEl.hidden = !(recoveryAction && typeof recoveryAction.onClick === 'function');
+      restoreEl.textContent = recoveryAction?.label || 'Pulihkan Snapshot';
+      restoreEl.onclick = restoreEl.hidden ? null : recoveryAction.onClick;
     }
+    if (closeEl) closeEl.onclick = hideExpiredBanner;
 
-    // Auto hide setelah 8 detik
-    setTimeout(() => banner.classList.add('hidden'), 8000);
+    // Banner dengan aksi pemulihan tidak ditutup otomatis agar pengguna tidak
+    // kehilangan pemberitahuan sebelum sempat menyimpan atau memulihkan data.
+    if (!recoveryAction) setTimeout(hideExpiredBanner, 8000);
   }
 
   function hideExpiredBanner() {
-    document.getElementById('expired-banner')?.classList.add('hidden');
+    const banner = document.getElementById('expired-banner');
+    const restoreEl = document.getElementById('expired-banner-restore');
+    banner?.classList.add('hidden');
+    if (restoreEl) {
+      restoreEl.hidden = true;
+      restoreEl.onclick = null;
+    }
   }
 
   /* ── Storage Info (header) ── */
@@ -241,7 +254,7 @@ const UI = (() => {
 
     textEl.textContent = `Tersimpan ${savedAt} · Kedaluwarsa dalam ${remStr}`;
     wrap.classList.remove('hidden');
-    wrap.title = `Data tersimpan di perangkat ini dan akan dihapus otomatis setelah 2 jam sejak penyimpanan terakhir.\nPenyimpanan terakhir: ${savedAt}`;
+    wrap.title = `Penyimpanan cepat berlaku 2 jam. Snapshot terakhir dapat dipulihkan selama 30 hari setelah kedaluwarsa.\nPenyimpanan terakhir: ${savedAt}`;
   }
 
   /* ── Tandai ada perubahan yang belum disimpan ── */

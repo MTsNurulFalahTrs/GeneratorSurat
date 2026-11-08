@@ -1,36 +1,23 @@
 /* =============================================================
-   storage.js — LocalStorage wrapper dengan TTL 2 jam yang robust
-   =============================================================
-   Mekanisme expiry:
-   - TTL dihitung dari `lastSavedAt` (waktu penyimpanan terakhir)
-   - expiresAt = lastSavedAt + TTL_DURATION_MS
-   - Pengecekan dilakukan:
-     1. Saat initialization (page load/hard refresh)
-     2. Setiap EXPIRY_CHECK_INTERVAL_MS (1 menit) via setInterval
-     3. Saat tab kembali visible (visibilitychange event)
-     4. Saat tab mendapat focus (window focus event)
-   - Refresh/hard-refresh TIDAK mereset TTL
-   - TTL hanya diperbarui saat benar-benar ada penyimpanan data baru
-*/
+   storage.js — LocalStorage wrapper dengan TTL dan snapshot pemulihan
+   ============================================================= */
 
 const Storage = (() => {
+  const STORAGE_KEY = 'surat-generator-v1';
+  const RECOVERY_KEY = 'surat-generator-recovery-v1';
+  const TTL_DURATION_MS = 2 * 60 * 60 * 1000;
+  const RECOVERY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+  const CHECK_INTERVAL_MS = 60 * 1000;
+  const SCHEMA_VERSION = '1.0';
 
-  /* ── Konstanta ── */
-  const STORAGE_KEY        = 'surat-generator-v1';
-  const TTL_DURATION_MS    = 2 * 60 * 60 * 1000; // 2 jam
-  const CHECK_INTERVAL_MS  = 60 * 1000;           // cek tiap 1 menit
-  const SCHEMA_VERSION     = '1.0';
-
-  /* ── Internal state ── */
   let _checkIntervalId = null;
   let _onExpiredCallback = null;
   let _available = false;
   let _listenersBound = false;
+  let _lastHandledExpiry = null;
 
-  /* ── 1. Cek ketersediaan localStorage ── */
   function _checkAvailability() {
     try {
-      // Probe write/remove juga menangani mode private atau storage yang diblokir.
       const testKey = '__generator_surat_storage_probe__';
       localStorage.setItem(testKey, '1');
       localStorage.removeItem(testKey);
@@ -41,207 +28,298 @@ const Storage = (() => {
     return _available;
   }
 
-  /* ── 2. Baca raw data dari localStorage ── */
+  function _isPlainObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+  }
+
   function _readRaw() {
     if (!_available) return null;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      // Validasi schema + metadata minimum. Record yang rusak harus dibuang,
-      // bukan diperlakukan sebagai data yang masih aktif tanpa TTL yang jelas.
       if (
-        !parsed
+        !_isPlainObject(parsed)
         || parsed.version !== SCHEMA_VERSION
         || !Number.isFinite(parsed.lastSavedAt)
         || !Number.isFinite(parsed.expiresAt)
         || parsed.expiresAt < parsed.lastSavedAt
-        || !parsed.data
-        || typeof parsed.data !== 'object'
-        || Array.isArray(parsed.data)
+        || !_isPlainObject(parsed.data)
       ) {
-        _clearRaw();
+        console.warn('[Storage] Record penyimpanan tidak valid; tidak akan dipakai.');
         return null;
       }
       return parsed;
-    } catch {
-      // Data corrupt → hapus
-      _clearRaw();
+    } catch (err) {
+      console.warn('[Storage] Gagal membaca record penyimpanan:', err?.name || 'Error');
       return null;
     }
   }
 
-  /* ── 3. Tulis raw data ke localStorage ── */
   function _writeRaw(payload) {
     if (!_available) return false;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       return true;
     } catch (err) {
-      // QuotaExceededError atau error lain
-      console.warn('[Storage] Gagal menulis ke localStorage:', err.message);
+      console.warn('[Storage] Gagal menulis ke localStorage:', err?.name || 'Error');
       return false;
     }
   }
 
-  /* ── 4. Hapus data dari localStorage ── */
   function _clearRaw() {
-    if (!_available) return;
+    if (!_available) return false;
     try {
       localStorage.removeItem(STORAGE_KEY);
+      return true;
     } catch {
-      /* silent */
+      return false;
     }
   }
 
-  /* ── 5. Cek apakah data sudah expired ── */
-  function _isExpired(record) {
-    if (!record || !Number.isFinite(record.expiresAt)) return false;
-    return Date.now() >= record.expiresAt;
+  function _readRecoveryList() {
+    if (!_available) return [];
+    try {
+      const raw = localStorage.getItem(RECOVERY_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!_isPlainObject(parsed) || parsed.version !== SCHEMA_VERSION || !Array.isArray(parsed.items)) {
+        console.warn('[Storage] Indeks snapshot pemulihan tidak valid.');
+        return [];
+      }
+
+      const now = Date.now();
+      return parsed.items.filter(item =>
+        _isPlainObject(item)
+        && typeof item.id === 'string'
+        && Number.isFinite(item.lastSavedAt)
+        && Number.isFinite(item.archivedAt)
+        && Number.isFinite(item.recoveryExpiresAt)
+        && item.recoveryExpiresAt > now
+        && _isPlainObject(item.data)
+      ).slice(-1);
+    } catch (err) {
+      console.warn('[Storage] Gagal membaca snapshot pemulihan:', err?.name || 'Error');
+      return [];
+    }
   }
 
-  /* ── 6. Hapus data expired dan panggil callback ── */
+  function _writeRecoveryList(items) {
+    if (!_available) return false;
+    try {
+      if (!items.length) {
+        localStorage.removeItem(RECOVERY_KEY);
+        return true;
+      }
+      localStorage.setItem(RECOVERY_KEY, JSON.stringify({
+        version: SCHEMA_VERSION,
+        items: items.slice(-1),
+      }));
+      return true;
+    } catch (err) {
+      console.warn('[Storage] Snapshot pemulihan belum dapat disimpan:', err?.name || 'Error');
+      return false;
+    }
+  }
+
+  function _archiveExpiredRecord(record) {
+    if (!_isPlainObject(record) || !_isPlainObject(record.data)) return false;
+
+    const existing = _readRecoveryList();
+    const id = 'recovery-' + String(record.lastSavedAt);
+    if (existing.some(item => item.id === id)) return true;
+
+    const now = Date.now();
+    const snapshot = {
+      id,
+      lastSavedAt: record.lastSavedAt,
+      archivedAt: now,
+      recoveryExpiresAt: now + RECOVERY_RETENTION_MS,
+      data: record.data,
+    };
+
+    // Hanya simpan satu snapshot terakhir agar pemulihan tidak menghabiskan
+    // kuota localStorage dan mengorbankan draft bernama pengguna.
+    return _writeRecoveryList([snapshot]);
+  }
+
+  function _isExpired(record) {
+    return !!record && Number.isFinite(record.expiresAt) && Date.now() >= record.expiresAt;
+  }
+
+  function getRecovery() {
+    if (!_available) return null;
+
+    const archived = _readRecoveryList();
+    if (archived.length) {
+      const item = archived[archived.length - 1];
+      return { ...item, source: 'archive' };
+    }
+
+    // Bila kuota penuh membuat pengarsipan gagal, record TTL yang expired
+    // tetap dibiarkan di key asal sehingga pengguna masih bisa memulihkannya.
+    const raw = _readRaw();
+    if (_isExpired(raw)) {
+      return {
+        id: 'expired-cache-' + String(raw.lastSavedAt),
+        lastSavedAt: raw.lastSavedAt,
+        archivedAt: null,
+        recoveryExpiresAt: null,
+        data: raw.data,
+        source: 'expired-cache',
+      };
+    }
+    return null;
+  }
+
   function _handleExpiry(record) {
-    console.info('[Storage] Data kedaluwarsa, menghapus...');
-    _clearRaw();
+    if (!record) return false;
+    const expiryId = String(record.lastSavedAt);
+    if (_lastHandledExpiry === expiryId) return true;
+
+    const archived = _archiveExpiredRecord(record);
+    if (archived) _clearRaw();
+
+    _lastHandledExpiry = expiryId;
     if (typeof _onExpiredCallback === 'function') {
       try {
-        _onExpiredCallback(record);
+        _onExpiredCallback({
+          ...record,
+          archived,
+          recoveryAvailable: !!getRecovery(),
+        });
       } catch (err) {
-        console.warn('[Storage] Error di onExpired callback:', err);
+        console.warn('[Storage] Error di callback expiry:', err?.name || 'Error');
       }
     }
+
+    return archived;
   }
 
-  /* ── 7. Pengecekan expiry (dipanggil dari berbagai trigger) ── */
   function checkExpiry() {
     if (!_available) return false;
     const record = _readRaw();
-    if (!record) return false; // Tidak ada data, tidak perlu expire
-    if (_isExpired(record)) {
-      _handleExpiry(record);
-      return true; // true = sudah expired dan dihapus
-    }
-    return false; // false = belum expired
+    if (!_isExpired(record)) return false;
+    _handleExpiry(record);
+    return true;
   }
 
-  /* ── 8. Start interval checker ── */
   function _startIntervalCheck() {
     if (_checkIntervalId) return;
-    _checkIntervalId = setInterval(() => {
-      checkExpiry();
-    }, CHECK_INTERVAL_MS);
+    _checkIntervalId = setInterval(checkExpiry, CHECK_INTERVAL_MS);
   }
 
-  /* ── 10. Setup page visibility listener ── */
   function _setupVisibilityListener() {
     if (_listenersBound) return;
     _listenersBound = true;
 
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        // Tab kembali visible → cek expiry
-        checkExpiry();
-      }
+      if (!document.hidden) checkExpiry();
     });
-
-    window.addEventListener('focus', () => {
-      // Window mendapat focus → cek expiry
-      checkExpiry();
-    });
-
-    // Page show event (saat tab dipulihkan dari bfcache)
-    window.addEventListener('pageshow', (e) => {
-      if (e.persisted) {
-        // Halaman dipulihkan dari back-forward cache
-        checkExpiry();
-      }
+    window.addEventListener('focus', checkExpiry);
+    window.addEventListener('pageshow', event => {
+      if (event.persisted) checkExpiry();
     });
   }
 
-  /* ── 11. Initialize storage ── */
   function init(options = {}) {
     const { onExpired } = options;
-
     _checkAvailability();
 
-    if (typeof onExpired === 'function') {
-      _onExpiredCallback = onExpired;
-    }
-
+    if (typeof onExpired === 'function') _onExpiredCallback = onExpired;
     if (!_available) {
       console.warn('[Storage] localStorage tidak tersedia.');
-      return { available: false, hasData: false, expired: false };
+      return { available: false, hasData: false, expired: false, recoveryAvailable: false };
     }
 
-    // Cek expiry saat init (page load / hard refresh)
     const record = _readRaw();
     const expired = _isExpired(record);
-
-    if (expired) {
-      _handleExpiry(record);
-      _startIntervalCheck();
-      _setupVisibilityListener();
-      return { available: true, hasData: false, expired: true };
-    }
+    if (expired) _handleExpiry(record);
 
     _startIntervalCheck();
     _setupVisibilityListener();
 
     return {
       available: true,
-      hasData: record !== null,
-      expired: false,
-      record: record || null,
+      hasData: record !== null && !expired,
+      expired,
+      record: record && !expired ? record : null,
+      recoveryAvailable: !!getRecovery(),
     };
   }
 
-  /* ── 12. Load data dari storage ── */
   function load() {
     if (!_available) return null;
-
     const record = _readRaw();
     if (!record) return null;
-
     if (_isExpired(record)) {
       _handleExpiry(record);
       return null;
     }
-
     return record.data || null;
   }
 
-  /* ── 13. Simpan data ke storage (update lastSavedAt & expiresAt) ── */
-  function save(data) {
+  function save(data, options = {}) {
     if (!_available) return { success: false, reason: 'localStorage tidak tersedia' };
+    if (!_isPlainObject(data)) {
+      return { success: false, reason: 'Data yang akan disimpan tidak valid.' };
+    }
+
+    const existing = _readRaw();
+    if (_isExpired(existing) && options.replaceExpired !== true) {
+      // Jangan timpa data TTL yang expired sebelum snapshot pemulihannya aman.
+      if (!_archiveExpiredRecord(existing)) {
+        return {
+          success: false,
+          reason: 'Snapshot lama belum berhasil diamankan. Ekspor backup atau hapus data lama sebelum menyimpan ulang.',
+        };
+      }
+      _clearRaw();
+    }
 
     const now = Date.now();
-    const payload = {
+    const expiresAt = now + TTL_DURATION_MS;
+    const success = _writeRaw({
       version: SCHEMA_VERSION,
       lastSavedAt: now,
-      expiresAt: now + TTL_DURATION_MS,
-      data: data,
-    };
+      expiresAt,
+      data,
+    });
 
-    const success = _writeRaw(payload);
     if (!success) {
       return { success: false, reason: 'Gagal menulis ke localStorage (mungkin penuh)' };
     }
 
-    return {
-      success: true,
-      lastSavedAt: now,
-      expiresAt: now + TTL_DURATION_MS,
-    };
+    _lastHandledExpiry = null;
+    return { success: true, lastSavedAt: now, expiresAt };
   }
 
-  /* ── 14. Hapus semua data ── */
+  function removeRecovery(id) {
+    if (!_available || !id) return false;
+    const items = _readRecoveryList().filter(item => item.id !== id);
+    return _writeRecoveryList(items);
+  }
+
+  function clearRecovery() {
+    if (!_available) return false;
+    try {
+      localStorage.removeItem(RECOVERY_KEY);
+      return true;
+    } catch (err) {
+      console.warn('[Storage] Gagal menghapus snapshot pemulihan:', err?.name || 'Error');
+      return false;
+    }
+  }
+
   function clear() {
     _clearRaw();
+    if (_available) {
+      try { localStorage.removeItem(RECOVERY_KEY); } catch { /* no-op */ }
+    }
+    _lastHandledExpiry = null;
     return true;
   }
 
-  /* ── 15. Ambil info metadata storage ── */
   function getMeta() {
     if (!_available) return null;
     const record = _readRaw();
@@ -255,12 +333,10 @@ const Storage = (() => {
     };
   }
 
-  /* ── 17. Cek apakah storage tersedia ── */
   function isAvailable() {
     return _available;
   }
 
-  /* ── Public API ── */
   return {
     init,
     load,
@@ -269,7 +345,10 @@ const Storage = (() => {
     getMeta,
     isAvailable,
     checkExpiry,
+    getRecovery,
+    removeRecovery,
+    clearRecovery,
     TTL_DURATION_MS,
+    RECOVERY_RETENTION_MS,
   };
-
 })();

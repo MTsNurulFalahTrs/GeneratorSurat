@@ -680,6 +680,7 @@ const State = (() => {
 
   /** Reset settings ke default */
   function resetSettings() {
+    _historyPush();
     _state.settings = DEFAULT_SETTINGS();
     _state.ui.isDirty = true;
     emit('settings:change', { settings: Utils.deepClone(_state.settings) });
@@ -727,6 +728,7 @@ const State = (() => {
     const id = templateId || _state.activeTemplate;
     if (!id || !tableId) return;
 
+    _historyPush();
     if (!_state.tables[id]) _state.tables[id] = {};
     _state.tables[id][tableId] = Utils.deepMerge(
       _state.tables[id][tableId] || {},
@@ -746,13 +748,18 @@ const State = (() => {
     const id = templateId || _state.activeTemplate;
     if (!id) return;
 
+    const hasConfig = tableId === null
+      ? Object.prototype.hasOwnProperty.call(_state.tables, id)
+      : !!_state.tables[id] && Object.prototype.hasOwnProperty.call(_state.tables[id], tableId);
+    if (!hasConfig) return;
+
+    _historyPush();
     if (tableId === null) {
       // Reset seluruh konfigurasi tabel template ini
       delete _state.tables[id];
     } else {
-      if (_state.tables[id]) {
-        delete _state.tables[id][tableId];
-      }
+      delete _state.tables[id][tableId];
+      if (Object.keys(_state.tables[id]).length === 0) delete _state.tables[id];
     }
     _state.ui.isDirty = true;
     emit('table:reset', { templateId: id, tableId });
@@ -983,6 +990,12 @@ const State = (() => {
     emit('state:saved', { meta: storageMeta });
   }
 
+  /** Tandai hasil pemulihan yang belum berhasil dipersistenkan sebagai dirty. */
+  function markDirty() {
+    _state.ui.isDirty = true;
+    emit('state:change', { field: 'all' });
+  }
+
   /* ── Cek apakah state kotor (ada perubahan belum tersimpan) ── */
   function isDirty() {
     return _state.ui.isDirty;
@@ -1025,6 +1038,7 @@ const State = (() => {
     serialize,
     restore,
     markSaved,
+    markDirty,
     undo,
     redo,
     getHistoryInfo,

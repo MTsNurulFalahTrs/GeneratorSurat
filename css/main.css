@@ -378,6 +378,11 @@ a:hover {
 
 .expired-banner__text {
   flex: 1;
+  min-width: 0;
+}
+
+.expired-banner__restore {
+  flex-shrink: 0;
 }
 
 .expired-banner__close {
