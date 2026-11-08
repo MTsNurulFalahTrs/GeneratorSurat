@@ -357,7 +357,7 @@ const Validation = (() => {
 
       if (section.type === 'repeatable') {
         const items = Array.isArray(formData[section.id]) ? formData[section.id] : [];
-        if (!items.length && section.required !== false) {
+        if (!items.length && section.required === true) {
           errors.push({
             field: section.id,
             message: `Minimal satu ${section.itemLabel || 'item'} harus ditambahkan.`,
