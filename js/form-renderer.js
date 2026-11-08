@@ -14,6 +14,18 @@ const FormRenderer = (() => {
       return;
     }
 
+    // Delegasi event agar tombol empty-state tidak membutuhkan inline onclick.
+    _containerEl.addEventListener('click', (event) => {
+      const target = event.target instanceof Element
+        ? event.target.closest('[data-action="select-template"]')
+        : null;
+      if (!target || !_containerEl.contains(target)) return;
+      event.preventDefault();
+      if (typeof window.App?.switchTab === 'function') {
+        window.App.switchTab('template');
+      }
+    });
+
     // Buat mount point untuk TableConfigUI (accordion Pengaturan Tabel)
     // Mount point ini berada di luar #form-container agar tidak terhapus
     // saat FormRenderer.render() mengosongkan innerHTML #form-container.
@@ -98,8 +110,8 @@ const FormRenderer = (() => {
           <polyline points="14,2 14,8 20,8"/>
         </svg>
         <p>Pilih template surat terlebih dahulu.</p>
-        <button class="btn btn--sm btn--secondary"
-          onclick="window.App && window.App.switchTab('template')">
+        <button class="btn btn--sm btn--secondary" type="button"
+          data-action="select-template">
           Pilih Template
         </button>
       </div>`;

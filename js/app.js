@@ -483,7 +483,7 @@ const App = (() => {
           <p style="color:#64748b;margin-bottom:1.5rem;">
             Terjadi kesalahan saat memulai aplikasi. Coba muat ulang halaman.
           </p>
-          <button onclick="location.reload()"
+          <button id="fatal-reload-btn" type="button"
             style="padding:.5rem 1.5rem;background:#2563eb;color:white;
               border:none;border-radius:6px;cursor:pointer;font-size:1rem;">
             Muat Ulang
@@ -497,6 +497,8 @@ ${Utils.escapeHtml(err?.stack || err?.message || String(err))}
           </details>
         </div>
       </div>`;
+    document.getElementById('fatal-reload-btn')
+      ?.addEventListener('click', () => window.location.reload());
   }
 
   /* ── Public API ── */

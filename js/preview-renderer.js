@@ -23,6 +23,24 @@ const PreviewRenderer = (() => {
   const ZOOM_MAX  = 2.5;
   const PX_PER_MM = 96 / 25.4;  // 1 mm = ~3.78 px pada 96 dpi
 
+  // Semua template menggunakan halaman fisik berukuran tetap. Template daftar
+  // memiliki paginator khusus/generik; template IJOP juga harus dipaginasi agar
+  // konten panjang tidak meluber dari satu lembar dan preview sama dengan PDF.
+  const PAGINATED_TEMPLATE_IDS = new Set([
+    'dpu',
+    'mutasi-masuk',
+    'siswa-baru',
+    'ijop-permohonan',
+    'ijop-sptjm-satpen',
+    'ijop-rekomendasi-pengawas',
+    'ijop-rekomendasi-kankemenag',
+    'ijop-sptjm-kankemenag',
+  ]);
+
+  function _usesMultiPageLayout(templateId) {
+    return PAGINATED_TEMPLATE_IDS.has(String(templateId || ''));
+  }
+
   /* ── Init ── */
   function init() {
     _previewEl   = document.getElementById('surat-preview');
@@ -108,7 +126,7 @@ const PreviewRenderer = (() => {
     const margin       = State.getMarginMm();
     const typo         = State.getTypography();
     const isLandscape  = s.orientation === 'landscape';
-    const isMultiPage  = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(tpl?.TEMPLATE_ID);
+    const isMultiPage  = _usesMultiPageLayout(tpl?.TEMPLATE_ID);
     const renderToken  = ++_renderToken;
 
     // Pagination harus diukur pada ukuran halaman fisik sebenarnya.
@@ -1898,7 +1916,7 @@ const PreviewRenderer = (() => {
     const templateId = State.getActiveTemplate();
     if (!templateId) return;
 
-    const isMultiPage = ['dpu', 'mutasi-masuk', 'siswa-baru'].includes(templateId);
+    const isMultiPage = _usesMultiPageLayout(templateId);
     if (isMultiPage && _paginationPromise) {
       // Tunggu pagination render terbaru secara deterministik. Polling di bawah
       // tetap menjadi fallback untuk render lama yang tidak memiliki promise.
@@ -1932,6 +1950,7 @@ const PreviewRenderer = (() => {
     init,
     render,
     setZoomMode: _setZoomMode,
+    usesMultiPageLayout: _usesMultiPageLayout,
     waitForReady,
   };
 

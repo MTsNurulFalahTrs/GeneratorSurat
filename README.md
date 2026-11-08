@@ -1,6 +1,6 @@
 # Generator Surat Madrasah
 
-Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesional. Seluruh proses berjalan langsung di browser pengguna — tidak ada backend, tidak ada server, tidak ada data yang dikirim ke luar perangkat.
+Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesional. Pengisian formulir, pengelolaan state, dan pembentukan preview berlangsung di browser. Fitur Ekspor PDF mengirimkan HTML/CSS preview ke endpoint serverless Vercel untuk dirender menggunakan Chromium, kemudian mengembalikan file PDF ke browser.
 
 ---
 
@@ -22,14 +22,15 @@ Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesi
 
 ## Fitur
 
-- **3 Template Surat** siap pakai: DPU, Mutasi Masuk, Siswa Baru
+- **8 Template Surat** siap pakai: DPU, Mutasi Masuk, Siswa Baru, serta lima template IJOP
 - **Editor KOP Surat** fleksibel — logo kiri (wajib) + logo kanan (opsional), jumlah baris dapat diatur (1–10), setiap baris dapat dikonfigurasi secara individual (font, ukuran, tebal, miring, garis bawah, rata teks, warna, transformasi huruf)
 - **Tab Pengaturan** — kontrol penuh atas ukuran kertas, orientasi, margin, skala cetak, dan tampilan preview
 - **Live Preview** surat secara real-time dengan kontrol zoom
 - **Cetak / Print** langsung dari browser dengan format halaman yang tepat sesuai pengaturan
-- **Penyimpanan Lokal** otomatis dengan TTL 2 jam — data tidak hilang saat refresh, tetapi terhapus otomatis setelah 2 jam sejak penyimpanan terakhir
-- **100% Client-Side** — tidak ada server, tidak ada database, tidak ada data dikirim ke luar perangkat
+- **Penyimpanan Lokal** dengan TTL 2 jam sejak pengguna menekan Simpan; data yang belum disimpan tidak otomatis dipersistenkan
+- **Ekspor PDF langsung** melalui endpoint serverless Vercel dengan Chromium; HTML/CSS preview dikirim ke server untuk proses rendering
 - **Extensible** — template baru dapat ditambahkan tanpa mengubah arsitektur inti
+- **Advanced Data Management** — draft bernama tanpa TTL, kelola draft, serta ekspor/impor backup JSON
 - **Responsif** — editor dan preview beradaptasi pada desktop, tablet, dan smartphone
 
 ---
@@ -45,8 +46,10 @@ Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesi
 | FileReader API | Upload dan baca gambar logo secara lokal |
 | Canvas API | Kompresi gambar logo sebelum disimpan |
 | `window.print()` | Cetak dokumen dengan `@page` orientation |
+| Vercel Functions | Endpoint serverless untuk ekspor PDF |
+| `puppeteer-core` + `@sparticuz/chromium` | Render HTML/CSS menjadi PDF pada server |
 
-Tidak menggunakan React, Vue, Angular, Next.js, backend, database server, Firebase, Google Apps Script, atau dependency berat lainnya.
+Frontend menggunakan HTML/CSS/Vanilla JavaScript tanpa framework. Ekspor PDF memakai satu endpoint serverless Vercel; aplikasi tidak menggunakan database server.
 
 ---
 
@@ -136,7 +139,7 @@ npx serve .
    - Buka [vercel.com](https://vercel.com)
    - Klik **Add New → Project**
    - Pilih repository GitHub yang berisi project ini
-   - Vercel mendeteksi otomatis sebagai static site
+   - Frontend statis dilayani Vercel dan `api/export-pdf.js` dijalankan sebagai Serverless Function
    - Klik **Deploy**
 
 3. **Selesai.** Tidak ada konfigurasi build tambahan yang diperlukan karena tidak ada bundler atau compiler.
@@ -172,6 +175,32 @@ File `vercel.json` sudah dikonfigurasi dengan:
 - **Tanda Tangan:** 4 pihak + Pengesahan Palembang
 
 ---
+
+### 4. IJOP: Surat Permohonan Lembaga
+- **ID:** `ijop-permohonan`
+- **Orientasi:** A4 Portrait
+- **Keterangan:** Permohonan perpanjangan izin operasional RA/Madrasah dari lembaga ke Kantor Kementerian Agama.
+
+### 5. IJOP: SPTJM dari Kepala Satpen
+- **ID:** `ijop-sptjm-satpen`
+- **Orientasi:** A4 Portrait
+- **Keterangan:** Surat Pernyataan Tanggung Jawab Mutlak dari Kepala Satuan Pendidikan.
+
+### 6. IJOP: Rekomendasi Pengawas
+- **ID:** `ijop-rekomendasi-pengawas`
+- **Orientasi:** A4 Portrait
+- **Keterangan:** Rekomendasi perpanjangan izin operasional dari Pengawas Madrasah.
+
+### 7. IJOP: Rekomendasi Kakankemenag
+- **ID:** `ijop-rekomendasi-kankemenag`
+- **Orientasi:** A4 Portrait
+- **Keterangan:** Rekomendasi perpanjangan izin operasional dari Kepala Kantor Kementerian Agama.
+
+### 8. IJOP: SPTJM Kakankemenag
+- **ID:** `ijop-sptjm-kankemenag`
+- **Orientasi:** A4 Portrait
+- **Keterangan:** Surat Pernyataan Tanggung Jawab Mutlak dari Kepala Kantor Kementerian Agama.
+
 
 ## Tab Pengaturan
 
@@ -283,7 +312,7 @@ Print.printDocument()
 - Preview surat terlihat secara real-time di panel kanan
 - Gunakan tombol **+** / **−** untuk menyesuaikan zoom preview
 - Klik **Simpan** di header untuk menyimpan data ke perangkat
-- Klik **Cetak** untuk mencetak atau menyimpan sebagai PDF via dialog browser
+- Klik **Cetak** untuk dialog cetak browser atau **Ekspor PDF** untuk membuat file PDF langsung
 
 ### Reset Data
 - Klik **Reset** di header untuk menghapus semua data dan memulai dari awal
@@ -293,7 +322,7 @@ Print.printDocument()
 
 ## Sistem Penyimpanan Lokal dan TTL 2 Jam
 
-Semua data yang dimasukkan pengguna disimpan **hanya di perangkat pengguna** menggunakan `localStorage`. Tidak ada data yang dikirim ke server manapun.
+Data formulir, pengaturan, dan preview dikelola di browser. Penyimpanan cepat menggunakan `localStorage`; draft bernama disimpan terpisah pada perangkat. **Pengecualian penting:** saat pengguna menjalankan Ekspor PDF, HTML dan CSS dari preview (yang dapat berisi data surat dan logo) dikirim ke `api/export-pdf` di Vercel untuk dirender oleh Chromium. Jangan gunakan ekspor PDF untuk data yang tidak boleh diproses oleh server tersebut tanpa persetujuan yang sesuai.
 
 ### Mekanisme TTL (Time To Live)
 

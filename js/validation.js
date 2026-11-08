@@ -276,6 +276,116 @@ const Validation = (() => {
     return { valid: errors.length === 0, errors };
   }
 
+  /* ── Validasi generik berbasis definisi form template ── */
+  function formTemplate(formData, template) {
+    if (!formData || typeof formData !== 'object' || !template) {
+      return {
+        valid: false,
+        errors: [{ field: 'form', message: 'Template atau data form belum tersedia.' }],
+      };
+    }
+
+    const errors = [];
+    const getValue = (source, path) => {
+      if (!source || typeof path !== 'string' || !path) return undefined;
+      return path.split('.').reduce((value, key) => {
+        if (value === null || value === undefined) return undefined;
+        return value[key];
+      }, source);
+    };
+
+    const validateField = (fieldDef, source, prefix = '') => {
+      if (!fieldDef || typeof fieldDef.key !== 'string' || !fieldDef.key) return;
+
+      if (typeof fieldDef.showIf === 'function') {
+        try {
+          if (!fieldDef.showIf(source)) return;
+        } catch (error) {
+          console.warn('[Validation] showIf gagal dievaluasi:', fieldDef.key, error);
+          return;
+        }
+      }
+
+      const value = getValue(source, fieldDef.key);
+      const fieldPath = prefix ? `${prefix}.${fieldDef.key}` : fieldDef.key;
+      const label = fieldDef.label || fieldDef.key;
+      const isBlank = value === null || value === undefined || String(value).trim() === '';
+
+      if (fieldDef.required) {
+        const requiredCheck = required(value, label);
+        const checkboxMissing = fieldDef.type === 'checkbox' && value !== true;
+        if (!requiredCheck.valid || checkboxMissing) {
+          errors.push({
+            field: fieldPath,
+            message: checkboxMissing ? `${label} harus dicentang.` : requiredCheck.message,
+          });
+          return;
+        }
+      }
+
+      if (isBlank) return;
+
+      if (fieldDef.type === 'date') {
+        const dateCheck = isoDate(String(value), label);
+        if (!dateCheck.valid) errors.push({ field: fieldPath, message: dateCheck.message });
+      }
+
+      if (fieldDef.type === 'number') {
+        const number = Number(value);
+        if (!Number.isFinite(number)) {
+          errors.push({ field: fieldPath, message: `${label} harus berupa angka.` });
+        } else if (fieldDef.min !== undefined && number < Number(fieldDef.min)) {
+          errors.push({ field: fieldPath, message: `${label} minimal ${fieldDef.min}.` });
+        } else if (fieldDef.max !== undefined && number > Number(fieldDef.max)) {
+          errors.push({ field: fieldPath, message: `${label} maksimal ${fieldDef.max}.` });
+        }
+      }
+
+      if (fieldDef.type === 'select' && Array.isArray(fieldDef.options) && fieldDef.options.length) {
+        const allowedValues = fieldDef.options.map(option =>
+          option && typeof option === 'object' ? option.value : option
+        );
+        if (!allowedValues.some(option => String(option) === String(value))) {
+          errors.push({ field: fieldPath, message: `${label} memiliki pilihan yang tidak valid.` });
+        }
+      }
+    };
+
+    const sections = Array.isArray(template.formSections) ? template.formSections : [];
+    sections.forEach(section => {
+      if (!section || !Array.isArray(section.fields)) return;
+
+      if (section.type === 'repeatable') {
+        const items = Array.isArray(formData[section.id]) ? formData[section.id] : [];
+        if (!items.length && section.required === true) {
+          errors.push({
+            field: section.id,
+            message: `Minimal satu ${section.itemLabel || 'item'} harus ditambahkan.`,
+          });
+          return;
+        }
+
+        items.forEach((item, index) => {
+          if (!item || typeof item !== 'object') {
+            errors.push({
+              field: `${section.id}[${index}]`,
+              message: `${section.itemLabel || 'Item'} #${index + 1} tidak valid.`,
+            });
+            return;
+          }
+          section.fields.forEach(fieldDef =>
+            validateField(fieldDef, item, `${section.id}[${index}]`)
+          );
+        });
+        return;
+      }
+
+      section.fields.forEach(fieldDef => validateField(fieldDef, formData));
+    });
+
+    return { valid: errors.length === 0, errors };
+  }
+
   /* ── DOM feedback helpers ── */
   function showFieldError(inputEl, message) {
     if (!inputEl) return;
@@ -321,6 +431,7 @@ const Validation = (() => {
     kopConfig,
     formDpu,
     formSiswa,
+    formTemplate,
 
     // DOM feedback helpers
     showFieldError,
