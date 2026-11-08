@@ -277,6 +277,11 @@ const App = (() => {
 
     if (result.success) {
       State.markSaved(result);
+      // Snapshot expiry lama tidak lagi diperlukan setelah data terbaru berhasil
+      // disimpan sebagai quick-save baru.
+      Storage.clearRecovery();
+      _pendingExpiryNotice = false;
+      UI.hideExpiredBanner();
       // @ts-ignore
       const meta = Storage.getMeta();
       UI.updateStorageInfo(meta);
