@@ -117,6 +117,29 @@ describe('Storage expiry recovery', () => {
     expect(Storage.getRecovery()).toBeNull();
   });
 
+  it('removes an old recovery snapshot after a newer explicit quick-save', () => {
+    const savedAt = Date.now() - (2 * 60 * 60 * 1000) - 5_000;
+    const { Storage, values } = createStorageHarness({
+      initial: {
+        'surat-generator-v1': JSON.stringify({
+          version: '1.0',
+          lastSavedAt: savedAt,
+          expiresAt: savedAt + (2 * 60 * 60 * 1000),
+          data: { activeTemplate: 'dpu' },
+        }),
+      },
+    });
+
+    Storage.init();
+    expect(Storage.getRecovery()).not.toBeNull();
+    const result = Storage.save({ activeTemplate: 'siswa-baru' });
+    expect(result.success).toBe(true);
+    expect(Storage.clearRecovery()).toBe(true);
+    expect(Storage.getRecovery()).toBeNull();
+    expect(values.has('surat-generator-recovery-v1')).toBe(false);
+    expect(Storage.load().activeTemplate).toBe('siswa-baru');
+  });
+
   it('clears quick-save and recovery snapshot on explicit reset', () => {
     const { Storage, values } = createStorageHarness();
     Storage.init();
