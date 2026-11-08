@@ -24,6 +24,13 @@ describe('CSP compatibility guards', () => {
     expect(read('js/theme-init.js')).toContain("localStorage.getItem('ui-theme')");
   });
 
+  it('discloses server-side PDF processing in first-use consent copy', () => {
+    const about = read('js/about.js');
+    expect(about).toContain('Ekspor PDF');
+    expect(about).toContain('server Vercel');
+    expect(about).toContain('HTML/CSS preview');
+  });
+
   it('keeps DataManager and DocumentViewer in separate global declarations', () => {
     expect(read('js/data-manager.js')).toContain('const DataManager =');
     expect(read('js/data-manager.js')).not.toContain('const DocumentViewer =');
