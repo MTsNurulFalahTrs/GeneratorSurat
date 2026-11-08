@@ -125,6 +125,11 @@ const Workflow = (() => {
       return Validation.formSiswa(formData, templateId);
     }
 
+    const template = TemplateRegistry.get(templateId);
+    if (template && typeof Validation.formTemplate === 'function') {
+      return Validation.formTemplate(formData, template);
+    }
+
     return { valid: true, errors: [] };
   }
 
