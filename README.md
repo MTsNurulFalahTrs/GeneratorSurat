@@ -320,42 +320,40 @@ Print.printDocument()
 
 ---
 
-## Sistem Penyimpanan Lokal dan TTL 2 Jam
+## Sistem Penyimpanan Lokal, TTL, dan Pemulihan Data
 
-Data formulir, pengaturan, dan preview dikelola di browser. Penyimpanan cepat menggunakan `localStorage`; draft bernama disimpan terpisah pada perangkat. **Pengecualian penting:** saat pengguna menjalankan Ekspor PDF, HTML dan CSS dari preview (yang dapat berisi data surat dan logo) dikirim ke `api/export-pdf` di Vercel untuk dirender oleh Chromium. Jangan gunakan ekspor PDF untuk data yang tidak boleh diproses oleh server tersebut tanpa persetujuan yang sesuai.
+Data surat, pengaturan, dan preview dikelola di browser. Penyimpanan cepat menggunakan `localStorage`; draft bernama dan snapshot pemulihan disimpan terpisah pada perangkat. **Pengecualian penting:** saat pengguna menjalankan Ekspor PDF, HTML dan CSS dari preview (yang dapat berisi data surat dan logo) dikirim ke `api/export-pdf` di Vercel untuk dirender oleh Chromium. Jangan gunakan ekspor PDF untuk data yang tidak boleh diproses oleh server tersebut tanpa persetujuan yang sesuai.
 
-### Mekanisme TTL (Time To Live)
+### Mekanisme TTL dan snapshot pemulihan
 
 | Kondisi | Perilaku |
 |---------|----------|
-| Pengguna **refresh** halaman | Data **tetap ada** (TTL tidak direset) |
-| Pengguna **hard refresh** (Ctrl+F5) | Data **tetap ada** (TTL tidak direset) |
-| Pengguna **tutup lalu buka kembali** tab (dalam 2 jam) | Data **tetap ada** |
-| Pengguna klik **Simpan** | TTL diperbarui — 2 jam dihitung ulang dari sekarang |
-| **2 jam** sejak penyimpanan terakhir | Data **dihapus otomatis**, notifikasi ditampilkan |
+| Pengguna refresh atau hard refresh | Data tetap tersedia selama masa TTL belum berakhir |
+| Pengguna klik **Simpan** | Penyimpanan cepat diperbarui dan TTL dihitung ulang selama 2 jam |
+| Dua jam sejak penyimpanan terakhir | Snapshot terakhir diamankan secara lokal untuk pemulihan hingga 30 hari; dokumen yang sedang terbuka tidak direset |
+| Pengguna memilih **Pulihkan Snapshot** | Snapshot ditampilkan setelah konfirmasi dan disimpan kembali sebagai penyimpanan cepat baru |
+| Kuota browser tidak cukup untuk membuat arsip | Record lama tidak dihapus atau ditimpa; pengguna diberi peringatan dan dapat menggunakan Export Backup atau draft bernama |
+| Pengguna memilih **Reset Data** | Penyimpanan cepat, snapshot pemulihan, dan draft bernama dihapus setelah konfirmasi |
 
-### Kapan Data Terhapus
+Snapshot pemulihan hanya menyimpan **satu versi terakhir** agar tidak menghabiskan kuota browser. Snapshot tersedia sampai 30 hari sejak diarsipkan. Bila pengguna membuat perubahan yang belum disimpan saat TTL habis, data yang sedang terbuka tetap dipertahankan di memori dan ditandai belum tersimpan; jangan tutup tab sebelum menyimpan atau mengekspor backup.
 
-Data dihapus otomatis ketika:
-```
-waktu_sekarang >= (waktu_simpan_terakhir + 2 jam)
-```
+### Cara menyimpan dan memulihkan
 
-Pengecekan dilakukan di **4 titik**:
-1. Saat aplikasi pertama kali dibuka (page load)
-2. Setiap **1 menit** selama halaman aktif
-3. Saat tab kembali **visible** (setelah pengguna beralih dari tab lain)
-4. Saat window mendapat **focus** kembali
+1. Klik **Simpan** untuk membuat penyimpanan cepat dengan TTL dua jam.
+2. Gunakan **Simpan Draft** di Data Management untuk menyimpan dokumen bernama yang tidak mengikuti TTL penyimpanan cepat.
+3. Saat notifikasi kedaluwarsa muncul, pilih **Pulihkan Snapshot** bila ingin kembali ke data simpan terakhir. Pemulihan menggantikan dokumen yang sedang terbuka setelah konfirmasi.
+4. Gunakan **Export Backup** untuk menyimpan salinan JSON di luar browser. File backup dapat berisi data pribadi siswa dan harus diperlakukan sebagai dokumen sensitif.
 
-### Cara Menyimpan Manual
+### Pengamanan endpoint Ekspor PDF
 
-Klik tombol **Simpan** di header — TTL akan diperpanjang 2 jam dari waktu klik tersebut.
+Endpoint `api/export-pdf` hanya menerima origin yang terdaftar secara eksplisit, membatasi ukuran HTML/CSS dan dimensi kertas, membatasi jumlah render paralel, menonaktifkan JavaScript pada halaman Chromium, serta memblokir request jaringan eksternal. CORS dan pemeriksaan origin merupakan perlindungan browser, bukan sistem autentikasi pengguna.
 
-Contoh:
-- Data disimpan pukul **10:00** → kedaluwarsa pukul **12:00**
-- Pengguna klik Simpan lagi pukul **11:30** → kedaluwarsa diperbarui ke pukul **13:30**
+Endpoint membatasi hingga 10 request per IP per 60 detik. Tanpa konfigurasi Redis, limiter lokal tetap berjalan sebagai perlindungan dasar per instance Vercel dan tidak menjamin kuota global lintas-instance. Untuk pembatasan terdistribusi, tambahkan kedua environment variable berikut di Vercel (target Production dan Preview) menggunakan nilai rahasia dari Upstash Redis REST:
 
----
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+Ketika kredensial Redis dikonfigurasi tetapi layanan Redis tidak tersedia, ekspor ditolak sementara (HTTP 503), bukan diam-diam kembali ke limiter lokal. Jangan menaruh token Redis di kode sumber atau file yang dikirim ke browser.
 
 ## Cara Menambahkan Template Surat Baru
 
