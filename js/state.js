@@ -357,14 +357,41 @@ const State = (() => {
   function setActiveTemplate(templateId) {
     if (_state.activeTemplate === templateId) return;
 
-    const isKnown = typeof TemplateRegistry !== 'undefined'
-      ? TemplateRegistry.get(templateId) !== null
-      : false;
+    const template = typeof TemplateRegistry !== 'undefined'
+      ? TemplateRegistry.get(templateId)
+      : null;
+    const isKnown = Boolean(template);
+    const templateOrientation = ['portrait', 'landscape'].includes(template?.meta?.orientation)
+      ? template.meta.orientation
+      : null;
+    const orientationChanged = Boolean(
+      isKnown && templateOrientation && _state.settings.orientation !== templateOrientation
+    );
 
     _historyPush();
     _state.activeTemplate = isKnown ? templateId : null;
+
+    // Orientasi template menjadi default saat template dipilih. Pengguna tetap
+    // bebas mengubahnya sesudah itu melalui Pengaturan; pemulihan state tidak
+    // melewati setter ini sehingga preferensi yang tersimpan tidak ditimpa.
+    if (orientationChanged) {
+      _state.settings.orientation = templateOrientation;
+      _state.settings.activePreset = 'custom';
+    }
+
     _state.ui.isDirty = true;
     emit('template:change', { templateId: _state.activeTemplate });
+
+    // Beri tahu kontrol Pengaturan untuk menyegarkan orientasi/kertas yang
+    // ditampilkan tanpa memicu sinkronisasi penuh pada setiap perubahan input.
+    if (orientationChanged) {
+      emit('settings:change', {
+        settings: Utils.deepClone(_state.settings),
+        source: 'template-default',
+        templateId: _state.activeTemplate,
+      });
+    }
+
     emit('state:change', { field: 'activeTemplate' });
   }
 
