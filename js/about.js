@@ -55,8 +55,9 @@ const About = (() => {
             </span>
           </label>
           <p class="about-consent__hint">
-            Persetujuan ini hanya disimpan di browser/perangkat Anda untuk mengingat bahwa informasi S&amp;K
-            sudah dibaca. Ini bukan akun dan tidak mengirim data surat ke pengembang.
+            Persetujuan ini disimpan di browser/perangkat Anda dan bukan merupakan akun. Data formulir
+            dikelola di browser; saat Anda menggunakan Ekspor PDF, HTML/CSS preview yang memuat isi surat
+            dikirim ke server Vercel untuk dirender menjadi PDF.
           </p>
         </div>`
       : `
