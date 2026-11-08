@@ -173,8 +173,11 @@ const About = (() => {
               disimpan di perangkat dan tidak mengikuti TTL penyimpanan cepat.</li>
             <li><strong>Backup JSON dapat diekspor.</strong> File backup dapat disimpan oleh pengguna dan
               diimpor kembali melalui fitur Import Backup.</li>
-            <li><strong>Data tetap berada pada perangkat kecuali pengguna sendiri membagikannya.</strong>
-              Jangan menyalin atau mengunggah file backup ke tempat yang tidak Anda percayai.</li>
+            <li><strong>Ekspor PDF diproses melalui server Vercel.</strong> Saat fitur Ekspor PDF digunakan,
+              HTML dan CSS preview dikirim ke endpoint serverless aplikasi untuk dirender oleh Chromium.
+              Konten tersebut dapat memuat data siswa, identitas madrasah, tanda tangan, dan logo KOP.</li>
+            <li><strong>Gunakan fitur PDF sesuai kebijakan data madrasah.</strong> Jangan mengirimkan data
+              yang tidak diizinkan diproses oleh layanan server tanpa persetujuan dan dasar yang sesuai.</li>
           </ol>
           <div class="about-callout about-callout--warning">
             <strong>Penting:</strong> perangkat bersama dapat membuat orang lain yang memiliki akses ke browser
@@ -238,8 +241,9 @@ const About = (() => {
         ${_section('❓', 'FAQ (Pertanyaan yang Sering Diajukan)', `
           <div class="about-faq">
             <details><summary>Apakah data surat otomatis dikirim ke pengembang?</summary>
-              <p>Data surat digunakan oleh aplikasi di browser untuk pemrosesan dan penyimpanan lokal. Pengguna tetap
-                harus berhati-hati saat menggunakan perangkat bersama atau membagikan file backup.</p>
+              <p>Formulir dan preview diproses di browser. Namun, saat Ekspor PDF digunakan, HTML/CSS preview
+                dikirim ke server Vercel untuk dirender oleh Chromium. Cetak browser dan backup JSON tetap berjalan
+                melalui browser pengguna.</p>
             </details>
             <details><summary>Berapa lama data yang disimpan melalui tombol Simpan bertahan?</summary>
               <p>Penyimpanan cepat menggunakan TTL 2 jam sejak penyimpanan terakhir. Draft bernama pada Data Management
