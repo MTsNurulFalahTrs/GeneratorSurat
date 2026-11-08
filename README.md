@@ -335,7 +335,7 @@ Data surat, pengaturan, dan preview dikelola di browser. Penyimpanan cepat mengg
 | Kuota browser tidak cukup untuk membuat arsip | Record lama tidak dihapus atau ditimpa; pengguna diberi peringatan dan dapat menggunakan Export Backup atau draft bernama |
 | Pengguna memilih **Reset Data** | Penyimpanan cepat, snapshot pemulihan, dan draft bernama dihapus setelah konfirmasi |
 
-Snapshot pemulihan hanya menyimpan **satu versi terakhir** agar tidak menghabiskan kuota browser. Snapshot tersedia sampai 30 hari sejak diarsipkan. Bila pengguna membuat perubahan yang belum disimpan saat TTL habis, data yang sedang terbuka tetap dipertahankan di memori dan ditandai belum tersimpan; jangan tutup tab sebelum menyimpan atau mengekspor backup.
+Snapshot pemulihan hanya menyimpan **satu versi terakhir** agar tidak menghabiskan kuota browser. Snapshot tersedia sampai 30 hari sejak diarsipkan. Setelah pengguna berhasil membuat quick-save baru, snapshot kedaluwarsa sebelumnya dihapus karena sudah digantikan oleh data terbaru. Bila pengguna membuat perubahan yang belum disimpan saat TTL habis, data yang sedang terbuka tetap dipertahankan di memori dan ditandai belum tersimpan; jangan tutup tab sebelum menyimpan atau mengekspor backup.
 
 ### Cara menyimpan dan memulihkan
 
