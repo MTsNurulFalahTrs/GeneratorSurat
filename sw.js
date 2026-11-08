@@ -2,7 +2,7 @@
    sw.js — Phase 5 Platform Service Worker
    ============================================================= */
 
-const CACHE_NAME = 'generator-surat-platform-v6';
+const CACHE_NAME = 'generator-surat-platform-v7';
 const APP_SHELL = [
   './',
   './index.html',
@@ -15,9 +15,12 @@ const APP_SHELL = [
   './css/responsive.css',
   './css/workflow.css',
   './css/data-manager.css',
+  './css/about.css',
+  './css/dark-mode.css',
   './css/platform.css',
   './css/document-viewer.css',
   './css/print.css',
+  './js/theme-init.js',
   './js/utils.js',
   './js/storage.js',
   './js/state.js',
