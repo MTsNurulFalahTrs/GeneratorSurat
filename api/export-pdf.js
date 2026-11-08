@@ -6,7 +6,6 @@ import {
   createMemoryRateLimiter,
   getClientIp,
   isOriginAllowed,
-  isUpstashConfigured,
   parseJsonBody,
   sanitizePdfFilename,
   validateContentLength,
