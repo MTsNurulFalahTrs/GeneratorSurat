@@ -169,7 +169,9 @@ const About = (() => {
             <li><strong>Pemrosesan utama berlangsung di browser.</strong> Data surat yang Anda isi digunakan
               untuk membentuk preview, pengaturan dokumen, dan hasil cetak.</li>
             <li><strong>Penyimpanan cepat menggunakan localStorage.</strong> Data yang disimpan melalui tombol
-              <em>Simpan</em> memiliki masa berlaku otomatis <strong>2 jam sejak penyimpanan terakhir</strong>.</li>
+              <em>Simpan</em> memiliki masa berlaku <strong>2 jam sejak penyimpanan terakhir</strong>. Saat masa berlaku habis,
+              snapshot terakhir diamankan di perangkat untuk dipulihkan hingga <strong>30 hari</strong>; dokumen yang sedang
+              terbuka tidak direset. Snapshot pemulihan dibatasi satu versi untuk menjaga kuota browser.</li>
             <li><strong>Draft bernama bersifat persisten.</strong> Draft yang dibuat melalui fitur Data Management
               disimpan di perangkat dan tidak mengikuti TTL penyimpanan cepat.</li>
             <li><strong>Backup JSON dapat diekspor.</strong> File backup dapat disimpan oleh pengguna dan
@@ -212,6 +214,7 @@ const About = (() => {
             <div><strong>Minimalkan data.</strong><span>Masukkan hanya data yang memang diperlukan untuk surat.</span></div>
             <div><strong>Amankan perangkat.</strong><span>Gunakan PIN/password perangkat dan browser yang terpercaya.</span></div>
             <div><strong>Hapus data yang tidak diperlukan.</strong><span>Hapus draft atau data lokal sebelum memindahtangankan perangkat.</span></div>
+            <div><strong>Pulihkan snapshot.</strong><span>Snapshot penyimpanan cepat dapat dipulihkan dari notifikasi kedaluwarsa hingga 30 hari setelah diarsipkan.</span></div>
             <div><strong>Jaga backup.</strong><span>File JSON backup dapat berisi data surat dan harus diperlakukan sebagai dokumen sensitif.</span></div>
             <div><strong>Waspadai tautan.</strong><span>Gunakan hanya tautan resmi aplikasi dan kanal pengembang yang tercantum di About.</span></div>
           </div>
