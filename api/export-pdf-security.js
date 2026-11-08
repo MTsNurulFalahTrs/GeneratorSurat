@@ -68,9 +68,12 @@ export function isOriginAllowed(origin, env = process.env) {
 }
 
 export function getClientIp(headers = {}, remoteAddress = '') {
+  // Vercel documents x-real-ip and x-vercel-forwarded-for as client-IP
+  // headers generated at its edge. Prefer them over the general XFF chain.
   const candidates = [
-    String(headers['x-forwarded-for'] || '').split(',')[0].trim(),
     String(headers['x-real-ip'] || '').trim(),
+    String(headers['x-vercel-forwarded-for'] || '').split(',')[0].trim(),
+    String(headers['x-forwarded-for'] || '').split(',')[0].trim(),
     String(remoteAddress || '').trim(),
   ];
 
