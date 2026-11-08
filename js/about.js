@@ -250,7 +250,8 @@ const About = (() => {
                 melalui browser pengguna.</p>
             </details>
             <details><summary>Berapa lama data yang disimpan melalui tombol Simpan bertahan?</summary>
-              <p>Penyimpanan cepat menggunakan TTL 2 jam sejak penyimpanan terakhir. Draft bernama pada Data Management
+              <p>Penyimpanan cepat menggunakan TTL 2 jam sejak penyimpanan terakhir. Saat TTL habis, snapshot terakhir
+                dapat dipulihkan hingga 30 hari melalui notifikasi aplikasi. Draft bernama pada Data Management
                 memiliki mekanisme penyimpanan terpisah dan tidak mengikuti TTL tersebut.</p>
             </details>
             <details><summary>Bagaimana cara menyimpan dokumen lebih lama?</summary>
