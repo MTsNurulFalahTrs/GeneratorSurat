@@ -6,10 +6,12 @@
    bahkan setelah TTL 2 jam habis atau browser dibersihkan.
 
    Ekspor  : State.serialize() → Blob JSON → download
-   Impor   : File JSON → validasi → State.restore() → Storage.save() → re-render
+   Impor   : File JSON → validasi → State.restore() → AppStorage.save() → re-render
 */
 
 const DataIO = (() => {
+  // TypeScript's DOM Storage constructor shadows this application's classic-script global.
+  const AppStorage = /** @type {GeneratorStorageApi} */ (/** @type {unknown} */ (Storage));
 
   /* ── Konstanta ── */
   const EXPORT_BUTTON_ID = 'btn-export-data';
@@ -155,11 +157,11 @@ const DataIO = (() => {
 
               // Restore hanya mengubah state memori. Persistensikan hasil impor
               // sebagai quick-save baru sebelum melaporkan keberhasilan.
-              const saved = Storage.save(State.serialize());
+              const saved = AppStorage.save(State.serialize());
               if (saved.success) {
                 State.markSaved(saved);
-                Storage.clearRecovery();
-                UI.updateStorageInfo(Storage.getMeta());
+                AppStorage.clearRecovery();
+                UI.updateStorageInfo(AppStorage.getMeta());
               } else {
                 // Data tetap tersedia di editor, tetapi tidak aman saat reload.
                 State.markDirty();
