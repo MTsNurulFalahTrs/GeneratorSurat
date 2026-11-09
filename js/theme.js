@@ -20,6 +20,7 @@ const Theme = (() => {
 
   /* ── Baca preferensi tersimpan ── */
   /** @returns {'auto'|'dark'|'light'} */
+  /** @returns {'light'|'dark'|'auto'} */
   function _loadSaved() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
