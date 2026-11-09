@@ -581,3 +581,59 @@
 .doc-empty-row {
   background: #fafafa;
 }
+
+
+/* ── Rekap Nilai ── */
+.rekap-nilai-meta table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.rekap-nilai-meta td {
+  padding: 1pt 3pt;
+  vertical-align: top;
+}
+
+.rekap-nilai-table-wrap {
+  margin-top: 4mm;
+  overflow-x: auto;
+}
+
+.rekap-nilai-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.rekap-nilai-table th,
+.rekap-nilai-table td {
+  border: 0.5pt solid #333;
+  padding: 1.5pt 2pt;
+  vertical-align: middle;
+  word-break: break-word;
+  text-align: center;
+}
+
+.rekap-nilai-table thead th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-align: center;
+}
+
+.rekap-nilai-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.rekap-nilai-empty-row td {
+  height: 6mm;
+}
+
+/* Pastikan tabel rekap nilai tidak terpotong saat cetak */
+@media print {
+  .rekap-nilai-table-wrap {
+    overflow: visible;
+  }
+  .rekap-nilai-table {
+    font-size: 6pt !important;
+  }
+}

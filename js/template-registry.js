@@ -179,6 +179,10 @@ const TemplateRegistry = (() => {
     if (typeof TemplateIjopSptjmKankemenag !== 'undefined') {
       register(TemplateIjopSptjmKankemenag);
     }
+    // ── Template Nilai ──
+    if (typeof TemplateRekapNilai !== 'undefined') {
+      register(TemplateRekapNilai);
+    }
 
     /*
      * ── CARA MENAMBAH TEMPLATE BARU ──

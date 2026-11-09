@@ -35,6 +35,7 @@ const PreviewRenderer = (() => {
     'ijop-rekomendasi-pengawas',
     'ijop-rekomendasi-kankemenag',
     'ijop-sptjm-kankemenag',
+    'rekap-nilai',
   ]);
 
   function _usesMultiPageLayout(templateId) {
@@ -179,6 +180,7 @@ const PreviewRenderer = (() => {
     if (id === 'ijop-rekomendasi-pengawas')   return _renderIjopRekomendasiPengawas(formData, kop, margin, typo);
     if (id === 'ijop-rekomendasi-kankemenag') return _renderIjopRekomendasiKankemenag(formData, kop, margin, typo);
     if (id === 'ijop-sptjm-kankemenag')       return _renderIjopSptjmKankemenag(formData, kop, margin, typo);
+    if (id === 'rekap-nilai')                 return _renderRekapNilai(formData, kop, margin, typo);
     return '<div style="padding:20px;color:#666;">Template tidak dikenali.</div>';
   }
 
@@ -1951,6 +1953,211 @@ const PreviewRenderer = (() => {
 
       await new Promise(resolve => requestAnimationFrame(resolve));
     }
+  }
+
+  /* ────────────────────────────────────────────────
+     RENDERER: REKAP NILAI
+  ──────────────────────────────────────────────── */
+  function _renderRekapNilai(data, kop, margin, typo) {
+    const hdr  = data?.header        && typeof data.header === 'object'        ? data.header        : {};
+    const ttd  = data?.tandaTangan   && typeof data.tandaTangan === 'object'   ? data.tandaTangan   : {};
+    const muridList = Array.isArray(data?.murid) ? data.murid : [];
+
+    const m = margin || State.getMarginMm();
+    const t = typo   || State.getTypography();
+    const marginStyle =
+      `padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;` +
+      `font-family:'${t.fontFamily}',serif;` +
+      `font-size:${t.fontSize}pt;` +
+      `line-height:${t.lineHeight};`;
+
+    const isModeFormat  = hdr.modePengisian === 'format';
+    const jumlahBab     = Math.min(5, Math.max(1, parseInt(hdr.jumlahBab,    10) || 3));
+    const jumlahTpBab   = Math.min(4, Math.max(1, parseInt(hdr.jumlahTpBab,  10) || 3));
+    const jumlahLm      = Math.min(4, Math.max(1, parseInt(hdr.jumlahLm,     10) || 2));
+    const jumlahTpLm    = Math.min(4, Math.max(1, parseInt(hdr.jumlahTpLm,   10) || 3));
+
+    /* ── KOP ── */
+    const kopHtml = _buildKopHtml(kop);
+
+    /* ── Header Info Dokumen ── */
+    const infoHtml = `
+      <div class="doc-meta rekap-nilai-meta">
+        <table>
+          <tr>
+            <td style="width:100px;">Nama Guru</td>
+            <td style="width:8px;">:</td>
+            <td><strong>${_esc(hdr.namaGuru || ttd.namaGuru || '')}</strong></td>
+            <td style="width:20px;"></td>
+            <td style="width:80px;">Semester</td>
+            <td style="width:8px;">:</td>
+            <td>${_esc(hdr.semester || '')}</td>
+          </tr>
+          <tr>
+            <td>Mata Pelajaran</td>
+            <td>:</td>
+            <td>${_esc(hdr.mataPelajaran || '')}</td>
+            <td></td>
+            <td>Tahun Pelajaran</td>
+            <td>:</td>
+            <td>${_esc(hdr.tahunPelajaran || '')}</td>
+          </tr>
+          <tr>
+            <td>Kelas</td>
+            <td>:</td>
+            <td>${_esc(hdr.namaKelas || '')}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </table>
+      </div>`;
+
+    /* ── Judul ── */
+    const judulHtml = `
+      <div class="doc-title-block">
+        <h1 class="doc-title">REKAPITULASI NILAI</h1>
+        ${isModeFormat ? '<p style="font-size:0.78em;color:#666;margin:0 0 4pt;font-style:italic;">(Format \u2014 kolom nilai dikosongkan, siap cetak)</p>' : ''}
+      </div>`;
+
+    /* ── Bangun header tabel multi-row (3 baris) ──
+       Baris 1 : No | Nama Murid | Formatif (span bab*tp) | Sumatif (span lm*tp) | STS | SAS | Praktik | Nilai Akhir
+       Baris 2 : (rowspan=3 dari No & Nama) | BAB 1 (span tp)... | LM1 (span tp)...
+       Baris 3 : TP1..TPn per BAB... | TP1..TPn per LM...
+    */
+    const colWidthNama  = '28mm';
+    const colWidthNilai = '6mm';
+    const colWidthBig   = '10mm';
+    const totalFormatifCols = jumlahBab * jumlahTpBab;
+    const totalSumatifCols  = jumlahLm  * jumlahTpLm;
+    const totalCols         = 2 + totalFormatifCols + totalSumatifCols + 4; // No + Nama + formatif + sumatif + STS+SAS+Praktik+NA
+
+    const row1 = `
+      <tr>
+        <th rowspan="3" style="width:8mm;">No.</th>
+        <th rowspan="3" style="width:${colWidthNama};text-align:left;">Nama Murid</th>
+        <th colspan="${totalFormatifCols}">Formatif (Lingkup BAB)</th>
+        <th colspan="${totalSumatifCols}">Sumatif (Lingkup Materi)</th>
+        <th rowspan="3" style="width:${colWidthBig};">Sumatif Tengah Semester</th>
+        <th rowspan="3" style="width:${colWidthBig};">Sumatif Akhir Semester</th>
+        <th rowspan="3" style="width:${colWidthBig};">Praktik</th>
+        <th rowspan="3" style="width:${colWidthBig};">Nilai Akhir</th>
+      </tr>`;
+
+    let row2Cells = '';
+    for (let b = 1; b <= jumlahBab; b++) {
+      row2Cells += `<th colspan="${jumlahTpBab}">BAB ${b}</th>`;
+    }
+    for (let l = 1; l <= jumlahLm; l++) {
+      row2Cells += `<th colspan="${jumlahTpLm}">LM${l}</th>`;
+    }
+    const row2 = `<tr>${row2Cells}</tr>`;
+
+    let row3Cells = '';
+    for (let b = 1; b <= jumlahBab; b++) {
+      for (let tp = 1; tp <= jumlahTpBab; tp++) {
+        row3Cells += `<th style="width:${colWidthNilai};">TP${tp}</th>`;
+      }
+    }
+    for (let l = 1; l <= jumlahLm; l++) {
+      for (let tp = 1; tp <= jumlahTpLm; tp++) {
+        row3Cells += `<th style="width:${colWidthNilai};">TP${tp}</th>`;
+      }
+    }
+    const row3 = `<tr>${row3Cells}</tr>`;
+
+    /* Helper ambil nilai (kosong jika mode Format) */
+    const getVal = (murid, key) => {
+      if (isModeFormat) return '';
+      const v = murid[key];
+      return (v !== undefined && v !== null && v !== '') ? _esc(String(v)) : '';
+    };
+
+    /* Baris data murid */
+    let bodyRows = '';
+    muridList.forEach((murid, idx) => {
+      let cells =
+        `<td style="text-align:center;">${_esc(String(murid.no || idx + 1))}</td>` +
+        `<td style="text-align:left;padding-left:2mm;">${_esc(murid.namaMurid || '')}</td>`;
+
+      for (let b = 1; b <= jumlahBab; b++) {
+        for (let tp = 1; tp <= jumlahTpBab; tp++) {
+          cells += `<td style="text-align:center;">${getVal(murid, `bab${b}_tp${tp}`)}</td>`;
+        }
+      }
+      for (let l = 1; l <= jumlahLm; l++) {
+        for (let tp = 1; tp <= jumlahTpLm; tp++) {
+          cells += `<td style="text-align:center;">${getVal(murid, `lm${l}_tp${tp}`)}</td>`;
+        }
+      }
+      cells += `<td style="text-align:center;">${getVal(murid, 'sts')}</td>`;
+      cells += `<td style="text-align:center;">${getVal(murid, 'sas')}</td>`;
+      cells += `<td style="text-align:center;">${getVal(murid, 'praktik')}</td>`;
+      cells += `<td style="text-align:center;">${getVal(murid, 'nilaiAkhir')}</td>`;
+
+      bodyRows += `<tr>${cells}</tr>`;
+    });
+
+    /* Baris kosong tambahan untuk mode Format (minimal 5 baris) */
+    const minRows = isModeFormat ? Math.max(0, 5 - muridList.length) : 0;
+    for (let i = 0; i < minRows; i++) {
+      let emptyCells = `<td style="text-align:center;">${muridList.length + i + 1}</td>`;
+      for (let c = 1; c < totalCols; c++) {
+        emptyCells += `<td></td>`;
+      }
+      bodyRows += `<tr class="rekap-nilai-empty-row">${emptyCells}</tr>`;
+    }
+
+    const tableHtml = `
+      <div class="doc-table-wrap rekap-nilai-table-wrap">
+        <table class="rekap-nilai-table" style="width:100%;border-collapse:collapse;font-size:${Math.max(6, t.fontSize - 1)}pt;">
+          <thead>${row1}${row2}${row3}</thead>
+          <tbody>
+            ${bodyRows || `<tr><td colspan="${totalCols}" style="text-align:center;color:#aaa;padding:6pt;">Belum ada data murid</td></tr>`}
+          </tbody>
+        </table>
+      </div>`;
+
+    /* ── Tanda Tangan ── */
+    const tanggalStr  = ttd.tanggalTerbit ? _formatTanggalPanjang(ttd.tanggalTerbit) : '\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026';
+    const namaKab     = _esc(ttd.namaKabupaten     || 'Musi Rawas');
+    const namaSekolah = _esc(ttd.namaSekolahan     || '');
+    const namaKs      = _esc(ttd.namaKepalaSekolah || '');
+    const nipKs       = _esc(ttd.nipKepalaSekolah  || '-');
+    const namaGuru    = _esc(ttd.namaGuru || hdr.namaGuru || '');
+    const nipGuru     = _esc(ttd.nipGuru            || '-');
+
+    const ttdHtml = `
+      <div class="doc-ttd-section" style="margin-top:8mm;">
+        <div class="doc-ttd-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8mm;">
+          <div class="doc-ttd-col" style="text-align:center;">
+            <p style="margin:0 0 2pt;">Mengetahui,</p>
+            <p style="margin:0 0 2pt;">Kepala ${namaSekolah},</p>
+            <div style="height:20mm;"></div>
+            <p style="margin:0;font-weight:bold;text-decoration:underline;">${namaKs || '\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026'}</p>
+            <p style="margin:2pt 0 0;">NIP. ${nipKs}</p>
+          </div>
+          <div class="doc-ttd-col" style="text-align:center;">
+            <p style="margin:0 0 2pt;">${namaKab}, ${tanggalStr}</p>
+            <p style="margin:0 0 2pt;">Guru Mata Pelajaran,</p>
+            <div style="height:20mm;"></div>
+            <p style="margin:0;font-weight:bold;text-decoration:underline;">${namaGuru || '\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026'}</p>
+            <p style="margin:2pt 0 0;">NIP. ${nipGuru}</p>
+          </div>
+        </div>
+      </div>`;
+
+    return `
+      <div class="doc-content doc-content--rekap-nilai" style="${marginStyle}">
+        ${kopHtml}
+        <hr class="doc-kop-divider" />
+        <hr class="doc-kop-divider-thin" />
+        ${infoHtml}
+        ${judulHtml}
+        ${tableHtml}
+        ${ttdHtml}
+      </div>`;
   }
 
   /* ── Public API ── */
