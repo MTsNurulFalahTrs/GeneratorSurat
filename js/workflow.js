@@ -73,9 +73,7 @@ const Workflow = (() => {
 
       if (step.id === 'template' && !State.getActiveTemplate()) {
         UI.toast('Pilih template surat terlebih dahulu.', 'warning');
-        document.getElementById('template-list')
-          ?.querySelector('.template-card')
-          ?.focus();
+        /** @type {HTMLElement|null} */ (document.getElementById('template-list')?.querySelector('.template-card'))?.focus();
         return;
       }
 
@@ -84,7 +82,7 @@ const Workflow = (() => {
   }
 
   function _ensureTabStatus() {
-    const tabs = document.querySelectorAll('.editor-tab');
+    const tabs = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.editor-tab'));
     tabs.forEach((tab, index) => {
       const step = STEPS[index];
       if (!step) return;
@@ -201,7 +199,7 @@ const Workflow = (() => {
     const stepLabel = document.getElementById('workflow-step-label');
     const statusEl = document.getElementById('workflow-status');
     const backBtn = document.getElementById('workflow-back');
-    const nextBtn = document.getElementById('workflow-next');
+    const nextBtn = /** @type {HTMLButtonElement|null} */ (document.getElementById('workflow-next'));
     const nextLabel = document.getElementById('workflow-next-label');
 
     if (stepLabel) stepLabel.textContent = `Langkah ${current.step} dari ${STEPS.length} · ${current.label}`;
@@ -245,7 +243,7 @@ const Workflow = (() => {
       tab.classList.toggle('workflow-complete', tabStatus.state === 'complete');
       tab.classList.toggle('workflow-attention', tabStatus.state === 'attention');
 
-      const statusDot = tab.querySelector('.editor-tab__status');
+      const statusDot = /** @type {HTMLElement|null} */ (tab.querySelector('.editor-tab__status'));
       if (statusDot) {
         statusDot.dataset.state = tabStatus.state;
         statusDot.title = tabStatus.text;
