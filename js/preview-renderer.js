@@ -1975,7 +1975,6 @@ const PreviewRenderer = (() => {
     const jumlahBab     = Math.min(5, Math.max(1, parseInt(hdr.jumlahBab,    10) || 3));
     const jumlahTpBab   = Math.min(4, Math.max(1, parseInt(hdr.jumlahTpBab,  10) || 3));
     const jumlahLm      = Math.min(4, Math.max(1, parseInt(hdr.jumlahLm,     10) || 2));
-    const jumlahTpLm    = Math.min(4, Math.max(1, parseInt(hdr.jumlahTpLm,   10) || 3));
 
     /* ── KOP ── */
     const kopHtml = _buildKopHtml(kop);
@@ -2021,47 +2020,49 @@ const PreviewRenderer = (() => {
         ${isModeFormat ? '<p style="font-size:0.78em;color:#666;margin:0 0 4pt;font-style:italic;">(Format \u2014 kolom nilai dikosongkan, siap cetak)</p>' : ''}
       </div>`;
 
-    /* ── Bangun header tabel multi-row (3 baris) ──
-       Baris 1 : No | Nama Murid | Formatif (span bab*tp) | Sumatif (span lm*tp) | STS | SAS | Praktik | Nilai Akhir
-       Baris 2 : (rowspan=3 dari No & Nama) | BAB 1 (span tp)... | LM1 (span tp)...
-       Baris 3 : TP1..TPn per BAB... | TP1..TPn per LM...
+    /* ── Bangun header tabel multi-row ──
+       Struktur sesuai dokumen asli:
+
+       Baris 1 : No(rs3) | Nama(rs3) | Formatif (colspan bab*tp) | Sumatif (colspan lm) | STS(rs3) | SAS(rs3) | Praktik(rs3) | Nilai Akhir(rs3)
+       Baris 2 :                     | BAB 1(colspan tp) | BAB 2 | BAB n | LM1(rs2) | LM2 | ... | LMn |
+       Baris 3 :                     | TP1 | TP2 | TPn  | TP1 | TP2 | TPn | ...      (kolom LM sudah rowspan=2, tidak punya TP)
+
+       Kunci: kolom Sumatif LM memakai rowspan="2" sehingga tidak ada baris TP di bawahnya.
     */
     const colWidthNama  = '28mm';
     const colWidthNilai = '6mm';
+    const colWidthLm    = '9mm';
     const colWidthBig   = '10mm';
     const totalFormatifCols = jumlahBab * jumlahTpBab;
-    const totalSumatifCols  = jumlahLm  * jumlahTpLm;
-    const totalCols         = 2 + totalFormatifCols + totalSumatifCols + 4; // No + Nama + formatif + sumatif + STS+SAS+Praktik+NA
+    const totalCols = 2 + totalFormatifCols + jumlahLm + 4; // No + Nama + formatif cols + LM cols + STS+SAS+Praktik+NA
 
+    /* Baris 1: grup besar */
     const row1 = `
       <tr>
         <th rowspan="3" style="width:8mm;">No.</th>
         <th rowspan="3" style="width:${colWidthNama};text-align:left;">Nama Murid</th>
         <th colspan="${totalFormatifCols}">Formatif (Lingkup BAB)</th>
-        <th colspan="${totalSumatifCols}">Sumatif (Lingkup Materi)</th>
+        <th colspan="${jumlahLm}">Sumatif (Lingkup Materi)</th>
         <th rowspan="3" style="width:${colWidthBig};">Sumatif Tengah Semester</th>
         <th rowspan="3" style="width:${colWidthBig};">Sumatif Akhir Semester</th>
         <th rowspan="3" style="width:${colWidthBig};">Praktik</th>
         <th rowspan="3" style="width:${colWidthBig};">Nilai Akhir</th>
       </tr>`;
 
+    /* Baris 2: sub-grup BAB (dengan colspan TP) + kolom LM (rowspan=2, tidak ada TP) */
     let row2Cells = '';
     for (let b = 1; b <= jumlahBab; b++) {
       row2Cells += `<th colspan="${jumlahTpBab}">BAB ${b}</th>`;
     }
     for (let l = 1; l <= jumlahLm; l++) {
-      row2Cells += `<th colspan="${jumlahTpLm}">LM${l}</th>`;
+      row2Cells += `<th rowspan="2" style="width:${colWidthLm};">LM${l}</th>`;
     }
     const row2 = `<tr>${row2Cells}</tr>`;
 
+    /* Baris 3: hanya TP untuk setiap BAB (kolom LM sudah di-rowspan) */
     let row3Cells = '';
     for (let b = 1; b <= jumlahBab; b++) {
       for (let tp = 1; tp <= jumlahTpBab; tp++) {
-        row3Cells += `<th style="width:${colWidthNilai};">TP${tp}</th>`;
-      }
-    }
-    for (let l = 1; l <= jumlahLm; l++) {
-      for (let tp = 1; tp <= jumlahTpLm; tp++) {
         row3Cells += `<th style="width:${colWidthNilai};">TP${tp}</th>`;
       }
     }
@@ -2087,9 +2088,7 @@ const PreviewRenderer = (() => {
         }
       }
       for (let l = 1; l <= jumlahLm; l++) {
-        for (let tp = 1; tp <= jumlahTpLm; tp++) {
-          cells += `<td style="text-align:center;">${getVal(murid, `lm${l}_tp${tp}`)}</td>`;
-        }
+        cells += `<td style="text-align:center;">${getVal(murid, `lm${l}`)}</td>`;
       }
       cells += `<td style="text-align:center;">${getVal(murid, 'sts')}</td>`;
       cells += `<td style="text-align:center;">${getVal(murid, 'sas')}</td>`;

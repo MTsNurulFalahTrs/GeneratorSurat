@@ -37,9 +37,8 @@ const TemplateRekapNilai = (() => {
       bab1_tp1: '', bab1_tp2: '', bab1_tp3: '',
       bab2_tp1: '', bab2_tp2: '', bab2_tp3: '',
       bab3_tp1: '', bab3_tp2: '', bab3_tp3: '',
-      /* Sumatif Lingkup Materi (LM1, LM2 default) */
-      lm1_tp1: '', lm1_tp2: '', lm1_tp3: '',
-      lm2_tp1: '', lm2_tp2: '', lm2_tp3: '',
+      /* Sumatif Lingkup Materi — satu nilai per LM (tidak ada sub-TP) */
+      lm1: '', lm2: '', lm3: '', lm4: '',
       /* Sumatif Tengah Semester, Sumatif Akhir Semester, Praktik */
       sts: '',
       sas: '',
@@ -64,7 +63,6 @@ const TemplateRekapNilai = (() => {
         jumlahBab:       3,   // 1–5
         jumlahLm:        2,   // 1–4
         jumlahTpBab:     3,   // TP per BAB, 1–4
-        jumlahTpLm:      3,   // TP per LM, 1–4
       },
       tandaTangan: {
         namaKabupaten:     'Musi Rawas',
@@ -156,15 +154,7 @@ const TemplateRekapNilai = (() => {
           type: 'number',
           min: 1, max: 4,
           required: true,
-          hint: 'Jumlah Lingkup Materi sumatif',
-        },
-        {
-          key: 'header.jumlahTpLm',
-          label: 'Jumlah TP per LM',
-          type: 'number',
-          min: 1, max: 4,
-          required: true,
-          hint: 'Jumlah Tujuan Pembelajaran per LM',
+          hint: 'Jumlah Lingkup Materi sumatif — setiap LM adalah satu kolom nilai',
         },
       ],
     },
@@ -260,47 +250,36 @@ const TemplateRekapNilai = (() => {
           required: false,
         },
         {
-          key: 'lm1_tp1',
-          label: 'LM1 – TP1',
+          key: 'lm1',
+          label: 'LM1',
           type: 'number',
           min: 0, max: 100,
           required: false,
-          hint: 'Sumatif Lingkup Materi 1, TP 1',
+          hint: 'Sumatif Lingkup Materi 1',
         },
         {
-          key: 'lm1_tp2',
-          label: 'LM1 – TP2',
+          key: 'lm2',
+          label: 'LM2',
           type: 'number',
           min: 0, max: 100,
           required: false,
+          hint: 'Sumatif Lingkup Materi 2',
         },
         {
-          key: 'lm1_tp3',
-          label: 'LM1 – TP3',
+          key: 'lm3',
+          label: 'LM3',
           type: 'number',
           min: 0, max: 100,
           required: false,
+          hint: 'Sumatif Lingkup Materi 3',
         },
         {
-          key: 'lm2_tp1',
-          label: 'LM2 – TP1',
+          key: 'lm4',
+          label: 'LM4',
           type: 'number',
           min: 0, max: 100,
           required: false,
-        },
-        {
-          key: 'lm2_tp2',
-          label: 'LM2 – TP2',
-          type: 'number',
-          min: 0, max: 100,
-          required: false,
-        },
-        {
-          key: 'lm2_tp3',
-          label: 'LM2 – TP3',
-          type: 'number',
-          min: 0, max: 100,
-          required: false,
+          hint: 'Sumatif Lingkup Materi 4',
         },
         {
           key: 'sts',
