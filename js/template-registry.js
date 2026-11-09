@@ -183,6 +183,10 @@ const TemplateRegistry = (() => {
     if (typeof TemplateRekapNilai !== 'undefined') {
       register(TemplateRekapNilai);
     }
+    // ── Template Izin ──
+    if (typeof TemplateSuratIzin !== 'undefined') {
+      register(TemplateSuratIzin);
+    }
 
     /*
      * ── CARA MENAMBAH TEMPLATE BARU ──

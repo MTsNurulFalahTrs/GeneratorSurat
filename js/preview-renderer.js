@@ -181,6 +181,7 @@ const PreviewRenderer = (() => {
     if (id === 'ijop-rekomendasi-kankemenag') return _renderIjopRekomendasiKankemenag(formData, kop, margin, typo);
     if (id === 'ijop-sptjm-kankemenag')       return _renderIjopSptjmKankemenag(formData, kop, margin, typo);
     if (id === 'rekap-nilai')                 return _renderRekapNilai(formData, kop, margin, typo);
+    if (id === 'surat-izin')                  return _renderSuratIzin(formData, kop, margin, typo);
     return '<div style="padding:20px;color:#666;">Template tidak dikenali.</div>';
   }
 
@@ -2212,6 +2213,132 @@ const PreviewRenderer = (() => {
         ${judulHtml}
         ${tableHtml}
         ${ttdHtml}
+      </div>`;
+  }
+
+  /* ────────────────────────────────────────────────
+     RENDERER: SURAT IZIN TIDAK MASUK
+  ──────────────────────────────────────────────── */
+  function _renderSuratIzin(data, kop, margin, typo) {
+    const sk = data?.sekolah  && typeof data.sekolah  === 'object' ? data.sekolah  : {};
+    const mu = data?.murid    && typeof data.murid    === 'object' ? data.murid    : {};
+    const iz = data?.izin     && typeof data.izin     === 'object' ? data.izin     : {};
+    const pg = data?.pengirim && typeof data.pengirim === 'object' ? data.pengirim : {};
+
+    const m = margin || State.getMarginMm();
+    const t = typo   || State.getTypography();
+    const marginStyle =
+      `padding:${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm;` +
+      `font-family:'${t.fontFamily}',serif;` +
+      `font-size:${t.fontSize}pt;` +
+      `line-height:${t.lineHeight};`;
+
+    const kopHtml = _buildKopHtml(kop);
+
+    /* Tanggal surat dalam format panjang */
+    const tanggalSurat = pg.tanggalKeluarSurat
+      ? _formatTanggalPanjang(pg.tanggalKeluarSurat)
+      : '…………………………………';
+
+    const namaSekolahan    = _esc(sk.namaSekolahan    || '…………………………………');
+    const namaOrangTuaWali = _esc(mu.namaOrangTuaWali || '…………………………………');
+    const namaMurid        = _esc(mu.namaMurid        || '…………………………………');
+    const kelasMurid       = _esc(mu.kelasMurid       || '……………');
+    const hariTanggalIzin  = _esc(iz.hariTanggalIzin  || '…………………………………');
+    const durasiIzin       = _esc(iz.durasiIzin       || '……………………');
+    const alasanIzin       = _esc(iz.alasanIzin       || '…………………………………');
+    const namaLokasi       = _esc(pg.namaLokasi       || '……………………');
+
+    return `
+      <div class="doc-content doc-content--surat-izin" style="${marginStyle}">
+        ${kopHtml}
+        <hr class="doc-kop-divider" />
+        <hr class="doc-kop-divider-thin" />
+
+        <!-- Judul -->
+        <div style="text-align:center;margin:16pt 0 20pt 0;">
+          <p style="margin:0;font-weight:bold;font-size:inherit;text-decoration:underline;">
+            SURAT PERMOHONAN IZIN TIDAK MASUK SEKOLAH
+          </p>
+        </div>
+
+        <!-- Tujuan -->
+        <div style="margin-bottom:16pt;">
+          <p style="margin:0;">Kepada Yth.</p>
+          <p style="margin:0;">Bapak/Ibu Guru</p>
+          <p style="margin:0;">${namaSekolahan}</p>
+          <p style="margin:0;">di</p>
+          <p style="margin:0;">Tempat</p>
+        </div>
+
+        <!-- Pembuka -->
+        <p style="margin:0 0 10pt 0;"><em>Assalamu'alaikum warahmatullahi wabarakatuh.</em></p>
+        <p style="margin:0 0 10pt 0;">Dengan hormat,</p>
+        <p style="margin:0 0 8pt 0;">Saya yang bertanda tangan di bawah ini:</p>
+
+        <!-- Data Pengirim -->
+        <table style="border-collapse:collapse;margin:0 0 14pt 20pt;">
+          <tr>
+            <td style="width:130px;vertical-align:top;padding-bottom:4pt;">Nama Orang Tua/Wali</td>
+            <td style="padding:0 8px;vertical-align:top;">:</td>
+            <td style="vertical-align:top;padding-bottom:4pt;">${namaOrangTuaWali}</td>
+          </tr>
+          <tr>
+            <td style="vertical-align:top;padding-bottom:4pt;">Nama Murid</td>
+            <td style="padding:0 8px;vertical-align:top;">:</td>
+            <td style="vertical-align:top;padding-bottom:4pt;">${namaMurid}</td>
+          </tr>
+          <tr>
+            <td style="vertical-align:top;">Kelas</td>
+            <td style="padding:0 8px;vertical-align:top;">:</td>
+            <td style="vertical-align:top;">${kelasMurid}</td>
+          </tr>
+        </table>
+
+        <!-- Isi Surat -->
+        <p style="margin:0 0 10pt 0;text-align:justify;">
+          Dengan ini bermaksud mengajukan permohonan izin kepada Bapak/Ibu agar anak kami tersebut
+          di atas dapat diberikan izin untuk tidak mengikuti kegiatan pembelajaran di
+          sekolah/madrasah pada:
+        </p>
+
+        <!-- Detail Izin -->
+        <table style="border-collapse:collapse;margin:0 0 14pt 20pt;">
+          <tr>
+            <td style="width:130px;vertical-align:top;padding-bottom:4pt;">Hari, Tanggal</td>
+            <td style="padding:0 8px;vertical-align:top;">:</td>
+            <td style="vertical-align:top;padding-bottom:4pt;">${hariTanggalIzin}</td>
+          </tr>
+          <tr>
+            <td style="vertical-align:top;padding-bottom:4pt;">Lama Izin</td>
+            <td style="padding:0 8px;vertical-align:top;">:</td>
+            <td style="vertical-align:top;padding-bottom:4pt;">${durasiIzin}</td>
+          </tr>
+          <tr>
+            <td style="vertical-align:top;">Alasan Izin</td>
+            <td style="padding:0 8px;vertical-align:top;">:</td>
+            <td style="vertical-align:top;">${alasanIzin}</td>
+          </tr>
+        </table>
+
+        <!-- Penutup -->
+        <p style="margin:0 0 8pt 0;text-align:justify;">
+          Demikian surat permohonan izin ini kami sampaikan. Besar harapan kami agar Bapak/Ibu
+          dapat memberikan izin dan memaklumi ketidakhadiran anak kami. Atas perhatian dan
+          pengertian Bapak/Ibu, kami mengucapkan terima kasih.
+        </p>
+        <p style="margin:0;"><em>Wassalamu'alaikum warahmatullahi wabarakatuh.</em></p>
+
+        <!-- Tanda Tangan -->
+        <div style="margin-top:24pt;display:flex;justify-content:flex-end;">
+          <div style="text-align:center;min-width:160px;">
+            <p style="margin:0;">${namaLokasi}, ${tanggalSurat}</p>
+            <p style="margin:4pt 0 0 0;">Hormat kami,</p>
+            <p style="margin:0;">Orang Tua/Wali Murid,</p>
+            <div style="height:40pt;"></div>
+            <p style="margin:0;font-weight:bold;text-decoration:underline;">${namaOrangTuaWali}</p>
+          </div>
+        </div>
       </div>`;
   }
 
