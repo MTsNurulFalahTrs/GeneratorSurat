@@ -19,7 +19,7 @@ describe('PreviewRenderer pagination policy', () => {
     const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     // Ambil semua template yang benar-benar dimuat aplikasi, bukan daftar
     // manual yang berisiko ketinggalan saat menambahkan template baru.
-    const templateIds = [...html.matchAll(/<script\\b[^>]*src=["']templates\\/([^"']+)\\.js["']/g)]
+    const templateIds = [...html.matchAll(/<script\b[^>]*src=["']templates\/([^"']+)\.js["']/g)]
       .map(match => match[1]);
 
     expect(templateIds).toHaveLength(10);
