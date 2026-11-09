@@ -109,7 +109,7 @@ describe('GS-001: imported JSON persistence', () => {
     expect(await h.dataIO.importData(h.file)).toBe(false);
     expect(h.State.restore).not.toHaveBeenCalled();
     expect(h.Storage.save).not.toHaveBeenCalled();
-    expect(h.UI.toast).not.toHaveBeenCalled();
+    expect(h.toasts).toHaveLength(0);
   });
 
   it('rejects invalid JSON without modifying saved data', async () => {
