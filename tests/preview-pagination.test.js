@@ -16,20 +16,31 @@ function loadPreviewRenderer() {
 describe('PreviewRenderer pagination policy', () => {
   it('paginates every registered letter template with fixed paper dimensions', () => {
     const renderer = loadPreviewRenderer();
-    const templateIds = [
-      'dpu',
-      'mutasi-masuk',
-      'siswa-baru',
-      'ijop-permohonan',
-      'ijop-sptjm-satpen',
-      'ijop-rekomendasi-pengawas',
-      'ijop-rekomendasi-kankemenag',
-      'ijop-sptjm-kankemenag',
-    ];
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    // Ambil semua template yang benar-benar dimuat aplikasi, bukan daftar
+    // manual yang berisiko ketinggalan saat menambahkan template baru.
+    const templateIds = [...html.matchAll(/<script\b[^>]*src=["']templates\/([^"']+)\.js["']/g)]
+      .map(match => match[1]);
 
+    expect(templateIds).toHaveLength(10);
+    expect(templateIds).toContain('rekap-nilai');
+    expect(templateIds).toContain('surat-izin');
     for (const templateId of templateIds) {
       expect(renderer.usesMultiPageLayout(templateId), templateId).toBe(true);
     }
+  });
+
+  it('keeps Surat Izin routed through its document renderer and the paginated preview pipeline', () => {
+    const renderer = loadPreviewRenderer();
+    const sourceOfSuratIzin = readFileSync(new URL('../templates/surat-izin.js', import.meta.url), 'utf8');
+
+    expect(renderer.usesMultiPageLayout('surat-izin')).toBe(true);
+    expect(source).toContain("if (id === 'surat-izin')");
+    expect(source).toContain('return _renderSuratIzin(formData, kop, margin, typo)');
+    expect(source).toContain('doc-content doc-content--surat-izin');
+    expect(source).toContain('await _waitForLayoutAssets(source)');
+    expect(source).toContain('_schedulePagination(renderToken, paperWidthPx, paperHeightPx)');
+    expect(sourceOfSuratIzin).toContain("const TEMPLATE_ID = 'surat-izin'");
   });
 
   it('does not treat unknown template identifiers as paginated templates', () => {
