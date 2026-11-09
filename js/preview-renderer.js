@@ -1203,6 +1203,7 @@ const PreviewRenderer = (() => {
       fragmentWrap = tableWrap.cloneNode(false);
       const fragmentTable = templateTable.cloneNode(true);
       fragmentBody = fragmentTable.querySelector(':scope > tbody');
+      if (!fragmentBody) throw new Error('Tabel dokumen tidak memiliki tbody untuk paginasi.');
       fragmentWrap.appendChild(fragmentTable);
       current.content.appendChild(fragmentWrap);
     };
@@ -1214,6 +1215,7 @@ const PreviewRenderer = (() => {
     for (const row of rows) {
       if (renderToken !== _renderToken) return;
       if (!fragmentWrap) beginFragment();
+      if (!fragmentBody) return;
 
       const rowClone = row.cloneNode(true);
       fragmentBody.appendChild(rowClone);
