@@ -10,6 +10,8 @@ Aplikasi web untuk membuat surat resmi madrasah secara mudah, cepat, dan profesi
 - [Teknologi](#teknologi)
 - [Struktur Project](#struktur-project)
 - [Cara Menjalankan Secara Lokal](#cara-menjalankan-secara-lokal)
+- [PWA, Instalasi, dan Mode Offline](#pwa-instalasi-dan-mode-offline)
+- [Pengujian dan Validasi](#pengujian-dan-validasi)
 - [Deploy ke Vercel](#deploy-ke-vercel)
 - [Template Surat yang Tersedia](#template-surat-yang-tersedia)
 - [Cara Menggunakan Aplikasi](#cara-menggunakan-aplikasi)
@@ -128,6 +130,38 @@ Atau gunakan Node.js:
 npx serve .
 # Lalu buka URL yang ditampilkan
 ```
+
+---
+
+## PWA, Instalasi, dan Mode Offline
+
+Aplikasi dapat dipasang sebagai Progressive Web App (PWA) dari browser yang mendukung instalasi. Manifest menyediakan identitas aplikasi, tampilan standalone, serta ikon SVG yang tersedia di folder assets/icons. Tombol Pasang hanya ditampilkan ketika browser menyediakan event instalasi. Pada browser lain, pengguna dapat memasang aplikasi melalui menu browser jika opsi tersebut tersedia.
+
+Service Worker menggunakan cache berversi untuk app shell. Instalasi versi baru hanya berhasil jika seluruh aset wajib dapat diunduh. Jika satu aset inti gagal, instalasi worker dibatalkan dan cache versi baru dibersihkan agar aplikasi tidak berpindah ke shell yang tidak lengkap.
+
+Setelah app shell tersimpan, navigasi dapat menggunakan halaman aplikasi yang tersimpan ketika offline. CSS, JavaScript, ikon, dan aset statis menggunakan strategi stale-while-revalidate. Request API, ekspor PDF, request non-GET, dan aset lintas-origin tidak dicache oleh Service Worker. Data formulir tetap disimpan melalui mekanisme penyimpanan lokal aplikasi; cache PWA bukan pengganti penyimpanan data.
+
+Pembaruan Service Worker tidak langsung mengambil alih sesi pengguna. Ketika worker baru menunggu, tombol Perbarui meminta persetujuan pengguna sebelum skipWaiting dijalankan. Setelah worker baru mengambil alih, halaman dimuat ulang satu kali agar seluruh modul berasal dari versi yang sama.
+
+Untuk melihat status platform, gunakan Platform.getDiagnostics() dari konsol browser. Informasi yang disediakan meliputi status koneksi, mode standalone, status controller Service Worker, versi worker, dan apakah pembaruan sedang menunggu.
+
+> Catatan: instalasi PWA dan mode offline membutuhkan HTTPS (localhost diperbolehkan untuk pengembangan). Ekspor PDF tetap membutuhkan koneksi karena proses rendering dilakukan oleh endpoint serverless Vercel.
+
+---
+
+## Pengujian dan Validasi
+
+Jalankan pemeriksaan lokal setelah perubahan kode:
+
+~~~bash
+npm ci
+npm run check
+npm audit --audit-level=moderate
+~~~
+
+npm run check menjalankan pemeriksaan sintaks seluruh file JavaScript dan seluruh suite Vitest. Suite mencakup validasi data, riwayat undo/redo, pagination preview, keamanan ekspor PDF, pemulihan penyimpanan, kontrak manifest/PWA, siklus hidup instalasi/update, integrasi registry seluruh template, serta strategi cache dan fallback offline Service Worker.
+
+Sebelum perubahan digabungkan, pastikan GitHub Actions Quality Checks berhasil dan deployment Preview Vercel berstatus READY. Uji instalasi dan offline pada browser nyata tetap perlu dilakukan pada perangkat target karena dukungan prompt instalasi dan kebijakan penyimpanan berbeda antar-browser.
 
 ---
 

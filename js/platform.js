@@ -12,7 +12,7 @@
 
 const Platform = (() => {
 
-  const APP_VERSION = '2026.10.03';
+  const APP_VERSION = '2026.11.09';
   const UPDATE_MESSAGE = 'Versi baru Generator Surat tersedia.';
   const OFFLINE_MESSAGE = 'Mode offline aktif. Data lokal dan fitur yang sudah tersimpan tetap dapat digunakan.';
   const ONLINE_MESSAGE = 'Koneksi internet kembali tersedia.';
@@ -22,6 +22,8 @@ const Platform = (() => {
   let _registration = null;
   let _refreshingAfterUpdate = false;
   let _hadControllerAtRegistration = false;
+  let _notifiedWaitingWorker = null;
+  let _updateCheckPromise = null;
 
   function init() {
     if (_initialized) return;
@@ -34,7 +36,12 @@ const Platform = (() => {
     _syncPlatformState();
 
     if ('serviceWorker' in navigator) {
+      document.documentElement.dataset.sw = navigator.serviceWorker.controller
+        ? 'controlled'
+        : 'registering';
       window.addEventListener('load', _registerServiceWorker, { once: true });
+    } else {
+      document.documentElement.dataset.sw = 'unsupported';
     }
 
     console.info('[Platform] Platform layer ready:', APP_VERSION);
@@ -52,6 +59,7 @@ const Platform = (() => {
   function _bindNetworkStatus() {
     window.addEventListener('online', () => {
       _updateNetworkUi(true);
+      _checkForUpdate();
       if (typeof UI !== 'undefined') UI.toast(ONLINE_MESSAGE, 'success', 3500);
     });
 
@@ -66,13 +74,18 @@ const Platform = (() => {
 
     const status = document.getElementById('platform-status');
     const label = document.getElementById('platform-status-label');
-    if (!status || !label) return;
+    if (status && label) {
+      status.dataset.state = online ? 'online' : 'offline';
+      label.textContent = online ? 'Online' : 'Offline';
+      status.title = online
+        ? 'Koneksi internet tersedia'
+        : OFFLINE_MESSAGE;
+    }
 
-    status.dataset.state = online ? 'online' : 'offline';
-    label.textContent = online ? 'Online' : 'Offline';
-    status.title = online
-      ? 'Koneksi internet tersedia'
-      : OFFLINE_MESSAGE;
+    const mobileStatus = document.getElementById('platform-status-mobile');
+    const mobileLabel = mobileStatus?.querySelector('.platform-status-mobile__label');
+    if (mobileStatus) mobileStatus.dataset.state = online ? 'online' : 'offline';
+    if (mobileLabel) mobileLabel.textContent = online ? 'Online' : 'Offline';
   }
 
   function _bindInstallPrompt() {
@@ -85,6 +98,7 @@ const Platform = (() => {
     window.addEventListener('appinstalled', () => {
       _deferredInstallPrompt = null;
       _showInstallButton(false);
+      _syncPlatformState();
       if (typeof UI !== 'undefined') {
         UI.toast('Generator Surat berhasil dipasang sebagai aplikasi.', 'success', 4500);
       }
@@ -123,33 +137,47 @@ const Platform = (() => {
     document.getElementById('btn-update-app')?.addEventListener('click', updateApp);
 
     navigator.serviceWorker?.addEventListener('controllerchange', () => {
-      // Reload otomatis hanya untuk pembaruan setelah halaman memang sudah
-      // dikendalikan service worker sebelumnya. Initial takeover tidak perlu
-      // memaksa reload.
+      document.documentElement.dataset.sw = 'controlled';
+
+      // Initial takeover does not require a reload. A later controller change
+      // means the user accepted an update, so reload exactly once.
       if (_refreshingAfterUpdate) return;
       if (!_hadControllerAtRegistration) {
-        // Pertama kali SW mengambil alih halaman setelah install.
         _hadControllerAtRegistration = true;
         return;
       }
       _refreshingAfterUpdate = true;
       window.location.reload();
     });
+
+    const standaloneQuery = window.matchMedia?.('(display-mode: standalone)');
+    standaloneQuery?.addEventListener?.('change', _syncPlatformState);
   }
 
   async function _registerServiceWorker() {
+    if (!('serviceWorker' in navigator) || window.isSecureContext === false) {
+      document.documentElement.dataset.sw = 'unavailable';
+      return;
+    }
+
     try {
       _hadControllerAtRegistration = !!navigator.serviceWorker.controller;
       _registration = await navigator.serviceWorker.register('./sw.js', {
         scope: './',
         updateViaCache: 'none',
       });
+      document.documentElement.dataset.sw = navigator.serviceWorker.controller
+        ? 'controlled'
+        : 'registered';
 
       const showWaitingUpdate = () => {
-        if (!navigator.serviceWorker.controller || !_registration?.waiting) return;
+        const waiting = _registration?.waiting;
+        if (!navigator.serviceWorker.controller || !waiting) return;
+
         _showUpdateButton(true);
-        if (typeof UI !== 'undefined') {
-          UI.toast(UPDATE_MESSAGE, 'info', 6000);
+        if (_notifiedWaitingWorker !== waiting) {
+          _notifiedWaitingWorker = waiting;
+          if (typeof UI !== 'undefined') UI.toast(UPDATE_MESSAGE, 'info', 6000);
         }
       };
 
@@ -160,24 +188,40 @@ const Platform = (() => {
         worker.addEventListener('statechange', () => {
           if (worker.state === 'installed') {
             showWaitingUpdate();
+          } else if (worker.state === 'redundant') {
+            _showUpdateButton(false);
           }
         });
       });
 
-      // Worker dapat sudah berstatus waiting sebelum event updatefound
-      // dipasang (misalnya saat halaman dibuka kembali). Tangani kondisi ini.
+      // Also handle an update that was already waiting when this page opened.
       showWaitingUpdate();
 
-      // Cek pembaruan setiap kali aplikasi kembali ke foreground.
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) _registration?.update().catch(() => {});
+        if (!document.hidden) _checkForUpdate();
       });
 
       console.info('[Platform] Service worker registered:', _registration.scope);
     } catch (error) {
-      console.warn('[Platform] Service worker tidak dapat didaftarkan:', error);
       document.documentElement.dataset.sw = 'unavailable';
+      console.warn('[Platform] Service worker tidak dapat didaftarkan:', error);
     }
+  }
+
+  function _checkForUpdate() {
+    if (!_registration || navigator.onLine === false) return Promise.resolve(null);
+    if (_updateCheckPromise) return _updateCheckPromise;
+
+    _updateCheckPromise = _registration.update()
+      .catch(error => {
+        console.warn('[Platform] Pemeriksaan pembaruan gagal:', error);
+        return null;
+      })
+      .finally(() => {
+        _updateCheckPromise = null;
+      });
+
+    return _updateCheckPromise;
   }
 
   function _showUpdateButton(visible) {
@@ -191,7 +235,7 @@ const Platform = (() => {
     const waiting = _registration?.waiting;
     if (!waiting) {
       _showUpdateButton(false);
-      _registration?.update().catch(() => {});
+      _checkForUpdate();
       return;
     }
 
@@ -234,6 +278,8 @@ const Platform = (() => {
       serviceWorker: 'serviceWorker' in navigator,
       controlled: !!navigator.serviceWorker?.controller,
       installPromptReady: !!_deferredInstallPrompt,
+      updateWaiting: !!_registration?.waiting,
+      serviceWorkerState: _registration?.active?.state || null,
       serviceWorkerScope: _registration?.scope || null,
       userAgent: navigator.userAgent,
     };
