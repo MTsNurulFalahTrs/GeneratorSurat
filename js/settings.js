@@ -799,7 +799,7 @@ const Settings = (() => {
     const debSave = Utils.debounce(() => {
       const ff  = fontSel?.value || 'Times New Roman';
       const fs  = Utils.clamp(Utils.safeFloat(sizeInput?.value, 12), 7, 22);
-      const lh  = parseFloat(lineHSel?.value || 1.5);
+      const lh  = parseFloat(lineHSel?.value || '1.5');
       const ts  = Utils.clamp(Utils.safeFloat(tblInput?.value, 7.5), 6, 14);
       State.setSettings({ typography: { fontFamily: ff, fontSize: fs, lineHeight: lh, tableSize: ts } });
       _updateTypoPreview(ff, fs);
