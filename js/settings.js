@@ -9,6 +9,23 @@
 */
 
 const Settings = (() => {
+  // TypeScript's DOM Storage constructor shadows this application's classic-script global.
+  const AppStorage = /** @type {GeneratorStorageApi} */ (/** @type {unknown} */ (Storage));
+
+  /**
+   * Kembalikan kontrol formulir dengan tipe DOM yang sesuai.
+   * Pengecekan null tetap dilakukan oleh pemanggil, tidak ada perubahan runtime.
+   * @param {string} id
+   * @returns {HTMLInputElement|null}
+   */
+  function _input(id) {
+    return /** @type {HTMLInputElement|null} */ (document.getElementById(id));
+  }
+
+  /** @param {string} id @returns {HTMLSelectElement|null} */
+  function _select(id) {
+    return /** @type {HTMLSelectElement|null} */ (document.getElementById(id));
+  }
 
   /* ── Konstanta validasi ── */
   const MARGIN_MIN_MM  =  0;
@@ -55,7 +72,7 @@ const Settings = (() => {
         const mode = typeof settings.preview.zoom === 'string' ? settings.preview.zoom : 'actual';
         document.getElementById('zoom-mode-seg')
           ?.querySelectorAll('.seg-btn')
-          .forEach(btn => btn.classList.toggle('active', btn.dataset.zoom === mode));
+          .forEach(btn => btn.classList.toggle('active', (/** @type {HTMLElement} */ (btn)).dataset.zoom === mode));
       }
 
       if (settings?.pageNumber) {
@@ -654,7 +671,7 @@ const Settings = (() => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'preset-btn';
-      btn.dataset.preset = key;
+      (/** @type {HTMLElement} */ (btn)).dataset.preset = key;
       btn.innerHTML = `<span class="preset-btn__name">${Utils.escapeHtml(p.label)}</span>`;
       btn.addEventListener('click', () => {
         State.applyDocumentPreset(key);
@@ -678,7 +695,7 @@ const Settings = (() => {
 
   /* ── Paper size select ── */
   function _bindPaperSize() {
-    const sel = document.getElementById('paper-size-select');
+    const sel = _select('paper-size-select');
     if (!sel) return;
     sel.addEventListener('change', () => {
       const size = sel.value;
@@ -695,12 +712,12 @@ const Settings = (() => {
     const unitSeg = document.getElementById('unit-seg');
     unitSeg?.querySelectorAll('.seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const unit = btn.dataset.unit;
+        const unit = (/** @type {HTMLElement} */ (btn)).dataset.unit;
         // Konversi nilai yang sudah ada ke unit baru sebelum menyimpan
         const s = State.getSettings();
         const curUnit = s.paper.unit;
-        const wEl = document.getElementById('custom-width-input');
-        const hEl = document.getElementById('custom-height-input');
+        const wEl = _input('custom-width-input');
+        const hEl = _input('custom-height-input');
         const wRaw = Number.parseFloat(wEl?.value);
         const hRaw = Number.parseFloat(hEl?.value);
         // customWidth/customHeight di State selalu dalam mm. Saat input
@@ -715,8 +732,8 @@ const Settings = (() => {
         const wNew = _fromMm(wMm, unit);
         const hNew = _fromMm(hMm, unit);
 
-        document.getElementById('custom-width-input').value  = _round(wNew);
-        document.getElementById('custom-height-input').value = _round(hNew);
+        _input('custom-width-input').value  = String(_round(wNew));
+        _input('custom-height-input').value = String(_round(hNew));
         document.getElementById('custom-width-unit').textContent  = unit;
         document.getElementById('custom-height-unit').textContent = unit;
 
@@ -733,8 +750,8 @@ const Settings = (() => {
     const debSave = Utils.debounce(() => {
       const s = State.getSettings();
       const unit = s.paper.unit;
-      const wRaw = Number.parseFloat(document.getElementById('custom-width-input')?.value);
-      const hRaw = Number.parseFloat(document.getElementById('custom-height-input')?.value);
+      const wRaw = Number.parseFloat(_input('custom-width-input')?.value);
+      const hRaw = Number.parseFloat(_input('custom-height-input')?.value);
       if (!Number.isFinite(wRaw) || !Number.isFinite(hRaw)) return;
       const wMm = Utils.clamp(_toMmFromUnit(wRaw, unit), CUSTOM_W_MIN, CUSTOM_W_MAX);
       const hMm = Utils.clamp(_toMmFromUnit(hRaw, unit), CUSTOM_H_MIN, CUSTOM_H_MAX);
@@ -743,8 +760,8 @@ const Settings = (() => {
       _markPresetCustom();
     }, 400);
 
-    document.getElementById('custom-width-input')?.addEventListener('input',  debSave);
-    document.getElementById('custom-height-input')?.addEventListener('input', debSave);
+    _input('custom-width-input')?.addEventListener('input',  debSave);
+    _input('custom-height-input')?.addEventListener('input', debSave);
   }
 
   /* ── Orientation buttons ── */
@@ -753,13 +770,13 @@ const Settings = (() => {
       ?.querySelectorAll('.orient-btn')
       .forEach(btn => {
         btn.addEventListener('click', () => {
-          const orientation = btn.dataset.orient;
+          const orientation = (/** @type {HTMLElement} */ (btn)).dataset.orient;
           State.setSettings({ orientation, activePreset: 'custom' });
 
           // Sinkronkan active state segera, tanpa menunggu rerender.
           document.getElementById('orientation-btns')
             ?.querySelectorAll('.orient-btn')
-            .forEach(b => b.classList.toggle('active', b.dataset.orient === orientation));
+            .forEach(b => b.classList.toggle('active', (/** @type {HTMLElement} */ (b)).dataset.orient === orientation));
 
           _updatePaperInfo();
           _markPresetCustom();
@@ -769,12 +786,12 @@ const Settings = (() => {
 
   /* ── Typography ── */
   function _bindTypography() {
-    const fontSel    = document.getElementById('doc-font-family');
-    const sizeInput  = document.getElementById('doc-font-size');
+    const fontSel    = _select('doc-font-family');
+    const sizeInput  = _input('doc-font-size');
     const sizeDecBtn = document.getElementById('doc-font-size-dec');
     const sizeIncBtn = document.getElementById('doc-font-size-inc');
-    const lineHSel   = document.getElementById('doc-line-height');
-    const tblInput   = document.getElementById('doc-table-size');
+    const lineHSel   = _select('doc-line-height');
+    const tblInput   = _input('doc-table-size');
     const tblDecBtn  = document.getElementById('doc-table-size-dec');
     const tblIncBtn  = document.getElementById('doc-table-size-inc');
 
@@ -798,19 +815,19 @@ const Settings = (() => {
     sizeDecBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(sizeInput?.value, 12);
       const nv  = Utils.clamp(cur - 0.5, 7, 22);
-      if (sizeInput) sizeInput.value = nv;
+      if (sizeInput) sizeInput.value = String(nv);
       debSave();
     });
     sizeIncBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(sizeInput?.value, 12);
       const nv  = Utils.clamp(cur + 0.5, 7, 22);
-      if (sizeInput) sizeInput.value = nv;
+      if (sizeInput) sizeInput.value = String(nv);
       debSave();
     });
     sizeInput?.addEventListener('input', debSave);
     sizeInput?.addEventListener('change', () => {
       const clamped = Utils.clamp(Utils.safeFloat(sizeInput.value, 12), 7, 22);
-      sizeInput.value = clamped;
+      sizeInput.value = String(clamped);
       debSave();
     });
 
@@ -821,19 +838,19 @@ const Settings = (() => {
     tblDecBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(tblInput?.value, 7.5);
       const nv  = Utils.clamp(cur - 0.5, 6, 14);
-      if (tblInput) tblInput.value = nv;
+      if (tblInput) tblInput.value = String(nv);
       debSave();
     });
     tblIncBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(tblInput?.value, 7.5);
       const nv  = Utils.clamp(cur + 0.5, 6, 14);
-      if (tblInput) tblInput.value = nv;
+      if (tblInput) tblInput.value = String(nv);
       debSave();
     });
     tblInput?.addEventListener('input', debSave);
     tblInput?.addEventListener('change', () => {
       const clamped = Utils.clamp(Utils.safeFloat(tblInput.value, 7.5), 6, 14);
-      tblInput.value = clamped;
+      tblInput.value = String(clamped);
       debSave();
     });
   }
@@ -848,7 +865,7 @@ const Settings = (() => {
 
   /* ── Margin preset select ── */
   function _bindMarginPreset() {
-    const sel = document.getElementById('margin-preset-select');
+    const sel = _select('margin-preset-select');
     if (!sel) return;
     sel.addEventListener('change', () => {
       const key = sel.value;
@@ -871,7 +888,7 @@ const Settings = (() => {
       const margin = {};
       let valid = true;
       sides.forEach(side => {
-        const el = document.getElementById(`margin-${side}`);
+        const el = _input(`margin-${side}`);
         const raw = String(el?.value ?? '').trim();
         const val = raw === '' ? NaN : Number(raw);
         if (!Number.isFinite(val) || val < MARGIN_MIN_MM || val > MARGIN_MAX_MM) {
@@ -889,14 +906,14 @@ const Settings = (() => {
     }, 300);
 
     sides.forEach(side => {
-      document.getElementById(`margin-${side}`)?.addEventListener('input', debSave);
+      _input(`margin-${side}`)?.addEventListener('input', debSave);
     });
   }
 
   /* ── Print scale ── */
   function _bindPrintScale() {
-    const sel    = document.getElementById('print-scale-select');
-    const custom = document.getElementById('print-scale-custom');
+    const sel    = _select('print-scale-select');
+    const custom = _input('print-scale-custom');
     const row    = document.getElementById('print-scale-custom-row');
 
     sel?.addEventListener('change', () => {
@@ -927,45 +944,45 @@ const Settings = (() => {
       ?.querySelectorAll('.seg-btn')
       .forEach(btn => {
         btn.addEventListener('click', () => {
-          const mode = btn.dataset.zoom;
+          const mode = (/** @type {HTMLElement} */ (btn)).dataset.zoom;
           State.setSettings({ preview: { zoom: mode } });
           _applyZoomMode(mode);
         });
       });
 
     // Margin guide toggle
-    document.getElementById('toggle-margin-guide')?.addEventListener('change', (e) => {
-      State.setSettings({ preview: { showMarginGuide: e.target.checked } });
-      _applyMarginGuide(e.target.checked);
+    _input('toggle-margin-guide')?.addEventListener('change', (e) => {
+      State.setSettings({ preview: { showMarginGuide: (/** @type {HTMLInputElement} */ (e.target)).checked } });
+      _applyMarginGuide((/** @type {HTMLInputElement} */ (e.target)).checked);
     });
 
     // Print area toggle
-    document.getElementById('toggle-print-area')?.addEventListener('change', (e) => {
-      State.setSettings({ preview: { showPrintableArea: e.target.checked } });
-      _applyPrintableArea(e.target.checked);
+    _input('toggle-print-area')?.addEventListener('change', (e) => {
+      State.setSettings({ preview: { showPrintableArea: (/** @type {HTMLInputElement} */ (e.target)).checked } });
+      _applyPrintableArea((/** @type {HTMLInputElement} */ (e.target)).checked);
     });
   }
 
   /* ── Footer nomor halaman ── */
   function _bindPageNumberControls() {
-    const enabledEl = document.getElementById('page-number-enabled');
+    const enabledEl = _input('page-number-enabled');
     const alignSeg = document.getElementById('page-number-align-seg');
-    const fontSel = document.getElementById('page-number-font-family');
-    const sizeInput = document.getElementById('page-number-font-size');
+    const fontSel = _select('page-number-font-family');
+    const sizeInput = _input('page-number-font-size');
     const sizeDecBtn = document.getElementById('page-number-font-size-dec');
     const sizeIncBtn = document.getElementById('page-number-font-size-inc');
-    const colorEl = document.getElementById('page-number-color');
-    const colorHexEl = document.getElementById('page-number-color-hex');
+    const colorEl = _input('page-number-color');
+    const colorHexEl = _input('page-number-color-hex');
     const styleSeg = document.getElementById('page-number-style-seg');
-    const bottomInput = document.getElementById('page-number-bottom-offset');
+    const bottomInput = _input('page-number-bottom-offset');
 
     enabledEl?.addEventListener('change', (e) => {
-      State.setSettings({ pageNumber: { enabled: e.target.checked }, activePreset: 'custom' });
+      State.setSettings({ pageNumber: { enabled: (/** @type {HTMLInputElement} */ (e.target)).checked }, activePreset: 'custom' });
     });
 
     alignSeg?.querySelectorAll('.seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const alignment = btn.dataset.align;
+        const alignment = (/** @type {HTMLElement} */ (btn)).dataset.align;
         State.setSettings({ pageNumber: { alignment }, activePreset: 'custom' });
         _syncPageNumberControls(State.getSettings().pageNumber);
       });
@@ -977,19 +994,19 @@ const Settings = (() => {
 
     const saveSize = () => {
       const size = Utils.clamp(Utils.safeFloat(sizeInput?.value, 8), 6, 14);
-      if (sizeInput) sizeInput.value = size;
+      if (sizeInput) sizeInput.value = String(size);
       State.setSettings({ pageNumber: { fontSize: size }, activePreset: 'custom' });
       _updatePageNumberPreview();
     };
 
     sizeDecBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(sizeInput?.value, 8);
-      if (sizeInput) sizeInput.value = Utils.clamp(cur - 0.5, 6, 14);
+      if (sizeInput) sizeInput.value = String(Utils.clamp(cur - 0.5, 6, 14));
       saveSize();
     });
     sizeIncBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(sizeInput?.value, 8);
-      if (sizeInput) sizeInput.value = Utils.clamp(cur + 0.5, 6, 14);
+      if (sizeInput) sizeInput.value = String(Utils.clamp(cur + 0.5, 6, 14));
       saveSize();
     });
     sizeInput?.addEventListener('input', Utils.debounce(saveSize, 250));
@@ -1010,7 +1027,7 @@ const Settings = (() => {
 
     styleSeg?.querySelectorAll('.seg-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const key = btn.dataset.style;
+        const key = (/** @type {HTMLElement} */ (btn)).dataset.style;
         const current = State.getSettings().pageNumber?.[key] === true;
         State.setSettings({ pageNumber: { [key]: !current }, activePreset: 'custom' });
         _syncPageNumberControls(State.getSettings().pageNumber);
@@ -1019,7 +1036,7 @@ const Settings = (() => {
 
     const saveBottom = () => {
       const value = Utils.clamp(Utils.safeFloat(bottomInput?.value, 5), 1, 20);
-      if (bottomInput) bottomInput.value = value;
+      if (bottomInput) bottomInput.value = String(value);
       State.setSettings({ pageNumber: { bottomOffset: value }, activePreset: 'custom' });
       _updatePageNumberPreview();
     };
@@ -1030,30 +1047,30 @@ const Settings = (() => {
   function _syncPageNumberControls(pageNumber = State.getSettings().pageNumber) {
     if (!pageNumber) return;
 
-    const enabledEl = document.getElementById('page-number-enabled');
+    const enabledEl = _input('page-number-enabled');
     if (enabledEl) enabledEl.checked = !!pageNumber.enabled;
 
     document.getElementById('page-number-align-seg')
       ?.querySelectorAll('.seg-btn')
-      .forEach(btn => btn.classList.toggle('active', btn.dataset.align === pageNumber.alignment));
+      .forEach(btn => btn.classList.toggle('active', (/** @type {HTMLElement} */ (btn)).dataset.align === pageNumber.alignment));
 
-    const fontSel = document.getElementById('page-number-font-family');
+    const fontSel = _select('page-number-font-family');
     if (fontSel) fontSel.value = pageNumber.fontFamily;
 
-    const sizeInput = document.getElementById('page-number-font-size');
-    if (sizeInput) sizeInput.value = pageNumber.fontSize;
+    const sizeInput = _input('page-number-font-size');
+    if (sizeInput) sizeInput.value = String(pageNumber.fontSize);
 
-    const colorEl = document.getElementById('page-number-color');
-    const colorHexEl = document.getElementById('page-number-color-hex');
+    const colorEl = _input('page-number-color');
+    const colorHexEl = _input('page-number-color-hex');
     if (colorEl) colorEl.value = pageNumber.color;
     if (colorHexEl) colorHexEl.value = pageNumber.color;
 
     document.getElementById('page-number-style-seg')
       ?.querySelectorAll('.seg-btn')
-      .forEach(btn => btn.classList.toggle('active', pageNumber[btn.dataset.style] === true));
+      .forEach(btn => btn.classList.toggle('active', pageNumber[(/** @type {HTMLElement} */ (btn)).dataset.style] === true));
 
-    const bottomInput = document.getElementById('page-number-bottom-offset');
-    if (bottomInput) bottomInput.value = pageNumber.bottomOffset;
+    const bottomInput = _input('page-number-bottom-offset');
+    if (bottomInput) bottomInput.value = String(pageNumber.bottomOffset);
 
     _updatePageNumberPreview(pageNumber);
   }
@@ -1111,7 +1128,7 @@ const Settings = (() => {
     _syncPresetButtons(s.activePreset);
 
     // Paper size
-    const sizeEl = document.getElementById('paper-size-select');
+    const sizeEl = _select('paper-size-select');
     if (sizeEl) sizeEl.value = s.paper.size;
     _toggleCustomBlock(s.paper.size === 'Custom');
     if (s.paper.size === 'Custom') _syncCustomSizeInputs(s);
@@ -1119,7 +1136,7 @@ const Settings = (() => {
     // Orientation
     document.getElementById('orientation-btns')
       ?.querySelectorAll('.orient-btn')
-      .forEach(btn => btn.classList.toggle('active', btn.dataset.orient === s.orientation));
+      .forEach(btn => btn.classList.toggle('active', (/** @type {HTMLElement} */ (btn)).dataset.orient === s.orientation));
 
     _updatePaperInfo();
 
@@ -1137,13 +1154,13 @@ const Settings = (() => {
     const zoomSeg = document.getElementById('zoom-mode-seg');
     const zoomMode = typeof s.preview.zoom === 'string' ? s.preview.zoom : 'actual';
     zoomSeg?.querySelectorAll('.seg-btn')
-      .forEach(btn => btn.classList.toggle('active', btn.dataset.zoom === zoomMode));
+      .forEach(btn => btn.classList.toggle('active', (/** @type {HTMLElement} */ (btn)).dataset.zoom === zoomMode));
 
-    const mgGuide = document.getElementById('toggle-margin-guide');
+    const mgGuide = _input('toggle-margin-guide');
     if (mgGuide) mgGuide.checked = !!s.preview.showMarginGuide;
     _applyMarginGuide(!!s.preview.showMarginGuide);
 
-    const paArea = document.getElementById('toggle-print-area');
+    const paArea = _input('toggle-print-area');
     if (paArea) paArea.checked = !!s.preview.showPrintableArea;
     _applyPrintableArea(!!s.preview.showPrintableArea);
 
@@ -1161,7 +1178,7 @@ const Settings = (() => {
   function _syncPresetButtons(activeKey) {
     document.getElementById('preset-grid')
       ?.querySelectorAll('.preset-btn')
-      .forEach(btn => btn.classList.toggle('active', btn.dataset.preset === activeKey));
+      .forEach(btn => btn.classList.toggle('active', (/** @type {HTMLElement} */ (btn)).dataset.preset === activeKey));
   }
 
   /* ── Sync helper: custom size inputs ── */
@@ -1183,16 +1200,16 @@ const Settings = (() => {
 
   function _syncCustomSizeConstraints(unit) {
     const constraints = _getCustomDisplayConstraints(unit);
-    const wEl = document.getElementById('custom-width-input');
-    const hEl = document.getElementById('custom-height-input');
+    const wEl = _input('custom-width-input');
+    const hEl = _input('custom-height-input');
     if (wEl) {
-      wEl.min = constraints.width.min;
-      wEl.max = constraints.width.max;
+      wEl.min = String(constraints.width.min);
+      wEl.max = String(constraints.width.max);
       wEl.step = constraints.step;
     }
     if (hEl) {
-      hEl.min = constraints.height.min;
-      hEl.max = constraints.height.max;
+      hEl.min = String(constraints.height.min);
+      hEl.max = String(constraints.height.max);
       hEl.step = constraints.step;
     }
   }
@@ -1204,31 +1221,31 @@ const Settings = (() => {
     const wDisp = _round(_fromMm(wMm, unit));
     const hDisp = _round(_fromMm(hMm, unit));
 
-    const wEl = document.getElementById('custom-width-input');
-    const hEl = document.getElementById('custom-height-input');
-    if (wEl) wEl.value = wDisp;
-    if (hEl) hEl.value = hDisp;
+    const wEl = _input('custom-width-input');
+    const hEl = _input('custom-height-input');
+    if (wEl) wEl.value = String(wDisp);
+    if (hEl) hEl.value = String(hDisp);
 
     document.getElementById('custom-width-unit') && (document.getElementById('custom-width-unit').textContent = unit);
     document.getElementById('custom-height-unit') && (document.getElementById('custom-height-unit').textContent = unit);
 
     document.getElementById('unit-seg')?.querySelectorAll('.seg-btn')
-      .forEach(btn => btn.classList.toggle('active', btn.dataset.unit === unit));
+      .forEach(btn => btn.classList.toggle('active', (/** @type {HTMLElement} */ (btn)).dataset.unit === unit));
 
     _syncCustomSizeConstraints(unit);
   }
   /* ── Sync helper: typography ── */
   function _syncTypography(typo) {
     if (!typo) return;
-    const fontSel   = document.getElementById('doc-font-family');
-    const sizeInput = document.getElementById('doc-font-size');
-    const lineHSel  = document.getElementById('doc-line-height');
-    const tblInput  = document.getElementById('doc-table-size');
+    const fontSel   = _select('doc-font-family');
+    const sizeInput = _input('doc-font-size');
+    const lineHSel  = _select('doc-line-height');
+    const tblInput  = _input('doc-table-size');
 
     if (fontSel)  fontSel.value   = typo.fontFamily  || 'Times New Roman';
-    if (sizeInput) sizeInput.value = typo.fontSize    || 12;
-    if (lineHSel) lineHSel.value  = typo.lineHeight   || 1.5;
-    if (tblInput) tblInput.value  = typo.tableSize    || 7.5;
+    if (sizeInput) sizeInput.value = String(typo.fontSize || 12);
+    if (lineHSel) lineHSel.value  = String(typo.lineHeight || 1.5);
+    if (tblInput) tblInput.value  = String(typo.tableSize || 7.5);
 
     _updateTypoPreview(typo.fontFamily || 'Times New Roman', typo.fontSize || 12);
   }
@@ -1236,14 +1253,14 @@ const Settings = (() => {
   /* ── Sync helper: margin inputs ── */
   function _syncMarginInputs(margin) {
     ['top', 'right', 'bottom', 'left'].forEach(side => {
-      const el = document.getElementById(`margin-${side}`);
-      if (el) el.value = margin[side] ?? 20;
+      const el = _input(`margin-${side}`);
+      if (el) el.value = String(margin[side] ?? 20);
     });
   }
 
   /* ── Sync helper: margin preset select ── */
   function _syncMarginPresetSelect(margin) {
-    const sel = document.getElementById('margin-preset-select');
+    const sel = _select('margin-preset-select');
     if (!sel || !margin) return;
     // Cek apakah cocok dengan salah satu preset
     const match = Object.entries(State.MARGIN_PRESETS).find(([, p]) =>
@@ -1255,8 +1272,8 @@ const Settings = (() => {
 
   /* ── Sync helper: print scale ── */
   function _syncPrintScale(scale) {
-    const sel  = document.getElementById('print-scale-select');
-    const cust = document.getElementById('print-scale-custom');
+    const sel  = _select('print-scale-select');
+    const cust = _input('print-scale-custom');
     const row  = document.getElementById('print-scale-custom-row');
     if (!sel) return;
 
@@ -1267,7 +1284,7 @@ const Settings = (() => {
       row?.classList.add('hidden');
     } else {
       sel.value = 'custom';
-      if (cust) cust.value = scale;
+      if (cust) cust.value = String(scale);
       row?.classList.remove('hidden');
     }
   }
@@ -1335,10 +1352,10 @@ const Settings = (() => {
     // Posisikan sesuai margin saat ini
     const m = State.getMarginMm();
     const PX_PER_MM = 96 / 25.4;
-    guide.style.top    = `${m.top    * PX_PER_MM}px`;
-    guide.style.right  = `${m.right  * PX_PER_MM}px`;
-    guide.style.bottom = `${m.bottom * PX_PER_MM}px`;
-    guide.style.left   = `${m.left   * PX_PER_MM}px`;
+    (/** @type {HTMLElement} */ (guide)).style.top    = `${m.top    * PX_PER_MM}px`;
+    (/** @type {HTMLElement} */ (guide)).style.right  = `${m.right  * PX_PER_MM}px`;
+    (/** @type {HTMLElement} */ (guide)).style.bottom = `${m.bottom * PX_PER_MM}px`;
+    (/** @type {HTMLElement} */ (guide)).style.left   = `${m.left   * PX_PER_MM}px`;
   }
 
   /* ── Printable area highlight ── */
@@ -1358,10 +1375,10 @@ const Settings = (() => {
 
     const m = State.getMarginMm();
     const PX = 96 / 25.4;
-    area.style.top    = `${m.top    * PX}px`;
-    area.style.right  = `${m.right  * PX}px`;
-    area.style.bottom = `${m.bottom * PX}px`;
-    area.style.left   = `${m.left   * PX}px`;
+    (/** @type {HTMLElement} */ (area)).style.top    = `${m.top    * PX}px`;
+    (/** @type {HTMLElement} */ (area)).style.right  = `${m.right  * PX}px`;
+    (/** @type {HTMLElement} */ (area)).style.bottom = `${m.bottom * PX}px`;
+    (/** @type {HTMLElement} */ (area)).style.left   = `${m.left   * PX}px`;
   }
 
   /* ═══════════════════════════════════════════════════════════
@@ -1398,9 +1415,9 @@ const Settings = (() => {
 
     if (!avEl) return;
 
-    const meta = Storage.getMeta();
+    const meta = AppStorage.getMeta();
 
-    avEl.textContent = Storage.isAvailable() ? '✅ Tersedia' : '❌ Tidak tersedia';
+    avEl.textContent = AppStorage.isAvailable() ? '✅ Tersedia' : '❌ Tidak tersedia';
 
     if (!meta) {
       saveEl.textContent = '—';
