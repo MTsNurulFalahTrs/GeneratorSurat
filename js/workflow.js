@@ -366,9 +366,7 @@ const Workflow = (() => {
     if (error.step === 'template') {
       UI.switchTab('template');
       setTimeout(() => {
-        document.getElementById('template-list')
-          ?.querySelector('.template-card')
-          ?.focus();
+        /** @type {HTMLElement|null} */ (document.getElementById('template-list')?.querySelector('.template-card'))?.focus();
       }, 60);
       return;
     }
