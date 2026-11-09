@@ -78,9 +78,9 @@ describe('PWA Service Worker', () => {
     const end = source.indexOf('];', start);
     const shell = [...source.slice(start, end).matchAll(/['"]([^'"]+)['"]/g)].map(match => match[1]);
     const required = [
-      ...[...html.matchAll(/<script\\b[^>]*\\bsrc=["']([^"']+)["']/gi)].map(match => match[1]),
-      ...[...html.matchAll(/<link\\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']/gi)].map(match => match[1]),
-      ...[...html.matchAll(/<link\\b[^>]*rel=["']manifest["'][^>]*href=["']([^"']+)["']/gi)].map(match => match[1]),
+      ...[...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi)].map(match => match[1]),
+      ...[...html.matchAll(/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["']/gi)].map(match => match[1]),
+      ...[...html.matchAll(/<link\b[^>]*rel=["']manifest["'][^>]*href=["']([^"']+)["']/gi)].map(match => match[1]),
     ];
 
     expect(new Set(shell).size).toBe(shell.length);
