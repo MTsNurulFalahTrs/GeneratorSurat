@@ -399,6 +399,35 @@ const TemplateRekapNilai = (() => {
 
   const tableColumns = _buildTableColumns();
 
+  /**
+   * Satu-satunya sumber urutan kolom aktif untuk panel Pengaturan Tabel
+   * dan preview. configIndex selalu merujuk posisi dalam 30 kolom kanonis,
+   * sehingga preferensi lama tidak bergeser saat jumlah BAB/TP/LM berubah.
+   *
+   * @param {object} [formData]
+   */
+  function getTableLayout(formData = {}) {
+    const hdr = formData?.header || {};
+    const count = (value, fallback, max) =>
+      Math.min(max, Math.max(1, parseInt(value, 10) || fallback));
+    const jumlahBab = count(hdr.jumlahBab, 3, 5);
+    const jumlahTpBab = count(hdr.jumlahTpBab, 3, 4);
+    const jumlahLm = count(hdr.jumlahLm, 2, 4);
+
+    const visibleKeys = new Set(['no', 'namaMurid', 'sts', 'sas', 'praktik', 'nilaiAkhir']);
+    for (let b = 1; b <= jumlahBab; b++) {
+      for (let tp = 1; tp <= jumlahTpBab; tp++) {
+        visibleKeys.add(`bab${b}_tp${tp}`);
+      }
+    }
+    for (let l = 1; l <= jumlahLm; l++) visibleKeys.add(`lm${l}`);
+
+    const columns = tableColumns.flatMap((column, configIndex) =>
+      visibleKeys.has(column.key) ? [{ ...column, configIndex }] : []
+    );
+    return { jumlahBab, jumlahTpBab, jumlahLm, columns };
+  }
+
   /* ── Public API ── */
   return {
     TEMPLATE_ID,
@@ -407,6 +436,7 @@ const TemplateRekapNilai = (() => {
     createItem: _createMurid,
     formSections,
     tableColumns,
+    getTableLayout,
   };
 
 })();

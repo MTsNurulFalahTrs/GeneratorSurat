@@ -1979,9 +1979,10 @@ const PreviewRenderer = (() => {
       `line-height:${t.lineHeight};`;
 
     const isModeFormat  = hdr.modePengisian === 'format';
-    const jumlahBab     = Math.min(5, Math.max(1, parseInt(hdr.jumlahBab,    10) || 3));
-    const jumlahTpBab   = Math.min(4, Math.max(1, parseInt(hdr.jumlahTpBab,  10) || 3));
-    const jumlahLm      = Math.min(4, Math.max(1, parseInt(hdr.jumlahLm,     10) || 2));
+    // Panel Pengaturan Tabel dan preview menggunakan layout kolom aktif yang sama.
+    const layout = TemplateRegistry.get('rekap-nilai').getTableLayout(data);
+    const { jumlahBab, jumlahTpBab, jumlahLm } = layout;
+    const activeColumns = layout.columns;
 
     /* ── KOP ── */
     const kopHtml = _buildKopHtml(kop);
@@ -2036,64 +2037,52 @@ const PreviewRenderer = (() => {
 
        Kunci: kolom Sumatif LM memakai rowspan="2" sehingga tidak ada baris TP di bawahnya.
     */
-    const colWidthNama  = '28mm';
-    const colWidthNilai = '6mm';
-    const colWidthLm    = '9mm';
-    const colWidthBig   = '10mm';
     const totalFormatifCols = jumlahBab * jumlahTpBab;
-    const totalCols = 2 + totalFormatifCols + jumlahLm + 4; // No + Nama + formatif cols + LM cols + STS+SAS+Praktik+NA
-
-    // Semua kolom Rekap Nilai perlu lebar terdefinisi agar header bertingkat
-    // konsisten pada preview, paginasi, print, dan ekspor PDF.
-    const tableLayoutStyle = 'width:100%;table-layout:fixed;';
-    const colgroupHtml = '<colgroup>' +
-      '<col style="width:8mm;">' +
-      '<col style="width:' + colWidthNama + ';">' +
-      Array.from({ length: totalFormatifCols }, () => '<col style="width:' + colWidthNilai + ';">').join('') +
-      Array.from({ length: jumlahLm }, () => '<col style="width:' + colWidthLm + ';">').join('') +
-      Array.from({ length: 4 }, () => '<col style="width:' + colWidthBig + ';">').join('') +
-      '</colgroup>';
-
-    /* -- Ambil tableConfig LEBIH AWAL, sebelum dipakai membangun header -- */
+    const totalCols = activeColumns.length;
     const tableConfig = _getTableConfig('rekap-nilai', 'rekap-nilai');
 
-    /* Helper: bangun inline style untuk <th> dari tableConfig */
-    const buildHeaderCellStyle = (colIdx, baseStyle = '') => {
+    // Konfigurasi teks memakai indeks kanonis (30 kolom maksimum), sedangkan
+    // aturan warna berdasarkan nomor kolom visual saat ini (1..jumlah aktif).
+    const byKey = new Map(activeColumns.map((col, visualIndex) =>
+      [col.key, { configIndex: col.configIndex, visualIndex }]
+    ));
+    const configIndex = key => byKey.get(key)?.configIndex ?? -1;
+    const visualIndex = key => byKey.get(key)?.visualIndex ?? -1;
+
+    // Tidak boleh membuat colgroup statis: kolom yang tampil bisa berubah
+    // dan lebar yang disimpan di Pengaturan Tabel harus mengendalikan preview.
+    const activeWidthByKey = {};
+    activeColumns.forEach(col => {
+      const width = tableConfig?.columnWidths?.byKey?.[col.key];
+      if (width) activeWidthByKey[col.key] = width;
+    });
+    const activeWidths = { byKey: activeWidthByKey };
+    const hasCustomWidth = typeof TableConfigManager !== 'undefined'
+      && TableConfigManager.hasAnyCustomWidth(activeWidths);
+    const colgroupHtml = hasCustomWidth
+      ? TableConfigManager.buildColGroupHtml(activeColumns, activeWidths)
+      : '<colgroup>' + activeColumns.map(col =>
+          '<col style="width:' + (col.width || 'auto') + ';">'
+        ).join('') + '</colgroup>';
+    const tableLayoutStyle = 'width:100%;table-layout:fixed;';
+
+    const buildHeaderCellStyle = (key, baseStyle = '') => {
       if (!tableConfig || typeof TableConfigManager === 'undefined') return baseStyle;
-      const colCfg = tableConfig.header?.columns?.[colIdx] || {};
-      const t = typo || State.getTypography();
+      const index = configIndex(key);
+      const colCfg = index >= 0 ? tableConfig.header?.columns?.[index] : null;
       const cfgStyle = TableConfigManager.buildCellStyle(colCfg, t.tableSize || t.fontSize);
-      const bgColor = tableConfig.colors?.header || '#FFFFFF';
-      const parts = [];
-      if (baseStyle) parts.push(baseStyle);
-      if (cfgStyle)  parts.push(cfgStyle);
-      parts.push(`background-color:${bgColor}`);
-      return parts.filter(Boolean).join(';');
+      return [baseStyle, cfgStyle, 'background-color:' + (tableConfig.colors?.header || '#FFFFFF')]
+        .filter(Boolean).join(';');
     };
 
-    /* Helper: bangun inline style untuk <td> dari tableConfig */
-    const buildBodyCellStyle = (colIdx, rowNumber, baseStyle = '') => {
+    const buildBodyCellStyle = (key, rowNumber, baseStyle = '') => {
       if (!tableConfig || typeof TableConfigManager === 'undefined') return baseStyle;
-      const colCfg = tableConfig.body?.columns?.[colIdx] || {};
-      const t = typo || State.getTypography();
+      const index = configIndex(key);
+      const colCfg = index >= 0 ? tableConfig.body?.columns?.[index] : null;
       const cfgStyle = TableConfigManager.buildCellStyle(colCfg, t.tableSize || t.fontSize);
-      const bgColor = TableConfigManager.getBodyCellColor(tableConfig, rowNumber, colIdx);
-      const parts = [];
-      if (baseStyle) parts.push(baseStyle);
-      if (cfgStyle)  parts.push(cfgStyle);
-      parts.push(`background-color:${bgColor}`);
-      return parts.filter(Boolean).join(';');
+      const color = TableConfigManager.getBodyCellColor(tableConfig, rowNumber, visualIndex(key));
+      return [baseStyle, cfgStyle, 'background-color:' + color].filter(Boolean).join(';');
     };
-
-    /* Helper: hitung colIndex absolut (posisi dalam daftar kolom flat) */
-    const colIdxNo        = 0;
-    const colIdxNama      = 1;
-    const colIdxBabStart  = 2;
-    const colIdxLmStart   = colIdxBabStart + jumlahBab * jumlahTpBab;
-    const colIdxSts       = colIdxLmStart + jumlahLm;
-    const colIdxSas       = colIdxSts + 1;
-    const colIdxPraktik   = colIdxSas + 1;
-    const colIdxNa        = colIdxPraktik + 1;
 
     /* Baris 1: grup besar
        - "Formatif (Lingkup BAB)" hanya 1 baris → di baris 2 akan diisi sub-grup BAB
@@ -2103,21 +2092,20 @@ const PreviewRenderer = (() => {
     const hBgStyle = `background-color:${hBgColor}`;
     const row1 = `
       <tr>
-        <th rowspan="3" style="width:8mm;${hBgStyle}">No.</th>
-        <th rowspan="3" style="width:${colWidthNama};text-align:left;${hBgStyle}">Nama Murid</th>
-        <th colspan="${totalFormatifCols}" style="${hBgStyle}">Formatif (Lingkup BAB)</th>
-        <th rowspan="2" colspan="${jumlahLm}" style="${hBgStyle}">Sumatif (Lingkup Materi)</th>
-        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Sumatif Tengah Semester</th>
-        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Sumatif Akhir Semester</th>
-        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Praktik</th>
-        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Nilai Akhir</th>
+        <th rowspan="3" style="${buildHeaderCellStyle('no', hBgStyle)}">No.</th>
+        <th rowspan="3" style="${buildHeaderCellStyle('namaMurid', 'text-align:left;' + hBgStyle)}">Nama Murid</th>
+        <th colspan="${totalFormatifCols}" style="${buildHeaderCellStyle('bab1_tp1', hBgStyle)}">Formatif (Lingkup BAB)</th>
+        <th rowspan="2" colspan="${jumlahLm}" style="${buildHeaderCellStyle('lm1', hBgStyle)}">Sumatif (Lingkup Materi)</th>
+        <th rowspan="3" style="${buildHeaderCellStyle('sts', hBgStyle)}">Sumatif Tengah Semester</th>
+        <th rowspan="3" style="${buildHeaderCellStyle('sas', hBgStyle)}">Sumatif Akhir Semester</th>
+        <th rowspan="3" style="${buildHeaderCellStyle('praktik', hBgStyle)}">Praktik</th>
+        <th rowspan="3" style="${buildHeaderCellStyle('nilaiAkhir', hBgStyle)}">Nilai Akhir</th>
       </tr>`;
 
     /* Baris 2: sub-grup BAB saja (LM tidak ada di sini — sudah tercakup rowspan baris 1) */
     let row2Cells = '';
     for (let b = 1; b <= jumlahBab; b++) {
-      const ci = colIdxBabStart + (b - 1) * jumlahTpBab;
-      row2Cells += `<th colspan="${jumlahTpBab}" style="${buildHeaderCellStyle(ci, hBgStyle)}">BAB ${b}</th>`;
+      row2Cells += `<th colspan="${jumlahTpBab}" style="${buildHeaderCellStyle(`bab${b}_tp1`, hBgStyle)}">BAB ${b}</th>`;
     }
     const row2 = `<tr>${row2Cells}</tr>`;
 
@@ -2125,13 +2113,11 @@ const PreviewRenderer = (() => {
     let row3Cells = '';
     for (let b = 1; b <= jumlahBab; b++) {
       for (let tp = 1; tp <= jumlahTpBab; tp++) {
-        const ci = colIdxBabStart + (b - 1) * jumlahTpBab + (tp - 1);
-        row3Cells += `<th style="width:${colWidthNilai};${buildHeaderCellStyle(ci, hBgStyle)}">TP${tp}</th>`;
+        row3Cells += `<th style="${buildHeaderCellStyle(`bab${b}_tp${tp}`, hBgStyle)}">TP${tp}</th>`;
       }
     }
     for (let l = 1; l <= jumlahLm; l++) {
-      const ci = colIdxLmStart + (l - 1);
-      row3Cells += `<th style="width:${colWidthLm};${buildHeaderCellStyle(ci, hBgStyle)}">LM${l}</th>`;
+      row3Cells += `<th style="${buildHeaderCellStyle(`lm${l}`, hBgStyle)}">LM${l}</th>`;
     }
     const row3 = `<tr>${row3Cells}</tr>`;
 
@@ -2142,43 +2128,31 @@ const PreviewRenderer = (() => {
       return (v !== undefined && v !== null && v !== '') ? _esc(String(v)) : '';
     };
 
-    /* ── Ambil tableConfig dari TableConfigManager (sama seperti DPU) ── */
-
-    /* Baris data murid */
+    /* Baris data dan placeholder dibangun dari urutan kolom yang sama. */
     let bodyRows = '';
+    const renderDataCell = (column, murid, rowNumber) => {
+      const key = column.key;
+      const text = key === 'no' ? _esc(String(murid?.no || rowNumber))
+        : key === 'namaMurid' ? _esc(murid?.namaMurid || '')
+        : murid ? getVal(murid, key) : '';
+      const baseStyle = key === 'namaMurid' ? 'text-align:left;padding-left:2mm;'
+        : 'text-align:center;';
+      return '<td style="' + buildBodyCellStyle(key, rowNumber, baseStyle) + '">' + text + '</td>';
+    };
+
     muridList.forEach((murid, idx) => {
       const rowNumber = idx + 1;
-      let cells =
-        `<td style="${buildBodyCellStyle(colIdxNo,   rowNumber, 'text-align:center;')}">${_esc(String(murid.no || rowNumber))}</td>` +
-        `<td style="${buildBodyCellStyle(colIdxNama, rowNumber, 'text-align:left;padding-left:2mm;')}">${_esc(murid.namaMurid || '')}</td>`;
-
-      for (let b = 1; b <= jumlahBab; b++) {
-        for (let tp = 1; tp <= jumlahTpBab; tp++) {
-          const ci = colIdxBabStart + (b - 1) * jumlahTpBab + (tp - 1);
-          cells += `<td style="${buildBodyCellStyle(ci, rowNumber, 'text-align:center;')}">${getVal(murid, `bab${b}_tp${tp}`)}</td>`;
-        }
-      }
-      for (let l = 1; l <= jumlahLm; l++) {
-        const ci = colIdxLmStart + (l - 1);
-        cells += `<td style="${buildBodyCellStyle(ci, rowNumber, 'text-align:center;')}">${getVal(murid, `lm${l}`)}</td>`;
-      }
-      cells += `<td style="${buildBodyCellStyle(colIdxSts,     rowNumber, 'text-align:center;')}">${getVal(murid, 'sts')}</td>`;
-      cells += `<td style="${buildBodyCellStyle(colIdxSas,     rowNumber, 'text-align:center;')}">${getVal(murid, 'sas')}</td>`;
-      cells += `<td style="${buildBodyCellStyle(colIdxPraktik, rowNumber, 'text-align:center;')}">${getVal(murid, 'praktik')}</td>`;
-      cells += `<td style="${buildBodyCellStyle(colIdxNa,      rowNumber, 'text-align:center;')}">${getVal(murid, 'nilaiAkhir')}</td>`;
-
-      bodyRows += `<tr>${cells}</tr>`;
+      bodyRows += '<tr>' +
+        activeColumns.map(column => renderDataCell(column, murid, rowNumber)).join('') +
+        '</tr>';
     });
 
-    /* Baris kosong tambahan untuk mode Format (minimal 5 baris) */
     const minRows = isModeFormat ? Math.max(0, 5 - muridList.length) : 0;
     for (let i = 0; i < minRows; i++) {
       const rowNumber = muridList.length + i + 1;
-      let emptyCells = `<td style="${buildBodyCellStyle(colIdxNo, rowNumber, 'text-align:center;')}">${rowNumber}</td>`;
-      for (let c = 1; c < totalCols; c++) {
-        emptyCells += `<td style="${buildBodyCellStyle(c, rowNumber)}"></td>`;
-      }
-      bodyRows += `<tr class="rekap-nilai-empty-row">${emptyCells}</tr>`;
+      bodyRows += '<tr class="rekap-nilai-empty-row">' +
+        activeColumns.map(column => renderDataCell(column, null, rowNumber)).join('') +
+        '</tr>';
     }
 
     const tableHtml = `

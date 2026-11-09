@@ -430,6 +430,14 @@ const TableConfigManager = (() => {
     State.setTableConfig(templateId, tableId, updated);
   }
 
+  function _getActiveColumns(templateId, columns) {
+    const template = TemplateRegistry.get(templateId);
+    if (templateId === 'rekap-nilai' && typeof template?.getTableLayout === 'function') {
+      return template.getTableLayout(State.getFormData(templateId)).columns;
+    }
+    return columns.map((col, configIndex) => ({ ...col, configIndex }));
+  }
+
   /* ────────────────────────────────────────────────
      6. Apply to All — terapkan satu atau beberapa
         properti ke semua kolom di section tertentu
@@ -459,7 +467,8 @@ const TableConfigManager = (() => {
       body:   { columns: { ...(current.body?.columns   || {}) } },
     };
 
-    tableDef.columns.forEach((_, idx) => {
+    _getActiveColumns(templateId, tableDef.columns).forEach((col, position) => {
+      const idx = col.configIndex ?? position;
       updated[section].columns[idx] = Object.assign(
         {},
         updated[section].columns[idx] || {},
@@ -518,7 +527,8 @@ const TableConfigManager = (() => {
       body:   { columns: { ...(current.body?.columns   || {}) } },
     };
 
-    tableDef.columns.forEach((_, idx) => {
+    _getActiveColumns(templateId, tableDef.columns).forEach((col, position) => {
+      const idx = col.configIndex ?? position;
       updated[section].columns[idx] = Object.assign(
         {},
         updated[section].columns[idx] || {},
@@ -579,14 +589,15 @@ const TableConfigManager = (() => {
 
     const tableDef = TemplateRegistry.getTableDefinitions(templateId)
       .find(t => t.id === tableId);
-    const columns = tableDef?.columns || [];
+    const columns = tableDef ? _getActiveColumns(templateId, tableDef.columns) : [];
     if (!columns.length) return;
 
     const currentAll = State.getTableConfig(templateId);
     const currentTable = currentAll[tableId] || {};
     const currentByKey = currentTable.columnWidths?.byKey || {};
     const equalPct = Math.round((100 / columns.length) * 100) / 100;
-    const byKey = {};
+    // Jangan hapus konfigurasi kolom yang sementara tidak tampil.
+    const byKey = { ...currentByKey };
 
     columns.forEach(col => {
       const key = col?.key;
@@ -635,8 +646,8 @@ const TableConfigManager = (() => {
     const current    = currentAll[tableId] || {};
 
     // Set semua kolom ke auto
-    const byKey = {};
-    tableDef.columns.forEach(col => {
+    const byKey = { ...(current.columnWidths?.byKey || {}) };
+    _getActiveColumns(templateId, tableDef.columns).forEach(col => {
       if (col.key) byKey[col.key] = { mode: WIDTH_MODE_AUTO };
     });
 

@@ -16,6 +16,7 @@ const TableConfigUI = (() => {
   /* ── State UI lokal ── */
   let _mountEl      = null;
   let _templateId   = null;
+  let _visibleColumnSignature = '';
   let _openSections = {};
   let _boundClickHandler  = null;
   let _boundChangeHandler = null;
@@ -75,8 +76,17 @@ const TableConfigUI = (() => {
     State.on('table:change', debouncedSync);
     State.on('table:reset',  debouncedSync);
 
+    // Rekap Nilai: jumlah BAB/TP/LM mengubah susunan kolom yang terlihat.
+    // Perbarui kartu pengaturan saat struktur berubah, bukan di setiap input.
+    State.on('form:change', ({ templateId }) => {
+      if (templateId !== 'rekap-nilai' || _templateId !== templateId) return;
+      const signature = _getVisibleColumnSignature(templateId);
+      if (signature !== _visibleColumnSignature) render(templateId);
+    });
+
     State.on('state:reset', () => {
       _templateId = null;
+      _visibleColumnSignature = '';
       _hide();
     });
   }
@@ -92,12 +102,49 @@ const TableConfigUI = (() => {
       return;
     }
 
+    const previousToggle = _mountEl.querySelector('#tbl-cfg-toggle');
+    const wasCollapsed = previousToggle?.getAttribute('aria-expanded') === 'false';
     _templateId = templateId;
+    _visibleColumnSignature = _getVisibleColumnSignature(templateId);
     _mountEl.innerHTML = _buildAccordionHtml(templateId);
+    if (wasCollapsed) {
+      const toggle = _mountEl.querySelector('#tbl-cfg-toggle');
+      const body = _mountEl.querySelector('#tbl-cfg-body');
+      toggle?.setAttribute('aria-expanded', 'false');
+      toggle?.querySelector('.tbl-cfg-accordion__chevron')?.classList.add('is-collapsed');
+      body?.classList.add('is-collapsed');
+    }
     _mountEl.removeAttribute('hidden');
     _mountEl.style.display = '';
 
     _bindEvents(_mountEl);
+  }
+
+  /**
+   * Gunakan daftar kolom visual Rekap Nilai, tetapi pertahankan configIndex
+   * kanonis agar pengaturan yang disimpan tidak bergeser saat jumlah berubah.
+   */
+  function _getVisibleColumns(templateId, tableDef) {
+    const template = TemplateRegistry.get(templateId);
+    if (templateId === 'rekap-nilai' && typeof template?.getTableLayout === 'function') {
+      return template.getTableLayout(State.getFormData(templateId)).columns;
+    }
+    return tableDef.columns.map((column, index) => ({ ...column, configIndex: index }));
+  }
+
+  function _getVisibleColumnSignature(templateId) {
+    return TemplateRegistry.getTableDefinitions(templateId)
+      .map(tableDef => _getVisibleColumns(templateId, tableDef).map(col => col.key).join('|'))
+      .join(';');
+  }
+
+  /** Total persentase yang relevan hanya mencakup kolom yang muncul di preview. */
+  function _visibleWidthConfig(columns, columnWidths) {
+    const byKey = {};
+    columns.forEach(col => {
+      if (columnWidths?.byKey?.[col.key]) byKey[col.key] = columnWidths.byKey[col.key];
+    });
+    return { byKey };
   }
 
   /* ────────────────────────────────────────────────
@@ -149,7 +196,7 @@ const TableConfigUI = (() => {
   ──────────────────────────────────────────────── */
   function _buildTableSection(templateId, tableDef) {
     const resolvedCfg = TableConfigManager.getResolvedConfig(templateId, tableDef.id);
-    const columns     = tableDef.columns;
+    const columns     = _getVisibleColumns(templateId, tableDef);
     const tableId     = tableDef.id;
 
     // ── Tiga panel: Lebar Kolom | Header | Isi ──
@@ -289,7 +336,7 @@ const TableConfigUI = (() => {
     const byKey      = columnWidths?.byKey || {};
 
     // Total % indicator
-    const totalPct = TableConfigManager.getTotalWidthPercent(columnWidths);
+    const totalPct = TableConfigManager.getTotalWidthPercent(_visibleWidthConfig(columns, columnWidths));
     const totalStr = totalPct !== null
       ? `<span class="tbl-cfg__width-total${totalPct > 100 ? ' tbl-cfg__width-total--over' : ''}"
            title="Total lebar kolom (mode %)">${totalPct}%</span>`
@@ -429,9 +476,10 @@ const TableConfigUI = (() => {
     const sectionIcon  = section === 'header' ? '📌' : '📝';
     const sectionId    = `tbl-sec-${_esc(tableId)}-${section}`;
 
-    const columnsHtml = columns.map((col, idx) => {
-      const colCfg = colsConfig[idx] || {};
-      return _buildColumnCard(templateId, tableId, section, idx, col, colCfg);
+    const columnsHtml = columns.map((col, position) => {
+      const configIndex = col.configIndex ?? position;
+      const colCfg = colsConfig[configIndex] || {};
+      return _buildColumnCard(templateId, tableId, section, configIndex, col, colCfg, position);
     }).join('');
 
     const applyAllBar = _buildApplyAllBar(templateId, tableId, section);
@@ -471,7 +519,7 @@ const TableConfigUI = (() => {
   }
 
   /* ── Build card satu kolom (styling teks) ── */
-  function _buildColumnCard(templateId, tableId, section, colIdx, colDef, colCfg) {
+  function _buildColumnCard(templateId, tableId, section, colIdx, colDef, colCfg, visiblePosition = colIdx) {
     const colLabel  = colDef.header || colDef.label || `Kolom ${colIdx + 1}`;
     const hAlign    = colCfg.horizontalAlign || 'center';
     const vAlign    = colCfg.verticalAlign   || 'middle';
@@ -512,7 +560,7 @@ const TableConfigUI = (() => {
         data-table-id="${_esc(tableId)}"
         data-section="${section}">
         <div class="tbl-cfg__col-header">
-          <span class="tbl-cfg__col-num">${colIdx + 1}</span>
+          <span class="tbl-cfg__col-num">${visiblePosition + 1}</span>
           <span class="tbl-cfg__col-label" title="${_esc(colLabel)}">${_esc(colLabel)}</span>
         </div>
         <div class="tbl-cfg__col-controls">
@@ -783,7 +831,7 @@ const TableConfigUI = (() => {
         rule.color = colorEl?.value?.toUpperCase() || '#FFFFFF';
 
         const tableDef = TemplateRegistry.getTableDefinitions(templateId).find(function(t) { return t.id === tableId; });
-        const maxCol = tableDef?.columns?.length || 0;
+        const maxCol = tableDef ? _getVisibleColumns(templateId, tableDef).length : 0;
 
         if (rule.rowMode === 'selected' && !rule.rows.length) {
           UI.toast('Pilih nomor baris terlebih dahulu.', 'warning', 2200);
@@ -1152,6 +1200,7 @@ const TableConfigUI = (() => {
     tableDefs.forEach(tableDef => {
       const tableId     = tableDef.id;
       const resolvedCfg = TableConfigManager.getResolvedConfig(templateId, tableId);
+      const visibleColumns = _getVisibleColumns(templateId, tableDef);
 
       // ── Sync warna tabel + aturan Isi ──
       _syncTableColors(tableId, resolvedCfg.colors);
@@ -1160,17 +1209,18 @@ const TableConfigUI = (() => {
       // ── Sync Header + Body section (styling teks per kolom) ──
       ['header', 'body'].forEach(section => {
         const colsCfg = resolvedCfg[section]?.columns || {};
-        tableDef.columns.forEach((col, idx) => {
-          const colCfg = colsCfg[idx] || {};
-          _syncColCard(tableId, section, idx, col, colCfg);
+        visibleColumns.forEach((col, position) => {
+          const configIndex = col.configIndex ?? position;
+          const colCfg = colsCfg[configIndex] || {};
+          _syncColCard(tableId, section, configIndex, col, colCfg);
         });
       });
 
       // ── Sync Lebar Kolom rows (tombol Auto/Manual + input + unit) ──
-      _syncWidthRows(tableId, resolvedCfg.columnWidths, tableDef.columns);
+      _syncWidthRows(tableId, resolvedCfg.columnWidths, visibleColumns);
 
       // ── Sync total % indicator di header section Lebar Kolom ──
-      _syncWidthTotal(tableId, resolvedCfg.columnWidths);
+      _syncWidthTotal(tableId, _visibleWidthConfig(visibleColumns, resolvedCfg.columnWidths));
     });
   }
 
