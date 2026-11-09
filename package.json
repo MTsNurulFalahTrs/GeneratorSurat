@@ -11,7 +11,8 @@
     "test:coverage": "vitest run --coverage",
     "check:syntax": "node scripts/check-syntax.js",
     "check": "npm run check:syntax && npm run check:types && npm test",
-    "check:types": "tsc --project tsconfig.json --noEmit"
+    "check:types": "node scripts/check-types.js",
+    "check:types:raw": "tsc --project tsconfig.json --noEmit --pretty false"
   },
   "dependencies": {
     "@sparticuz/chromium": "153.0.0",
