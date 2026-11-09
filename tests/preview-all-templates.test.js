@@ -210,6 +210,7 @@ describe('Rekap Nilai: panel Pengaturan Tabel vs preview', () => {
     const mount = {
       innerHTML: '', style: {},
       querySelector: () => null,
+      querySelectorAll: () => [],
       removeAttribute: () => {},
       addEventListener: () => {},
     };
@@ -271,7 +272,10 @@ describe('Rekap Nilai: panel Pengaturan Tabel vs preview', () => {
     h.manager.updateColumn('rekap-nilai', 'rekap-nilai', 'body', idx('sts'), {
       bold: true,
     });
+    const config = h.manager.getResolvedConfig('rekap-nilai', 'rekap-nilai');
+    expect(config.columnWidths.byKey.sts).toMatchObject({ mode: 'custom', value: 24, unit: 'mm' });
     h.renderer.render(h.template, h.state.currentData, {});
+    expect(h.context.console.warn).not.toHaveBeenCalled();
     const html = h.preview.innerHTML;
     const layout = h.template.getTableLayout(h.state.currentData);
     const widths = [...html.matchAll(/<col(?: style="([^"]*)")?>/g)];
@@ -289,10 +293,10 @@ describe('Rekap Nilai: panel Pengaturan Tabel vs preview', () => {
     h.manager.updateColumnWidth('rekap-nilai', 'rekap-nilai', 'bab5_tp4', {
       mode: 'custom', value: 13, unit: 'mm',
     });
-    h.manager.applyToAllColumns('rekap-nilai', 'rekap-nilai', 'header', { bold: true });
+    h.manager.applyToAllColumns('rekap-nilai', 'rekap-nilai', 'header', { italic: true });
     const config = h.manager.getResolvedConfig('rekap-nilai', 'rekap-nilai');
-    expect(config.header.columns[keyIndex('sts')].bold).toBe(true);
-    expect(config.header.columns[keyIndex('bab5_tp4')].bold).toBe(false);
+    expect(config.header.columns[keyIndex('sts')].italic).toBe(true);
+    expect(config.header.columns[keyIndex('bab5_tp4')].italic).toBe(false);
     h.manager.setAllColumnWidthMode('rekap-nilai', 'rekap-nilai', 'auto');
     expect(h.manager.getResolvedConfig('rekap-nilai', 'rekap-nilai').columnWidths.byKey.bab5_tp4.value).toBe(13);
   });
