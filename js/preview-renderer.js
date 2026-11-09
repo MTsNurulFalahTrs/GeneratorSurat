@@ -36,6 +36,7 @@ const PreviewRenderer = (() => {
     'ijop-rekomendasi-kankemenag',
     'ijop-sptjm-kankemenag',
     'rekap-nilai',
+    'surat-izin',
   ]);
 
   function _usesMultiPageLayout(templateId) {
