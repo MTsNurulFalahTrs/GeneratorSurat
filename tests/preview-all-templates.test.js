@@ -74,7 +74,7 @@ function makeElement(tagName, height = 0) {
   return element;
 }
 
-function createPreviewHarness(heights = [350, 350, 350]) {
+function createPreviewHarness(heights = [350, 350, 350], withTableConfig = false) {
   const preview = makeElement('preview');
   preview._fixtureHeights = heights;
   preview.querySelector = selector => {
@@ -101,8 +101,16 @@ function createPreviewHarness(heights = [350, 350, 350]) {
     fonts: { ready: Promise.resolve() },
   };
   const state = {
-    currentId: null, currentData: null,
-    on: vi.fn(),
+    currentId: null, currentData: null, tables: {}, listeners: {},
+    on: vi.fn((event, callback) => {
+      (state.listeners[event] ||= []).push(callback);
+    }),
+    getTableConfig: templateId => state.tables[templateId] || {},
+    initTableConfig: (templateId, config) => { state.tables[templateId] = config; },
+    setTableConfig: (templateId, tableId, config) => {
+      (state.tables[templateId] ||= {})[tableId] = config;
+      (state.listeners['table:change'] || []).forEach(callback => callback({ templateId, tableId }));
+    },
     getUi: () => ({ previewZoom: 1 }),
     getActiveTemplate: () => state.currentId,
     getFormData: () => state.currentData,
@@ -134,6 +142,10 @@ function createPreviewHarness(heights = [350, 350, 350]) {
   runInNewContext(read('js/utils.js'), context);
   for (const path of scripts) runInNewContext(read(path), context, { filename: path });
   runInNewContext(read('js/template-registry.js'), context);
+  if (withTableConfig) {
+    runInNewContext(read('js/table-config.js'), context);
+    runInNewContext(read('js/table-config-ui.js'), context);
+  }
   runInNewContext(read('js/preview-renderer.js'), context);
   const registry = runInNewContext('TemplateRegistry', context);
   const renderer = runInNewContext('PreviewRenderer', context);
@@ -181,5 +193,107 @@ describe('GS-005: pagination integration across all runtime templates', () => {
     expect(h.preview.dataset.pageCount).toBe('1');
     expect(h.preview.children).toHaveLength(1);
     expect(h.pageInfo.textContent).toBe('1 halaman');
+  });
+});
+
+
+describe('Rekap Nilai: panel Pengaturan Tabel vs preview', () => {
+  const open = () => {
+    const h = createPreviewHarness([120], true);
+    const template = h.registry.get('rekap-nilai');
+    const manager = runInNewContext('TableConfigManager', h.context);
+    const tableUi = runInNewContext('TableConfigUI', h.context);
+    h.state.currentId = 'rekap-nilai';
+    h.state.currentData = template.createDefaultData();
+    manager.initForTemplate('rekap-nilai');
+
+    const mount = {
+      innerHTML: '', style: {},
+      querySelector: () => null,
+      removeAttribute: () => {},
+      addEventListener: () => {},
+    };
+    tableUi.init(mount);
+    tableUi.render('rekap-nilai');
+    return { ...h, template, manager, tableUi, mount };
+  };
+  const htmlCardCount = (html, className) =>
+    (html.match(new RegExp('class="' + className + '"', 'g')) || []).length;
+
+  it('shows 17 editable width/header/body columns for default layout, not 30', () => {
+    const h = open();
+    const layout = h.template.getTableLayout(h.state.currentData);
+    expect(layout.columns.map(c => c.key)).toHaveLength(17);
+    expect(htmlCardCount(h.mount.innerHTML, 'tbl-cfg__width-row')).toBe(17);
+    expect(htmlCardCount(h.mount.innerHTML, 'tbl-cfg__col-card')).toBe(34);
+    expect(h.mount.innerHTML).not.toContain('data-col-key="bab5_tp4"');
+    expect(h.mount.innerHTML).toContain('data-col-key="sts"');
+    expect(h.mount.innerHTML).toContain('data-col-idx="26"');
+  });
+
+  it('rebuilds the panel when BAB/TP/LM counts change without shifting stable settings', () => {
+    const h = open();
+    const previous = h.template.getTableLayout(h.state.currentData);
+    const originalIndex = previous.columns.find(c => c.key === 'sts').configIndex;
+    h.manager.updateColumn('rekap-nilai', 'rekap-nilai', 'body', originalIndex, { italic: true });
+    h.state.currentData.header = { ...h.state.currentData.header, jumlahBab: 1, jumlahTpBab: 1, jumlahLm: 1 };
+    for (const callback of h.state.listeners['form:change'] || []) {
+      callback({ templateId: 'rekap-nilai' });
+    }
+    const reduced = h.template.getTableLayout(h.state.currentData);
+    expect(reduced.columns).toHaveLength(8);
+    expect(reduced.columns.find(c => c.key === 'sts').configIndex).toBe(originalIndex);
+    expect(htmlCardCount(h.mount.innerHTML, 'tbl-cfg__width-row')).toBe(8);
+    expect(htmlCardCount(h.mount.innerHTML, 'tbl-cfg__col-card')).toBe(16);
+    expect(h.manager.getResolvedConfig('rekap-nilai', 'rekap-nilai').body.columns[originalIndex].italic).toBe(true);
+
+    h.state.currentData.header = { ...h.state.currentData.header, jumlahBab: 5, jumlahTpBab: 4, jumlahLm: 4 };
+    for (const callback of h.state.listeners['form:change'] || []) callback({ templateId: 'rekap-nilai' });
+    expect(h.template.getTableLayout(h.state.currentData).columns).toHaveLength(30);
+    expect(htmlCardCount(h.mount.innerHTML, 'tbl-cfg__width-row')).toBe(30);
+  });
+
+  it('applies custom widths and per-column text styling at their actual preview positions', () => {
+    const h = open();
+    const keys = h.template.tableColumns;
+    const idx = key => keys.findIndex(column => column.key === key);
+    h.state.currentData.murid[0].bab2_tp2 = '42';
+    h.state.currentData.murid[0].sts = '88';
+    h.manager.updateColumnWidth('rekap-nilai', 'rekap-nilai', 'sts', {
+      mode: 'custom', value: 24, unit: 'mm',
+    });
+    h.manager.updateColumn('rekap-nilai', 'rekap-nilai', 'header', idx('sts'), {
+      italic: true, horizontalAlign: 'right',
+    });
+    h.manager.updateColumn('rekap-nilai', 'rekap-nilai', 'body', idx('bab2_tp2'), {
+      italic: true, horizontalAlign: 'right',
+    });
+    h.manager.updateColumn('rekap-nilai', 'rekap-nilai', 'body', idx('sts'), {
+      bold: true,
+    });
+    h.renderer.render(h.template, h.state.currentData, {});
+    const html = h.preview.innerHTML;
+    const layout = h.template.getTableLayout(h.state.currentData);
+    const widths = [...html.matchAll(/<col(?: style="([^"]*)")?>/g)];
+    expect(widths).toHaveLength(layout.columns.length);
+    expect(widths[layout.columns.findIndex(c => c.key === 'sts')][1]).toContain('width:24mm');
+    expect(html).toMatch(/style="[^"]*font-style:italic[^"]*text-align:right[^"]*">Sumatif Tengah Semester/);
+    expect(html).toMatch(/<td style="[^"]*text-align:right[^"]*font-style:italic[^"]*">42<\/td>/);
+    expect(html).toMatch(/<td style="[^"]*font-weight:bold[^"]*">88<\/td>/);
+  });
+
+  it('applies bulk styling only to currently visible columns and retains hidden custom widths', () => {
+    const h = open();
+    const keys = h.template.tableColumns;
+    const keyIndex = key => keys.findIndex(col => col.key === key);
+    h.manager.updateColumnWidth('rekap-nilai', 'rekap-nilai', 'bab5_tp4', {
+      mode: 'custom', value: 13, unit: 'mm',
+    });
+    h.manager.applyToAllColumns('rekap-nilai', 'rekap-nilai', 'header', { bold: true });
+    const config = h.manager.getResolvedConfig('rekap-nilai', 'rekap-nilai');
+    expect(config.header.columns[keyIndex('sts')].bold).toBe(true);
+    expect(config.header.columns[keyIndex('bab5_tp4')].bold).toBe(false);
+    h.manager.setAllColumnWidthMode('rekap-nilai', 'rekap-nilai', 'auto');
+    expect(h.manager.getResolvedConfig('rekap-nilai', 'rekap-nilai').columnWidths.byKey.bab5_tp4.value).toBe(13);
   });
 });
