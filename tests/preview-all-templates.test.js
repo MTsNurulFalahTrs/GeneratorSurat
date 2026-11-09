@@ -277,7 +277,7 @@ describe('Rekap Nilai: panel Pengaturan Tabel vs preview', () => {
     const widths = [...html.matchAll(/<col(?: style="([^"]*)")?>/g)];
     expect(widths).toHaveLength(layout.columns.length);
     expect(widths[layout.columns.findIndex(c => c.key === 'sts')][1]).toContain('width:24mm');
-    expect(html).toMatch(/style="[^"]*font-style:italic[^"]*text-align:right[^"]*">Sumatif Tengah Semester/);
+    expect(html).toMatch(/style="[^"]*text-align:right[^"]*font-style:italic[^"]*">Sumatif Tengah Semester/);
     expect(html).toMatch(/<td style="[^"]*text-align:right[^"]*font-style:italic[^"]*">42<\/td>/);
     expect(html).toMatch(/<td style="[^"]*font-weight:bold[^"]*">88<\/td>/);
   });
