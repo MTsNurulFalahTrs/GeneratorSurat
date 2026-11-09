@@ -70,6 +70,7 @@ const UI = (() => {
     };
   }
 
+  /** @param {{title?: string, body?: string, footer?: any[], onClose?: () => void, closeOnBackdrop?: boolean, closeOnEscape?: boolean, showCloseButton?: boolean, initialFocusSelector?: string}} options */
   function showModal({
     title,
     body,
@@ -142,7 +143,7 @@ const UI = (() => {
     // Fokus ke elemen yang relevan pada modal.
     setTimeout(() => {
       const initial = initialFocusSelector
-        ? bodyEl.querySelector(initialFocusSelector)
+        ? /** @type {HTMLElement|null} */ (bodyEl.querySelector(initialFocusSelector))
         : null;
       if (initial && typeof initial.focus === 'function') {
         initial.focus();
@@ -150,7 +151,7 @@ const UI = (() => {
       }
       const fallback = showCloseButton
         ? closeBtn
-        : footerEl.querySelector('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)');
+        : /** @type {HTMLElement|null} */ (footerEl.querySelector('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'));
       if (fallback && typeof fallback.focus === 'function') fallback.focus();
     }, 50);
   }
@@ -288,7 +289,7 @@ const UI = (() => {
 
   /* ── Tab navigation ── */
   function initTabs() {
-    const tabs    = document.querySelectorAll('.editor-tab');
+    const tabs    = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.editor-tab'));
     const contents = document.querySelectorAll('.editor-tab-content');
 
     tabs.forEach(tab => {
@@ -376,7 +377,7 @@ const UI = (() => {
     // Tutup menu saat klik di luar
     document.addEventListener('click', (e) => {
       if (!isMobile()) return;
-      if (!group.contains(e.target) && e.target !== btn) closeMenu();
+      if (!(e.target instanceof Node && group.contains(e.target)) && e.target !== btn) closeMenu();
     });
 
     // Tutup menu saat tombol di dalam menu diklik
@@ -554,9 +555,9 @@ const UI = (() => {
     if (!overlay || overlay.classList.contains('hidden')) return;
     if (e.key !== 'Tab') return;
 
-    const focusable = Array.from(overlay.querySelectorAll(
+    const focusable = Array.from(/** @type {NodeListOf<HTMLElement>} */ (overlay.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )).filter(el => !el.disabled && !el.hidden && el.offsetParent !== null);
+    ))).filter(el => !el.disabled && !el.hidden && el.offsetParent !== null);
     const first = focusable[0];
     const last  = focusable[focusable.length - 1];
 
