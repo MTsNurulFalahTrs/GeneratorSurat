@@ -159,7 +159,10 @@ const Utils = (() => {
         return;
       }
       const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
+      reader.onload = () => {
+        if (typeof reader.result === 'string') resolve(reader.result);
+        else reject(new Error('Format data gambar tidak valid.'));
+      };
       reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
       reader.readAsDataURL(file);
     });
@@ -265,7 +268,7 @@ const Utils = (() => {
       return invoke();
     };
 
-    return debounced;
+    return /** @type {F & { cancel: () => void, flush: () => ReturnType<F> | undefined }} */ (/** @type {unknown} */ (debounced));
   }
 
   /** Flush semua debounce yang sedang pending */

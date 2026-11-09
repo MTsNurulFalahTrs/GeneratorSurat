@@ -19,10 +19,12 @@ const Theme = (() => {
   let _current = 'auto';
 
   /* ── Baca preferensi tersimpan ── */
+  /** @returns {'auto'|'dark'|'light'} */
+  /** @returns {'light'|'dark'|'auto'} */
   function _loadSaved() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (['light', 'dark', 'auto'].includes(saved)) return saved;
+      if (saved === 'light' || saved === 'dark' || saved === 'auto') return saved;
     } catch {
       /* localStorage tidak tersedia */
     }
