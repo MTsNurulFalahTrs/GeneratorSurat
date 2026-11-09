@@ -430,6 +430,14 @@ const TableConfigManager = (() => {
     State.setTableConfig(templateId, tableId, updated);
   }
 
+  function _getActiveColumns(templateId, columns) {
+    const template = TemplateRegistry.get(templateId);
+    if (templateId === 'rekap-nilai' && typeof template?.getTableLayout === 'function') {
+      return template.getTableLayout(State.getFormData(templateId)).columns;
+    }
+    return columns.map((col, configIndex) => ({ ...col, configIndex }));
+  }
+
   /* ────────────────────────────────────────────────
      6. Apply to All — terapkan satu atau beberapa
         properti ke semua kolom di section tertentu
@@ -440,14 +448,6 @@ const TableConfigManager = (() => {
    * @param {string} section   — 'header' | 'body'
    * @param {Object} partial   — properti yang akan diterapkan ke semua kolom
    */
-  function _getActiveColumns(templateId, columns) {
-    const template = TemplateRegistry.get(templateId);
-    if (templateId === 'rekap-nilai' && typeof template?.getTableLayout === 'function') {
-      return template.getTableLayout(State.getFormData(templateId)).columns;
-    }
-    return columns.map((col, configIndex) => ({ ...col, configIndex }));
-  }
-
   function applyToAllColumns(templateId, tableId, section, partial) {
     if (!templateId || !tableId) return;
     if (section !== 'header' && section !== 'body') return;
