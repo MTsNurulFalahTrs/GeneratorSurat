@@ -557,7 +557,7 @@ const UI = (() => {
 
     const focusable = Array.from(/** @type {NodeListOf<HTMLElement>} */ (overlay.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    ))).filter(el => !el.disabled && !el.hidden && el.offsetParent !== null);
+    ))).filter(el => !('disabled' in el && el.disabled) && !el.hidden && el.offsetParent !== null);
     const first = focusable[0];
     const last  = focusable[focusable.length - 1];
 
