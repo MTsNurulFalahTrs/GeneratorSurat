@@ -369,6 +369,36 @@ const TemplateRekapNilai = (() => {
     },
   ];
 
+  /* ── Definisi kolom tabel (untuk Pengaturan Tabel & TableConfigManager) ──
+     Kolom bersifat "flat" — header multi-row dibangun dinamis di renderer.
+     Key kolom ini dipakai sebagai identifier stabil di TableConfigManager.
+     Kolom dinamis (BAB, LM) didefinisikan sampai batas maksimal (5 BAB × 4 TP,
+     4 LM) sehingga pengguna dapat mengatur lebar/styling sebelum kolom tampil.
+  */
+  function _buildTableColumns() {
+    const cols = [
+      { key: 'no',        header: 'No.',        align: 'center', width: '8mm'  },
+      { key: 'namaMurid', header: 'Nama Murid', align: 'left',   width: '28mm' },
+    ];
+    // Formatif: BAB 1–5, TP 1–4
+    for (let b = 1; b <= 5; b++) {
+      for (let tp = 1; tp <= 4; tp++) {
+        cols.push({ key: `bab${b}_tp${tp}`, header: `BAB ${b} TP${tp}`, align: 'center', width: '6mm' });
+      }
+    }
+    // Sumatif LM: 1–4
+    for (let l = 1; l <= 4; l++) {
+      cols.push({ key: `lm${l}`, header: `LM${l}`, align: 'center', width: '9mm' });
+    }
+    cols.push({ key: 'sts',        header: 'STS',        align: 'center', width: '10mm' });
+    cols.push({ key: 'sas',        header: 'SAS',        align: 'center', width: '10mm' });
+    cols.push({ key: 'praktik',    header: 'Praktik',    align: 'center', width: '10mm' });
+    cols.push({ key: 'nilaiAkhir', header: 'Nilai Akhir',align: 'center', width: '10mm' });
+    return cols;
+  }
+
+  const tableColumns = _buildTableColumns();
+
   /* ── Public API ── */
   return {
     TEMPLATE_ID,
@@ -376,8 +406,7 @@ const TemplateRekapNilai = (() => {
     createDefaultData,
     createItem: _createMurid,
     formSections,
-    /* Tidak menggunakan tableColumns legacy;
-       rendering dilakukan sepenuhnya di preview-renderer.js */
+    tableColumns,
   };
 
 })();
