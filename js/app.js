@@ -3,6 +3,8 @@
    ============================================================= */
 
 const App = (() => {
+  // TypeScript's DOM Storage constructor shadows this application's classic-script global.
+  const AppStorage = /** @type {GeneratorStorageApi} */ (/** @type {unknown} */ (Storage));
 
   let _initialized = false;
   let _bootComplete = false;
@@ -28,7 +30,7 @@ const App = (() => {
 
     /* 2. Inisialisasi storage dan cek TTL */
     // @ts-ignore — Storage here is the custom IIFE module (storage.js), not the DOM Storage interface
-    const storageResult = Storage.init({
+    const storageResult = AppStorage.init({
       onExpired: _handleDataExpired,
     });
 
@@ -38,14 +40,14 @@ const App = (() => {
     let wasRestored = false;
     if (storageResult.available && storageResult.hasData && !storageResult.expired) {
       // @ts-ignore — Storage here is the custom IIFE module (storage.js), not the DOM Storage interface
-      const saved = Storage.load();
+      const saved = AppStorage.load();
       if (saved) {
         State.restore(saved);
         wasRestored = true;
 
         // Sync storage meta ke state
         // @ts-ignore
-        const meta = Storage.getMeta();
+        const meta = AppStorage.getMeta();
         if (meta) {
           State.setStorageMeta({
             lastSavedAt: meta.lastSavedAt,
@@ -119,7 +121,7 @@ const App = (() => {
     /* 13. Update storage info display */
     if (wasRestored) {
       // @ts-ignore
-      const meta = Storage.getMeta();
+      const meta = AppStorage.getMeta();
       UI.updateStorageInfo(meta);
       if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
     }
@@ -164,9 +166,9 @@ const App = (() => {
     _hideSkeleton();
     _bootComplete = true;
 
-    // Storage.init dapat mendeteksi expiry sebelum komponen UI selesai dibuat.
+    // AppStorage.init dapat mendeteksi expiry sebelum komponen UI selesai dibuat.
     // Tampilkan pemberitahuan setelah boot tanpa mereset data yang sedang aktif.
-    if (_pendingExpiryNotice || Storage.getRecovery()) {
+    if (_pendingExpiryNotice || AppStorage.getRecovery()) {
       _showExpiredStorageNotice();
     }
   }
@@ -266,24 +268,24 @@ const App = (() => {
   /* ── Handler Simpan ── */
   function _handleSave() {
     // @ts-ignore
-    if (!Storage.isAvailable()) {
+    if (!AppStorage.isAvailable()) {
       UI.toast('Penyimpanan lokal tidak tersedia di browser ini.', 'error');
       return;
     }
 
     const serialized = State.serialize();
     // @ts-ignore
-    const result = Storage.save(serialized);
+    const result = AppStorage.save(serialized);
 
     if (result.success) {
       State.markSaved(result);
       // Snapshot expiry lama tidak lagi diperlukan setelah data terbaru berhasil
       // disimpan sebagai quick-save baru.
-      Storage.clearRecovery();
+      AppStorage.clearRecovery();
       _pendingExpiryNotice = false;
       UI.hideExpiredBanner();
       // @ts-ignore
-      const meta = Storage.getMeta();
+      const meta = AppStorage.getMeta();
       UI.updateStorageInfo(meta);
       if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
       UI.toast('Data berhasil disimpan.', 'success');
@@ -295,7 +297,7 @@ const App = (() => {
   /* ── Handler Reset ── */
   function _handleReset() {
     // @ts-ignore
-    Storage.clear();
+    AppStorage.clear();
     if (typeof DataManager !== 'undefined' && typeof DataManager.clearAllDrafts === 'function') {
       DataManager.clearAllDrafts();
     }
@@ -333,7 +335,7 @@ const App = (() => {
   }
 
   function _showExpiredStorageNotice() {
-    const recovery = Storage.getRecovery();
+    const recovery = AppStorage.getRecovery();
     const message = recovery
       ? 'Penyimpanan cepat telah kedaluwarsa. Data kerja yang sedang terbuka tetap dipertahankan; snapshot terakhir dapat dipulihkan selama 30 hari.'
       : 'Penyimpanan cepat telah kedaluwarsa. Data kerja yang sedang terbuka tetap dipertahankan, tetapi tidak ditemukan snapshot pemulihan.';
@@ -349,7 +351,7 @@ const App = (() => {
   }
 
   function _restoreRecovery() {
-    const recovery = Storage.getRecovery();
+    const recovery = AppStorage.getRecovery();
     if (!recovery) {
       UI.toast('Snapshot pemulihan tidak ditemukan atau masa pemulihannya telah berakhir.', 'error', 5000);
       UI.hideExpiredBanner();
@@ -363,11 +365,11 @@ const App = (() => {
         if (typeof Utils.flushDebounces === 'function') Utils.flushDebounces();
 
         // Simpan hasil pulihan sebagai quick-save baru sebelum menghapus arsip.
-        const persisted = Storage.save(recovery.data, { replaceExpired: true });
+        const persisted = AppStorage.save(recovery.data, { replaceExpired: true });
         State.restore(recovery.data);
 
         if (persisted.success) {
-          Storage.removeRecovery(recovery.id);
+          AppStorage.removeRecovery(recovery.id);
           State.markSaved(persisted);
         } else {
           // Data tetap dibuka dalam memori dan arsip pemulihan tidak dihapus.
@@ -393,7 +395,7 @@ const App = (() => {
         }
 
         if (persisted.success) {
-          UI.updateStorageInfo(Storage.getMeta());
+          UI.updateStorageInfo(AppStorage.getMeta());
           UI.toast('Snapshot berhasil dipulihkan dan disimpan kembali.', 'success', 5000);
           _pendingExpiryNotice = false;
           UI.hideExpiredBanner();
@@ -430,7 +432,7 @@ const App = (() => {
         UI.markStorageDirty();
       } else {
         // @ts-ignore
-        const meta = Storage.getMeta();
+        const meta = AppStorage.getMeta();
         UI.updateStorageInfo(meta);
       }
     }, 250);
