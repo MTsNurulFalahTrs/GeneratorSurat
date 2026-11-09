@@ -29,5 +29,17 @@ jobs:
       - name: Check JavaScript syntax and tests
         run: npm run check
 
+      - name: Measure coverage for application, templates, and PDF API
+        run: npm run test:coverage
+
+      - name: Upload code coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generator-surat-coverage
+          path: coverage/
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Audit production and development dependencies
         run: npm audit --audit-level=moderate
