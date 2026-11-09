@@ -9,6 +9,8 @@
 */
 
 const Settings = (() => {
+  // TypeScript's DOM Storage constructor shadows this application's classic-script global.
+  const AppStorage = /** @type {GeneratorStorageApi} */ (/** @type {unknown} */ (Storage));
 
   /* ── Konstanta validasi ── */
   const MARGIN_MIN_MM  =  0;
@@ -1398,9 +1400,9 @@ const Settings = (() => {
 
     if (!avEl) return;
 
-    const meta = Storage.getMeta();
+    const meta = AppStorage.getMeta();
 
-    avEl.textContent = Storage.isAvailable() ? '✅ Tersedia' : '❌ Tidak tersedia';
+    avEl.textContent = AppStorage.isAvailable() ? '✅ Tersedia' : '❌ Tidak tersedia';
 
     if (!meta) {
       saveEl.textContent = '—';
