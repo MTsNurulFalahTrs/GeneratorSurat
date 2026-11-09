@@ -3,6 +3,8 @@
    ============================================================= */
 
 const UI = (() => {
+  // TypeScript's DOM Storage constructor shadows this application's classic-script global.
+  const AppStorage = /** @type {GeneratorStorageApi} */ (/** @type {unknown} */ (Storage));
 
   /* ── Toast ── */
   const TOAST_DURATION = 4000;
@@ -263,7 +265,7 @@ const UI = (() => {
     const textEl = document.getElementById('storage-info-text');
     if (!wrap || !textEl) return;
 
-    const meta = Storage.getMeta();
+    const meta = AppStorage.getMeta();
     const savedAt = meta?.lastSavedAt ? Utils.formatDateTime(meta.lastSavedAt) : null;
 
     wrap.classList.add('storage-info--dirty');
@@ -279,7 +281,7 @@ const UI = (() => {
   /* ── Refresh storage info setiap menit ── */
   function startStorageInfoRefresh() {
     setInterval(() => {
-      const meta = Storage.getMeta();
+      const meta = AppStorage.getMeta();
       if (meta) updateStorageInfo(meta);
     }, 30000); // update setiap 30 detik
   }
