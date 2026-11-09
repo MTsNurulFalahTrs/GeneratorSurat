@@ -130,7 +130,7 @@ function createPreviewHarness(heights = [350, 350, 350], withTableConfig = false
   };
   const context = {
     console: { warn: vi.fn(), info: vi.fn() },
-    document, State: state, Promise, Set,
+    document, State: state, Promise, Set, setTimeout, clearTimeout,
     requestAnimationFrame: callback => Promise.resolve().then(() => callback()),
     getComputedStyle: () => ({ paddingBottom: '0' }),
     KopEditor: { renderKopHtml: () => '<div class="doc-kop">KOP</div>' },
