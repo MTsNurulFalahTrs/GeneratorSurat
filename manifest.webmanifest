@@ -7,7 +7,11 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "background_color": "#f8fafc",
   "theme_color": "#1E3A5F",
@@ -24,5 +28,10 @@
       "type": "image/svg+xml",
       "purpose": "any"
     }
+  ],
+  "id": "./",
+  "categories": [
+    "productivity",
+    "utilities"
   ]
 }

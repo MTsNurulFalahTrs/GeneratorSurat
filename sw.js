@@ -1,8 +1,9 @@
 /* =============================================================
-   sw.js — Phase 5 Platform Service Worker
+   sw.js — PWA app shell, offline fallback, and safe asset caching
    ============================================================= */
 
-const CACHE_NAME = 'generator-surat-platform-v7';
+const CACHE_PREFIX = 'generator-surat-platform-';
+const CACHE_NAME = CACHE_PREFIX + 'v8';
 const APP_SHELL = [
   './',
   './index.html',
@@ -58,19 +59,39 @@ const APP_SHELL = [
   './assets/icons/favicon.svg',
 ];
 
+const STATIC_DESTINATIONS = new Set([
+  'style',
+  'script',
+  'image',
+  'font',
+  'manifest',
+  'worker',
+  'sharedworker',
+]);
+
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
-    await Promise.all(APP_SHELL.map(async url => {
-      try {
-        const response = await fetch(url, { cache: 'no-cache' });
-        if (response.ok || response.type === 'opaque') {
-          await cache.put(url, response);
+
+    try {
+      // A release is installed as one unit. Never activate with a partial shell.
+      const assets = await Promise.all(APP_SHELL.map(async asset => {
+        const url = new URL(asset, self.registration.scope).href;
+        const response = await fetch(url, { cache: 'reload' });
+
+        if (!response.ok || response.type === 'opaque') {
+          throw new Error('App shell asset unavailable (' + response.status + '): ' + asset);
         }
-      } catch (error) {
-        console.warn('[SW] Gagal menyimpan asset:', url, error);
-      }
-    }));
+
+        return { url, response };
+      }));
+
+      await Promise.all(assets.map(({ url, response }) => cache.put(url, response)));
+    } catch (error) {
+      await caches.delete(CACHE_NAME);
+      console.error('[SW] Instalasi dibatalkan karena app shell tidak lengkap:', error);
+      throw error;
+    }
   })());
 });
 
@@ -79,7 +100,7 @@ self.addEventListener('activate', event => {
     const keys = await caches.keys();
     await Promise.all(
       keys
-        .filter(key => key.startsWith('generator-surat-platform-') && key !== CACHE_NAME)
+        .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
         .map(key => caches.delete(key))
     );
     await self.clients.claim();
@@ -96,74 +117,69 @@ function isSameOrigin(request) {
   return new URL(request.url).origin === self.location.origin;
 }
 
+function isStaticAsset(request) {
+  if (!isSameOrigin(request)) return false;
+  if (STATIC_DESTINATIONS.has(request.destination)) return true;
+
+  const pathname = new URL(request.url).pathname;
+  return /\.(?:css|mjs|js|svg|png|jpe?g|webp|gif|ico|woff2?|ttf|otf|webmanifest)$/i.test(pathname);
+}
+
 async function networkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+
   try {
     const response = await fetch(request);
     if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
       await cache.put(request, response.clone());
     }
     return response;
   } catch {
-    return caches.match(request) || caches.match('./index.html');
+    const cachedPage = await cache.match(request);
+    const appShell = await cache.match(new URL('./index.html', self.registration.scope).href);
+    return cachedPage || appShell || Response.error();
   }
 }
 
-async function staleWhileRevalidate(request) {
-  const cached = await caches.match(request);
+async function staleWhileRevalidate(request, event) {
+  // Schedule cache lookup and refresh first; register waitUntil before awaiting.
+  const cachePromise = caches.open(CACHE_NAME);
+  const cachedPromise = cachePromise.then(cache => cache.match(request));
 
-  // Jika cache tersedia, kembalikan segera. Revalidasi berjalan di belakang
-  // agar koneksi lambat tidak membuat asset cached ikut menunggu network.
-  const refresh = fetch(request)
+  const refresh = fetch(request, { cache: 'no-cache' })
     .then(async response => {
-      if (response.ok) {
-        const cache = await caches.open(CACHE_NAME);
+      const cacheControl = String(response.headers?.get('cache-control') || '').toLowerCase();
+      const isPrivate = /(?:private|no-store)/.test(cacheControl);
+      const cache = await cachePromise;
+
+      if (response.ok && !isPrivate && response.type !== 'opaque') {
         await cache.put(request, response.clone());
+      } else if (isPrivate) {
+        await cache.delete(request);
       }
       return response;
     })
     .catch(() => null);
 
-  if (cached) {
-    return cached;
-  }
+  // Extend the worker lifetime synchronously while the FetchEvent is dispatching.
+  event.waitUntil(refresh.then(() => undefined));
 
-  return (await refresh)
-    || await caches.match('./index.html')
-    || Response.error();
-}
-
-async function cacheFirst(request) {
-  const cached = await caches.match(request);
+  const cached = await cachedPromise;
   if (cached) return cached;
-
-  try {
-    const response = await fetch(request);
-    if (response.ok || response.type === 'opaque') {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    return Response.error();
-  }
+  return (await refresh) || Response.error();
 }
 
 self.addEventListener('fetch', event => {
   const request = event.request;
-  if (request.method !== 'GET') return;
-
-  const url = new URL(request.url);
+  if (request.method !== 'GET' || !isSameOrigin(request)) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request));
     return;
   }
 
-  if (isSameOrigin(request)) {
-    event.respondWith(staleWhileRevalidate(request));
-    return;
+  // API/dynamic routes and cross-origin resources are never cached by this worker.
+  if (isStaticAsset(request)) {
+    event.respondWith(staleWhileRevalidate(request, event));
   }
-
-  event.respondWith(cacheFirst(request));
 });
