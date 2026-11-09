@@ -299,6 +299,36 @@ describe('Rekap Nilai: panel Pengaturan Tabel vs preview', () => {
     expect(html).toMatch(/<td style="[^"]*font-weight:bold[^"]*">88<\/td>/);
   });
 
+  it('honors header controls on No, Nama, STS, SAS, Praktik, Nilai Akhir and LM', () => {
+    const h = open();
+    const keys = h.template.tableColumns;
+    const labels = [
+      ['no', 'No.'],
+      ['namaMurid', 'Nama Murid'],
+      ['sts', 'Sumatif Tengah Semester'],
+      ['sas', 'Sumatif Akhir Semester'],
+      ['praktik', 'Praktik'],
+      ['nilaiAkhir', 'Nilai Akhir'],
+      ['lm1', 'LM1'],
+    ];
+    for (const [key] of labels) {
+      const index = keys.findIndex(col => col.key === key);
+      h.manager.updateColumn('rekap-nilai', 'rekap-nilai', 'header', index, {
+        horizontalAlign: 'right', italic: true, bold: false,
+      });
+    }
+    h.renderer.render(h.template, h.state.currentData, {});
+    const html = h.preview.innerHTML;
+    for (const [, label] of labels) {
+      const style = [...html.matchAll(/<th\b[^>]*style="([^"]*)"[^>]*>([^<]*)<\/th>/g)]
+        .find(match => match[2] === label)?.[1];
+      expect(style, 'Missing header: ' + label).toBeTruthy();
+      expect(style).toContain('text-align:right');
+      expect(style).toContain('font-style:italic');
+      expect(style).toContain('font-weight:normal');
+    }
+  });
+
   it('applies bulk styling only to currently visible columns and retains hidden custom widths', () => {
     const h = open();
     const keys = h.template.tableColumns;
