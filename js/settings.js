@@ -732,8 +732,8 @@ const Settings = (() => {
         const wNew = _fromMm(wMm, unit);
         const hNew = _fromMm(hMm, unit);
 
-        _input('custom-width-input').value  = _round(wNew);
-        _input('custom-height-input').value = _round(hNew);
+        _input('custom-width-input').value  = String(_round(wNew));
+        _input('custom-height-input').value = String(_round(hNew));
         document.getElementById('custom-width-unit').textContent  = unit;
         document.getElementById('custom-height-unit').textContent = unit;
 
@@ -815,19 +815,19 @@ const Settings = (() => {
     sizeDecBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(sizeInput?.value, 12);
       const nv  = Utils.clamp(cur - 0.5, 7, 22);
-      if (sizeInput) sizeInput.value = nv;
+      if (sizeInput) sizeInput.value = String(nv);
       debSave();
     });
     sizeIncBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(sizeInput?.value, 12);
       const nv  = Utils.clamp(cur + 0.5, 7, 22);
-      if (sizeInput) sizeInput.value = nv;
+      if (sizeInput) sizeInput.value = String(nv);
       debSave();
     });
     sizeInput?.addEventListener('input', debSave);
     sizeInput?.addEventListener('change', () => {
       const clamped = Utils.clamp(Utils.safeFloat(sizeInput.value, 12), 7, 22);
-      sizeInput.value = clamped;
+      sizeInput.value = String(clamped);
       debSave();
     });
 
@@ -838,19 +838,19 @@ const Settings = (() => {
     tblDecBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(tblInput?.value, 7.5);
       const nv  = Utils.clamp(cur - 0.5, 6, 14);
-      if (tblInput) tblInput.value = nv;
+      if (tblInput) tblInput.value = String(nv);
       debSave();
     });
     tblIncBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(tblInput?.value, 7.5);
       const nv  = Utils.clamp(cur + 0.5, 6, 14);
-      if (tblInput) tblInput.value = nv;
+      if (tblInput) tblInput.value = String(nv);
       debSave();
     });
     tblInput?.addEventListener('input', debSave);
     tblInput?.addEventListener('change', () => {
       const clamped = Utils.clamp(Utils.safeFloat(tblInput.value, 7.5), 6, 14);
-      tblInput.value = clamped;
+      tblInput.value = String(clamped);
       debSave();
     });
   }
@@ -994,19 +994,19 @@ const Settings = (() => {
 
     const saveSize = () => {
       const size = Utils.clamp(Utils.safeFloat(sizeInput?.value, 8), 6, 14);
-      if (sizeInput) sizeInput.value = size;
+      if (sizeInput) sizeInput.value = String(size);
       State.setSettings({ pageNumber: { fontSize: size }, activePreset: 'custom' });
       _updatePageNumberPreview();
     };
 
     sizeDecBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(sizeInput?.value, 8);
-      if (sizeInput) sizeInput.value = Utils.clamp(cur - 0.5, 6, 14);
+      if (sizeInput) sizeInput.value = String(Utils.clamp(cur - 0.5, 6, 14));
       saveSize();
     });
     sizeIncBtn?.addEventListener('click', () => {
       const cur = Utils.safeFloat(sizeInput?.value, 8);
-      if (sizeInput) sizeInput.value = Utils.clamp(cur + 0.5, 6, 14);
+      if (sizeInput) sizeInput.value = String(Utils.clamp(cur + 0.5, 6, 14));
       saveSize();
     });
     sizeInput?.addEventListener('input', Utils.debounce(saveSize, 250));
@@ -1036,7 +1036,7 @@ const Settings = (() => {
 
     const saveBottom = () => {
       const value = Utils.clamp(Utils.safeFloat(bottomInput?.value, 5), 1, 20);
-      if (bottomInput) bottomInput.value = value;
+      if (bottomInput) bottomInput.value = String(value);
       State.setSettings({ pageNumber: { bottomOffset: value }, activePreset: 'custom' });
       _updatePageNumberPreview();
     };
@@ -1058,7 +1058,7 @@ const Settings = (() => {
     if (fontSel) fontSel.value = pageNumber.fontFamily;
 
     const sizeInput = _input('page-number-font-size');
-    if (sizeInput) sizeInput.value = pageNumber.fontSize;
+    if (sizeInput) sizeInput.value = String(pageNumber.fontSize);
 
     const colorEl = _input('page-number-color');
     const colorHexEl = _input('page-number-color-hex');
@@ -1070,7 +1070,7 @@ const Settings = (() => {
       .forEach(btn => btn.classList.toggle('active', pageNumber[(/** @type {HTMLElement} */ (btn)).dataset.style] === true));
 
     const bottomInput = _input('page-number-bottom-offset');
-    if (bottomInput) bottomInput.value = pageNumber.bottomOffset;
+    if (bottomInput) bottomInput.value = String(pageNumber.bottomOffset);
 
     _updatePageNumberPreview(pageNumber);
   }
@@ -1203,13 +1203,13 @@ const Settings = (() => {
     const wEl = _input('custom-width-input');
     const hEl = _input('custom-height-input');
     if (wEl) {
-      wEl.min = constraints.width.min;
-      wEl.max = constraints.width.max;
+      wEl.min = String(constraints.width.min);
+      wEl.max = String(constraints.width.max);
       wEl.step = constraints.step;
     }
     if (hEl) {
-      hEl.min = constraints.height.min;
-      hEl.max = constraints.height.max;
+      hEl.min = String(constraints.height.min);
+      hEl.max = String(constraints.height.max);
       hEl.step = constraints.step;
     }
   }
@@ -1223,8 +1223,8 @@ const Settings = (() => {
 
     const wEl = _input('custom-width-input');
     const hEl = _input('custom-height-input');
-    if (wEl) wEl.value = wDisp;
-    if (hEl) hEl.value = hDisp;
+    if (wEl) wEl.value = String(wDisp);
+    if (hEl) hEl.value = String(hDisp);
 
     document.getElementById('custom-width-unit') && (document.getElementById('custom-width-unit').textContent = unit);
     document.getElementById('custom-height-unit') && (document.getElementById('custom-height-unit').textContent = unit);
@@ -1243,9 +1243,9 @@ const Settings = (() => {
     const tblInput  = _input('doc-table-size');
 
     if (fontSel)  fontSel.value   = typo.fontFamily  || 'Times New Roman';
-    if (sizeInput) sizeInput.value = typo.fontSize    || 12;
-    if (lineHSel) lineHSel.value  = typo.lineHeight   || 1.5;
-    if (tblInput) tblInput.value  = typo.tableSize    || 7.5;
+    if (sizeInput) sizeInput.value = String(typo.fontSize || 12);
+    if (lineHSel) lineHSel.value  = String(typo.lineHeight || 1.5);
+    if (tblInput) tblInput.value  = String(typo.tableSize || 7.5);
 
     _updateTypoPreview(typo.fontFamily || 'Times New Roman', typo.fontSize || 12);
   }
@@ -1254,7 +1254,7 @@ const Settings = (() => {
   function _syncMarginInputs(margin) {
     ['top', 'right', 'bottom', 'left'].forEach(side => {
       const el = _input(`margin-${side}`);
-      if (el) el.value = margin[side] ?? 20;
+      if (el) el.value = String(margin[side] ?? 20);
     });
   }
 
@@ -1284,7 +1284,7 @@ const Settings = (() => {
       row?.classList.add('hidden');
     } else {
       sel.value = 'custom';
-      if (cust) cust.value = scale;
+      if (cust) cust.value = String(scale);
       row?.classList.remove('hidden');
     }
   }
