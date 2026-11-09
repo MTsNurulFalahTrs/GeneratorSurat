@@ -108,7 +108,20 @@ function createPreviewHarness(heights = [350, 350, 350], withTableConfig = false
     getTableConfig: templateId => state.tables[templateId] || {},
     initTableConfig: (templateId, config) => { state.tables[templateId] = config; },
     setTableConfig: (templateId, tableId, config) => {
-      (state.tables[templateId] ||= {})[tableId] = config;
+      const templateTables = (state.tables[templateId] ||= {});
+      const previous = templateTables[tableId] || {};
+      // Production State.setTableConfig uses Utils.deepMerge instead of replace.
+      templateTables[tableId] = {
+        ...previous, ...config,
+        columnWidths: {
+          byKey: {
+            ...(previous.columnWidths?.byKey || {}),
+            ...(config.columnWidths?.byKey || {}),
+          },
+        },
+        header: { columns: { ...(previous.header?.columns || {}), ...(config.header?.columns || {}) } },
+        body: { columns: { ...(previous.body?.columns || {}), ...(config.body?.columns || {}) } },
+      };
       (state.listeners['table:change'] || []).forEach(callback => callback({ templateId, tableId }));
     },
     getUi: () => ({ previewZoom: 1 }),
