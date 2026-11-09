@@ -29,10 +29,44 @@ function normalizeConfiguredOrigin(value) {
 }
 
 /**
- * Browser CORS is an origin boundary, not authentication. Only exact origins
- * are accepted; arbitrary *.vercel.app hosts are deliberately not trusted.
+ * Resolve the exact HTTPS origin serving the current request. This lets the
+ * same app use PDF export on immutable Vercel preview URLs without trusting
+ * arbitrary *.vercel.app subdomains.
  */
-export function isOriginAllowed(origin, env = process.env) {
+export function getRequestOrigin(headers = {}) {
+  const protocol = String(headers['x-forwarded-proto'] || '').trim().toLowerCase();
+  const host = String(headers.host || '').trim();
+
+  if (protocol !== 'https' || !host
+      || host.includes(',') || host.includes('/') || host.includes('\\')
+      || /[\s@?#]/.test(host)) return null;
+
+  try {
+    const url = new URL('https://' + host);
+    if (url.username || url.password || url.pathname !== '/' || url.search || url.hash) return null;
+    if (url.host !== host.toLowerCase()) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Browser CORS is an origin boundary, not authentication. Only configured
+ * exact origins and the exact HTTPS origin serving this request are accepted.
+ * Arbitrary *.vercel.app hosts are never trusted by wildcard.
+ */
+export function getEffectiveRequestOrigin(headers = {}) {
+  const explicitOrigin = String(headers.origin || '').trim();
+  if (explicitOrigin) return explicitOrigin;
+
+  const fetchSite = String(headers['sec-fetch-site'] || '').trim().toLowerCase();
+  if (fetchSite !== 'same-origin') return '';
+
+  return getRequestOrigin(headers) || '';
+}
+
+export function isOriginAllowed(origin, env = process.env, requestOrigin = null) {
   if (typeof origin !== 'string' || !origin.trim()) return false;
 
   let parsed;
@@ -48,6 +82,11 @@ export function isOriginAllowed(origin, env = process.env) {
   for (const key of ['VERCEL_URL', 'VERCEL_BRANCH_URL', 'VERCEL_PROJECT_PRODUCTION_URL']) {
     const value = normalizeConfiguredOrigin(env?.[key]);
     if (value) allowed.add(value);
+  }
+
+  const exactRequestOrigin = normalizeConfiguredOrigin(requestOrigin);
+  if (exactRequestOrigin && exactRequestOrigin === requestOrigin) {
+    allowed.add(exactRequestOrigin);
   }
 
   String(env?.PDF_ALLOWED_ORIGINS || '')

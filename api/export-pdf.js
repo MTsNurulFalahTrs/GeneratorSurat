@@ -5,6 +5,8 @@ import {
   checkUpstashRateLimit,
   createMemoryRateLimiter,
   getClientIp,
+  getEffectiveRequestOrigin,
+  getRequestOrigin,
   isOriginAllowed,
   parseJsonBody,
   sanitizePdfFilename,
@@ -92,8 +94,9 @@ export default async function handler(req, res) {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
-  const requestOrigin = req.headers.origin || '';
-  if (!isOriginAllowed(requestOrigin)) {
+  const sameRequestOrigin = getRequestOrigin(req.headers);
+  const requestOrigin = getEffectiveRequestOrigin(req.headers);
+  if (!isOriginAllowed(requestOrigin, process.env, sameRequestOrigin)) {
     return res.status(403).json({ error: 'Origin tidak diizinkan.' });
   }
 

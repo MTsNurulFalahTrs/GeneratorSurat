@@ -1913,6 +1913,14 @@ const PreviewRenderer = (() => {
   async function waitForReady(maxFrames = 90) {
     if (!_previewEl) return;
 
+    // Pastikan semua perubahan input/settings/template yang masih tertunda
+    // masuk ke State dan render preview terbaru dijadwalkan sebelum status
+    // kesiapan diperiksa. Tanpa flush ini, halaman lama dapat terlihat siap
+    // sesaat setelah pengguna memilih template atau mengubah orientasi.
+    if (typeof Utils.flushDebounces === 'function') {
+      Utils.flushDebounces();
+    }
+
     const templateId = State.getActiveTemplate();
     if (!templateId) return;
 

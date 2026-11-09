@@ -4,6 +4,8 @@ import {
   checkUpstashRateLimit,
   createMemoryRateLimiter,
   getClientIp,
+  getEffectiveRequestOrigin,
+  getRequestOrigin,
   isOriginAllowed,
   validateContentLength,
   validatePdfPayload,
@@ -18,6 +20,49 @@ describe('PDF export security helpers', () => {
     expect(isOriginAllowed('https://generatorsurat.vercel.app.attacker.test', productionEnv)).toBe(false);
     expect(isOriginAllowed('', productionEnv)).toBe(false);
     expect(isOriginAllowed('https://generatorsurat.vercel.app/path', productionEnv)).toBe(false);
+  });
+
+  it('allows only the exact HTTPS origin of the request being served', () => {
+    const sameOrigin = getRequestOrigin({
+      host: 'generatorsurat-preview-123.vercel.app',
+      'x-forwarded-proto': 'https',
+    });
+
+    expect(sameOrigin).toBe('https://generatorsurat-preview-123.vercel.app');
+    expect(isOriginAllowed(sameOrigin, { NODE_ENV: 'production' }, sameOrigin)).toBe(true);
+    expect(isOriginAllowed('https://attacker.vercel.app', {
+      NODE_ENV: 'production',
+    }, sameOrigin)).toBe(false);
+  });
+
+  it('derives a missing Origin only for an exact same-origin browser request', () => {
+    const sameOriginHeaders = {
+      host: 'generatorsurat-preview-123.vercel.app',
+      'x-forwarded-proto': 'https',
+      'sec-fetch-site': 'same-origin',
+    };
+    const sameOrigin = getRequestOrigin(sameOriginHeaders);
+
+    expect(getEffectiveRequestOrigin(sameOriginHeaders)).toBe(sameOrigin);
+    expect(isOriginAllowed(getEffectiveRequestOrigin(sameOriginHeaders), {
+      NODE_ENV: 'production',
+    }, sameOrigin)).toBe(true);
+
+    expect(getEffectiveRequestOrigin({
+      ...sameOriginHeaders,
+      'sec-fetch-site': 'cross-site',
+    })).toBe('');
+    expect(getEffectiveRequestOrigin({
+      host: sameOriginHeaders.host,
+      'x-forwarded-proto': 'https',
+    })).toBe('');
+  });
+
+  it('rejects invalid or non-HTTPS request origins', () => {
+    expect(getRequestOrigin({ host: 'generatorsurat.vercel.app', 'x-forwarded-proto': 'http' })).toBeNull();
+    expect(getRequestOrigin({ host: 'generatorsurat.vercel.app,attacker.test', 'x-forwarded-proto': 'https' })).toBeNull();
+    expect(getRequestOrigin({ host: 'generatorsurat.vercel.app/path', 'x-forwarded-proto': 'https' })).toBeNull();
+    expect(getRequestOrigin({ host: 'generatorsurat.vercel.app', 'x-forwarded-proto': 'https,http' })).toBeNull();
   });
 
   it('supports exact deployment and explicitly configured origins', () => {

@@ -40,9 +40,17 @@ const Settings = (() => {
     State.on('state:restore', () => { if (_initialized) _syncAllFromState(); });
     State.on('state:reset',   () => { if (_initialized) _syncAllFromState(); });
     State.on('settings:reset',() => { if (_initialized) _syncAllFromState(); });
-    State.on('settings:change', ({ settings }) => {
+    State.on('settings:change', (payload) => {
       if (!_initialized) return;
 
+      // Saat template baru dipilih, orientasi default-nya disinkronkan ke
+      // kontrol UI tanpa mengganggu fokus input pada perubahan settings biasa.
+      if (payload?.source === 'template-default') {
+        _syncAllFromState();
+        return;
+      }
+
+      const { settings } = payload || {};
       if (settings?.preview) {
         const mode = typeof settings.preview.zoom === 'string' ? settings.preview.zoom : 'actual';
         document.getElementById('zoom-mode-seg')
