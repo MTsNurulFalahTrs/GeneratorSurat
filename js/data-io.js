@@ -6,7 +6,7 @@
    bahkan setelah TTL 2 jam habis atau browser dibersihkan.
 
    Ekspor  : State.serialize() → Blob JSON → download
-   Impor   : File JSON → validasi schema → State.restore() → re-render
+   Impor   : File JSON → validasi → State.restore() → Storage.save() → re-render
 */
 
 const DataIO = (() => {
@@ -149,7 +149,23 @@ const DataIO = (() => {
           'Data saat ini akan diganti dengan data dari file yang dipilih. Lanjutkan?',
           () => {
             try {
+              // Pastikan tidak ada handler input tertunda yang menimpa data impor.
+              if (typeof Utils.flushDebounces === 'function') Utils.flushDebounces();
               State.restore(data);
+
+              // Restore hanya mengubah state memori. Persistensikan hasil impor
+              // sebagai quick-save baru sebelum melaporkan keberhasilan.
+              const saved = Storage.save(State.serialize());
+              if (saved.success) {
+                State.markSaved(saved);
+                Storage.clearRecovery();
+                UI.updateStorageInfo(Storage.getMeta());
+              } else {
+                // Data tetap tersedia di editor, tetapi tidak aman saat reload.
+                State.markDirty();
+                UI.markStorageDirty();
+              }
+              if (typeof Settings !== 'undefined') Settings.updateStorageStatus();
 
               // Re-render semua komponen
               const activeId = State.getActiveTemplate();
@@ -177,8 +193,18 @@ const DataIO = (() => {
                 UI.switchTab('template');
               }
 
-              UI.toast('Data berhasil diimpor.', 'success');
-              resolve(true);
+              if (saved.success) {
+                UI.toast('Data berhasil diimpor dan disimpan pada perangkat ini.', 'success');
+              } else {
+                UI.toast(
+                  'Data berhasil dimuat ke editor, tetapi belum tersimpan: ' +
+                    (saved.reason || 'penyimpanan lokal tidak tersedia') +
+                    '. Simpan ulang atau ekspor backup JSON sebelum menutup halaman.',
+                  'warning',
+                  9000
+                );
+              }
+              resolve(saved.success);
             } catch (err) {
               console.error('[DataIO] Gagal restore state:', err);
               UI.toast('Gagal memuat data dari file.', 'error');
