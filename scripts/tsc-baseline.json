@@ -1,0 +1,325 @@
+{
+  "version": 1,
+  "typescript": "5.8.3",
+  "description": "GS-007: existing checkJs errors from initial full tsc run; additions must fail CI. Remove entries when fixed.",
+  "diagnostics": [
+    {
+      "file": "api/export-pdf-security.js",
+      "code": 2307,
+      "message": "Cannot find module 'node:crypto' or its corresponding type declarations.",
+      "count": 1
+    },
+    {
+      "file": "api/export-pdf-security.js",
+      "code": 2307,
+      "message": "Cannot find module 'node:net' or its corresponding type declarations.",
+      "count": 1
+    },
+    {
+      "file": "api/export-pdf-security.js",
+      "code": 2580,
+      "message": "Cannot find name 'Buffer'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.",
+      "count": 2
+    },
+    {
+      "file": "api/export-pdf-security.js",
+      "code": 2580,
+      "message": "Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.",
+      "count": 3
+    },
+    {
+      "file": "api/export-pdf.js",
+      "code": 2580,
+      "message": "Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`.",
+      "count": 1
+    },
+    {
+      "file": "js/app.js",
+      "code": 2339,
+      "message": "Property 'clearRecovery' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/app.js",
+      "code": 2339,
+      "message": "Property 'getMeta' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/app.js",
+      "code": 2339,
+      "message": "Property 'getRecovery' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 3
+    },
+    {
+      "file": "js/app.js",
+      "code": 2339,
+      "message": "Property 'removeRecovery' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/app.js",
+      "code": 2339,
+      "message": "Property 'save' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/data-io.js",
+      "code": 2339,
+      "message": "Property 'clearRecovery' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/data-io.js",
+      "code": 2339,
+      "message": "Property 'getMeta' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/data-io.js",
+      "code": 2339,
+      "message": "Property 'save' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/preview-renderer.js",
+      "code": 18047,
+      "message": "'fragmentBody' is possibly 'null'.",
+      "count": 6
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'checked' does not exist on type 'EventTarget'.",
+      "count": 5
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'checked' does not exist on type 'HTMLElement'.",
+      "count": 3
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'dataset' does not exist on type 'Element'.",
+      "count": 13
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'getMeta' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'isAvailable' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'max' does not exist on type 'HTMLElement'.",
+      "count": 2
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'min' does not exist on type 'HTMLElement'.",
+      "count": 2
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'step' does not exist on type 'HTMLElement'.",
+      "count": 2
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'style' does not exist on type 'Element'.",
+      "count": 8
+    },
+    {
+      "file": "js/settings.js",
+      "code": 2339,
+      "message": "Property 'value' does not exist on type 'HTMLElement'.",
+      "count": 60
+    },
+    {
+      "file": "js/table-config.js",
+      "code": 8024,
+      "message": "JSDoc '@param' tag has name 'tableId', but there is no parameter with that name.",
+      "count": 1
+    },
+    {
+      "file": "js/table-config.js",
+      "code": 8024,
+      "message": "JSDoc '@param' tag has name 'templateId', but there is no parameter with that name.",
+      "count": 1
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateDPU'.",
+      "count": 2
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateIjopPermohonan'.",
+      "count": 2
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateIjopRekomendasiKankemenag'.",
+      "count": 2
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateIjopRekomendasiPengawas'.",
+      "count": 2
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateIjopSptjmKankemenag'.",
+      "count": 2
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateIjopSptjmSatpen'.",
+      "count": 2
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateMutasiMasuk'.",
+      "count": 2
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateRekapNilai'.",
+      "count": 2
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateSiswaBaru'.",
+      "count": 2
+    },
+    {
+      "file": "js/template-registry.js",
+      "code": 2304,
+      "message": "Cannot find name 'TemplateSuratIzin'.",
+      "count": 2
+    },
+    {
+      "file": "js/theme.js",
+      "code": 2322,
+      "message": "Type 'string' is not assignable to type '\"auto\" | \"dark\" | \"light\"'.",
+      "count": 1
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2339,
+      "message": "Property 'dataset' does not exist on type 'Element'.",
+      "count": 2
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2339,
+      "message": "Property 'disabled' does not exist on type 'Element'.",
+      "count": 1
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2339,
+      "message": "Property 'focus' does not exist on type 'Element'.",
+      "count": 5
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2339,
+      "message": "Property 'getMeta' does not exist on type '{ new (): Storage; prototype: Storage; }'.",
+      "count": 2
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2339,
+      "message": "Property 'hidden' does not exist on type 'Element'.",
+      "count": 1
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2339,
+      "message": "Property 'key' does not exist on type 'Event'.",
+      "count": 6
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2339,
+      "message": "Property 'offsetParent' does not exist on type 'Element'.",
+      "count": 1
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2339,
+      "message": "Property 'tabIndex' does not exist on type 'Element'.",
+      "count": 1
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2345,
+      "message": "Argument of type '{ title: any; body: string; footer: { label: string; class: string; onClick: () => void; }[]; }' is not assignable to parameter of type '{ title: any; body: any; footer: any; onClose: any; closeOnBackdrop?: boolean; closeOnEscape?: boolean; showCloseButton?: boolean; initialFocusSelector?: any; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/ui.js",
+      "code": 2345,
+      "message": "Argument of type 'EventTarget' is not assignable to parameter of type 'Node'.",
+      "count": 1
+    },
+    {
+      "file": "js/utils.js",
+      "code": 2322,
+      "message": "Type '{ (...args: any[]): void; cancel(): void; flush(): any; }' is not assignable to type 'F & { cancel: () => void; flush: () => ReturnType<F>; }'.",
+      "count": 1
+    },
+    {
+      "file": "js/utils.js",
+      "code": 2345,
+      "message": "Argument of type 'string | ArrayBuffer' is not assignable to parameter of type 'string | PromiseLike<string>'.",
+      "count": 1
+    },
+    {
+      "file": "js/workflow.js",
+      "code": 2339,
+      "message": "Property 'dataset' does not exist on type 'Element'.",
+      "count": 2
+    },
+    {
+      "file": "js/workflow.js",
+      "code": 2339,
+      "message": "Property 'disabled' does not exist on type 'HTMLElement'.",
+      "count": 1
+    },
+    {
+      "file": "js/workflow.js",
+      "code": 2339,
+      "message": "Property 'focus' does not exist on type 'Element'.",
+      "count": 2
+    },
+    {
+      "file": "js/workflow.js",
+      "code": 2339,
+      "message": "Property 'title' does not exist on type 'Element'.",
+      "count": 1
+    }
+  ]
+}
