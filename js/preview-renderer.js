@@ -2038,6 +2038,17 @@ const PreviewRenderer = (() => {
     const totalFormatifCols = jumlahBab * jumlahTpBab;
     const totalCols = 2 + totalFormatifCols + jumlahLm + 4; // No + Nama + formatif cols + LM cols + STS+SAS+Praktik+NA
 
+    // Semua kolom Rekap Nilai perlu lebar terdefinisi agar header bertingkat
+    // konsisten pada preview, paginasi, print, dan ekspor PDF.
+    const tableLayoutStyle = 'width:100%;table-layout:fixed;';
+    const colgroupHtml = '<colgroup>' +
+      '<col style="width:8mm;">' +
+      '<col style="width:' + colWidthNama + ';">' +
+      Array.from({ length: totalFormatifCols }, () => '<col style="width:' + colWidthNilai + ';">').join('') +
+      Array.from({ length: jumlahLm }, () => '<col style="width:' + colWidthLm + ';">').join('') +
+      Array.from({ length: 4 }, () => '<col style="width:' + colWidthBig + ';">').join('') +
+      '</colgroup>';
+
     /* -- Ambil tableConfig LEBIH AWAL, sebelum dipakai membangun header -- */
     const tableConfig = _getTableConfig('rekap-nilai', 'rekap-nilai');
 
