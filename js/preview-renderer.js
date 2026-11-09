@@ -1197,15 +1197,19 @@ const PreviewRenderer = (() => {
     templateBody.innerHTML = '';
 
     let fragmentWrap = null;
+    /** @type {HTMLTableSectionElement|null} */
     let fragmentBody = null;
 
+    /** @returns {HTMLTableSectionElement} */
     const beginFragment = () => {
       fragmentWrap = tableWrap.cloneNode(false);
       const fragmentTable = templateTable.cloneNode(true);
-      fragmentBody = fragmentTable.querySelector(':scope > tbody');
-      if (!fragmentBody) throw new Error('Tabel dokumen tidak memiliki tbody untuk paginasi.');
+      const body = /** @type {HTMLTableSectionElement|null} */ (fragmentTable.querySelector(':scope > tbody'));
+      if (!body) throw new Error('Tabel dokumen tidak memiliki tbody untuk paginasi.');
+      fragmentBody = body;
       fragmentWrap.appendChild(fragmentTable);
       current.content.appendChild(fragmentWrap);
+      return body;
     };
 
     if (rows.length === 0) {
@@ -1214,22 +1218,21 @@ const PreviewRenderer = (() => {
 
     for (const row of rows) {
       if (renderToken !== _renderToken) return;
-      if (!fragmentWrap) beginFragment();
-      if (!fragmentBody) return;
+      let body = fragmentBody || beginFragment();
 
       const rowClone = row.cloneNode(true);
-      fragmentBody.appendChild(rowClone);
+      body.appendChild(rowClone);
 
-      if (_isPageOverflowing(current.content) && fragmentBody.rows.length > 1) {
-        fragmentBody.removeChild(rowClone);
+      if (_isPageOverflowing(current.content) && body.rows.length > 1) {
+        body.removeChild(rowClone);
         current = _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle);
-        beginFragment();
-        fragmentBody.appendChild(rowClone);
-      } else if (_isPageOverflowing(current.content) && fragmentBody.rows.length === 1 && current.content.children.length > 1) {
+        body = beginFragment();
+        body.appendChild(rowClone);
+      } else if (_isPageOverflowing(current.content) && body.rows.length === 1 && current.content.children.length > 1) {
         current.content.removeChild(fragmentWrap);
         current = _appendNewPreviewPage(pages, paperWidthPx, paperHeightPx, baseStyle);
-        beginFragment();
-        fragmentBody.appendChild(rowClone);
+        body = beginFragment();
+        body.appendChild(rowClone);
       }
     }
   }
