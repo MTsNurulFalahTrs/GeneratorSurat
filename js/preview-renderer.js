@@ -1,9 +1,9 @@
-﻿/* =============================================================
-   preview-renderer.js â€” Render live preview surat
+/* =============================================================
+   preview-renderer.js — Render live preview surat
    =============================================================
    Dimensi kertas dan margin diambil dari State.getSettings()
    agar sinkron dengan tab Pengaturan.
-   Zoom preview TIDAK mempengaruhi ukuran dokumen sebenarnya â€”
+   Zoom preview TIDAK mempengaruhi ukuran dokumen sebenarnya —
    hanya mengubah tampilan di layar.
 */
 
@@ -42,7 +42,7 @@ const PreviewRenderer = (() => {
     return PAGINATED_TEMPLATE_IDS.has(String(templateId || ''));
   }
 
-  /* â”€â”€ Init â”€â”€ */
+  /* ── Init ── */
   function init() {
     _previewEl   = document.getElementById('surat-preview');
     _viewportEl  = document.getElementById('preview-viewport');
@@ -85,8 +85,8 @@ const PreviewRenderer = (() => {
       }
       debouncedRender();
     });
-    State.on('table:change',      debouncedRender); // â† pengaturan tabel berubah
-    State.on('table:reset',       debouncedRender); // â† reset pengaturan tabel
+    State.on('table:change',      debouncedRender); // ← pengaturan tabel berubah
+    State.on('table:reset',       debouncedRender); // ← reset pengaturan tabel
     State.on('state:restore', () => {
       _currentZoom = State.getUi().previewZoom || 1;
       _applyZoom(_currentZoom);
@@ -103,7 +103,7 @@ const PreviewRenderer = (() => {
     _renderCurrent();
   }
 
-  /* â”€â”€ Render preview sesuai template aktif â”€â”€ */
+  /* ── Render preview sesuai template aktif ── */
   function _renderCurrent() {
     const templateId = State.getActiveTemplate();
     if (!templateId) { _showPlaceholder(); return; }
@@ -117,11 +117,11 @@ const PreviewRenderer = (() => {
     render(tpl, formData, kop);
   }
 
-  /* â”€â”€ Render utama â”€â”€ */
+  /* ── Render utama ── */
   function render(tpl, formData, kop) {
     if (!_previewEl) return;
 
-    // â”€â”€ Dimensi kertas dari Settings (bukan dari meta template) â”€â”€
+    // ── Dimensi kertas dari Settings (bukan dari meta template) ──
     const s            = State.getSettings();
     const dim          = State.getPaperDimensions();
     const margin       = State.getMarginMm();
@@ -169,7 +169,7 @@ const PreviewRenderer = (() => {
       }
     });
   }
-  /* â”€â”€ Build seluruh HTML dokumen â”€â”€ */
+  /* ── Build seluruh HTML dokumen ── */
   function _buildDocumentHtml(tpl, formData, kop, margin, typo) {
     const id = tpl.TEMPLATE_ID;
     if (id === 'dpu')                         return _renderDpu(formData, kop, margin, typo);
@@ -184,14 +184,14 @@ const PreviewRenderer = (() => {
     return '<div style="padding:20px;color:#666;">Template tidak dikenali.</div>';
   }
 
-  /* â”€â”€ KOP HTML helper â”€â”€ */
+  /* ── KOP HTML helper ── */
   function _buildKopHtml(kop) {
     return KopEditor.renderKopHtml(kop);
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ────────────────────────────────────────────────
      RENDERER: DPU
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  ──────────────────────────────────────────────── */
   function _renderDpu(data, kop, margin, typo) {
     const meta = data?.meta && typeof data.meta === 'object' ? data.meta : {};
     const peserta = Array.isArray(data?.peserta) ? data.peserta : [];
@@ -204,10 +204,10 @@ const PreviewRenderer = (() => {
       + `font-size:${t.fontSize}pt;`
       + `line-height:${t.lineHeight};`;
 
-    /* â”€â”€ KOP â”€â”€ */
+    /* ── KOP ── */
     const kopHtml = _buildKopHtml(kop);
 
-    /* â”€â”€ Info Madrasah (2 kolom) â”€â”€ */
+    /* ── Info Madrasah (2 kolom) ── */
     const infoHtml = `
       <div class="doc-meta">
         <table>
@@ -222,14 +222,14 @@ const PreviewRenderer = (() => {
         </table>
       </div>`;
 
-    /* â”€â”€ Judul â”€â”€ */
+    /* ── Judul ── */
     const judulHtml = `
       <div class="doc-title-block">
         <h1 class="doc-title">DAFTAR PESERTA UJIAN (DPU)</h1>
         <h2 class="doc-subtitle">TAHUN PELAJARAN ${_esc(meta.tahunPelajaran)}</h2>
       </div>`;
 
-    /* â”€â”€ Tabel Peserta â€” ambil tableConfig dari State â”€â”€ */
+    /* ── Tabel Peserta — ambil tableConfig dari State ── */
     // DPU memakai tableId = 'dpu' (sama dengan TEMPLATE_ID, format legacy)
     const tableConfig = _getTableConfig('dpu', 'dpu');
 
@@ -237,7 +237,7 @@ const PreviewRenderer = (() => {
       ? TableRenderer.renderDpuTable(peserta, t, 5, tableConfig)
       : _fallbackDpuTable(peserta, t);
 
-    /* â”€â”€ Tanda Tangan â”€â”€ */
+    /* ── Tanda Tangan ── */
     const ttdHtml = _buildTtdDpu(ttd);
 
     return `
@@ -289,9 +289,9 @@ const PreviewRenderer = (() => {
       </div>`;
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ────────────────────────────────────────────────
      RENDERER: Mutasi Masuk & Siswa Baru (struktur mirip)
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  ──────────────────────────────────────────────── */
   function _renderSiswa(data, kop, tpl, isMutasi, margin, typo) {
     const meta = data?.meta && typeof data.meta === 'object' ? data.meta : {};
     const siswa = Array.isArray(data?.siswa) ? data.siswa : [];
@@ -304,15 +304,15 @@ const PreviewRenderer = (() => {
       + `font-size:${t.fontSize}pt;`
       + `line-height:${t.lineHeight};`;
 
-    /* â”€â”€ KOP â”€â”€ */
+    /* ── KOP ── */
     const kopHtml = _buildKopHtml(kop);
 
-    /* â”€â”€ Header institusi & judul â”€â”€ */
+    /* ── Header institusi & judul ── */
     const judulText = isMutasi
       ? `DAFTAR PENGESAHAN SISWA BARU (MUTASI MASUK) TAHUN ${_esc(meta.tahunAjaran || meta.tahun)}`
       : `DAFTAR PENGESAHAN SISWA BARU TAHUN ${_esc(meta.tahunAjaran || meta.tahun)}`;
 
-    /* â”€â”€ Info Madrasah â”€â”€ */
+    /* ── Info Madrasah ── */
     const kelasRow = !isMutasi
       ? `<tr><td>Kelas</td><td>:</td><td>${_esc(meta.kelas)}</td></tr>` : '';
     const infoHtml = `
@@ -335,7 +335,7 @@ const PreviewRenderer = (() => {
         <h1 class="doc-title">${judulText}</h1>
       </div>`;
 
-    /* â”€â”€ Tabel siswa â€” pakai TableRenderer (Fit to Content) â”€â”€ */
+    /* ── Tabel siswa — pakai TableRenderer (Fit to Content) ── */
     // Preprocess data siswa: resolusi kolom khusus (no, tanggalLahir, kelas)
     const cols = tpl.tableColumns;
     const resolvedRows = siswa.map((s, i) => {
@@ -374,7 +374,7 @@ const PreviewRenderer = (() => {
         )
       : _fallbackSiswaTable(cols, resolvedRows, t.tableSize);
 
-    /* â”€â”€ Rekap â”€â”€ */
+    /* ── Rekap ── */
     const laki   = siswa.filter(s => s.jenisKelamin === 'L').length;
     const perempuan = siswa.filter(s => s.jenisKelamin === 'P').length;
     const rekapHtml = `
@@ -387,7 +387,7 @@ const PreviewRenderer = (() => {
         </table>
       </div>`;
 
-    /* â”€â”€ Tanda Tangan â”€â”€ */
+    /* ── Tanda Tangan ── */
     const ttdHtml = _buildTtdSiswa(ttd, meta, catatan);
 
     return `
@@ -476,9 +476,9 @@ const PreviewRenderer = (() => {
       </div>`;
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ────────────────────────────────────────────────
      CATATAN + PAGINATION PREVIEW
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  ──────────────────────────────────────────────── */
 
   function _buildCatatanHtml(catatan) {
     if (!catatan?.tampilkan || !Array.isArray(catatan.items) || !catatan.items.length) {
@@ -599,7 +599,7 @@ const PreviewRenderer = (() => {
 
     /*
      * DPU mempunyai satu struktur linear:
-     *   KOP + metadata + judul â†’ tabel peserta â†’ tanda tangan.
+     *   KOP + metadata + judul → tabel peserta → tanda tangan.
      *
      * Header sebelum tabel hanya boleh berada pada halaman pertama.
      * Tabel dipaginasi per-row dan setiap fragment tabel mengulang <thead>.
@@ -1081,7 +1081,7 @@ const PreviewRenderer = (() => {
      * getBoundingClientRect() sudah memperhitungkan transform zoom, sedangkan
      * padding dari getComputedStyle() berada dalam CSS pixel. Skala ini membuat
      * keduanya berada pada satu satuan sehingga batas bawah tetap akurat pada
-     * zoom 30%â€“250%.
+     * zoom 30%—250%.
      */
     const scale = cssHeight > 0 ? rect.height / cssHeight : 1;
     const styles = getComputedStyle(content);
@@ -1230,11 +1230,11 @@ const PreviewRenderer = (() => {
     }
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ────────────────────────────────────────────────
      FALLBACK TABLE RENDERERS
      Digunakan jika TableRenderer belum tersedia
      (cache lama, file gagal load, dll).
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  ──────────────────────────────────────────────── */
 
   function _fallbackDpuTable(peserta, typo) {
     const ts = typo?.tableSize ?? 7.5;
@@ -1253,8 +1253,8 @@ const PreviewRenderer = (() => {
         <td>${_esc(p.namaOrangTua)}</td>
         <td>${_esc(p.asalSekolah)}</td>
         <td>${_esc(p.noIjazah)}</td>
-        <td style="text-align:center;">${p.terdaftarEmis !== false ? 'â˜‘' : ''}</td>
-        <td style="text-align:center;">${p.terdaftarEmis === false ? 'â˜' : ''}</td>
+        <td style="text-align:center;">${p.terdaftarEmis !== false ? '☑' : ''}</td>
+        <td style="text-align:center;">${p.terdaftarEmis === false ? '☐' : ''}</td>
         <td>${_esc(p.alasanBelum)}</td>
       </tr>`).join('');
     const empties = Array.from({ length: emptyCount }, () =>
@@ -1307,7 +1307,7 @@ const PreviewRenderer = (() => {
       </div>`;
   }
 
-  /* â”€â”€ Re-apply overlay helpers (dipanggil post-render, tidak trigger state) â”€â”€ */
+  /* ── Re-apply overlay helpers (dipanggil post-render, tidak trigger state) ── */
   function _reApplyMarginGuide(show) {
     const preview = _previewEl;
     if (!preview) return;
@@ -1346,7 +1346,7 @@ const PreviewRenderer = (() => {
     area.style.left   = `${m.left   * PX}px`;
   }
 
-  /* â”€â”€ Zoom â”€â”€ */
+  /* ── Zoom ── */
   function _changeZoom(delta) {
     const newZoom = Utils.clamp(_currentZoom + delta, ZOOM_MIN, ZOOM_MAX);
     _currentZoom = newZoom;
@@ -1409,7 +1409,7 @@ const PreviewRenderer = (() => {
     }
   }
 
-  /* â”€â”€ Placeholder â”€â”€ */
+  /* ── Placeholder ── */
   function _showPlaceholder() {
     if (!_previewEl) return;
 
@@ -1439,7 +1439,7 @@ const PreviewRenderer = (() => {
       </div>`;
   }
 
-  /* â”€â”€ Ambil tableConfig yang sudah resolved dari State + TableConfigManager â”€â”€ */
+  /* ── Ambil tableConfig yang sudah resolved dari State + TableConfigManager ── */
   function _getTableConfig(templateId, tableId) {
     if (!templateId || !tableId) return null;
     if (typeof TableConfigManager === 'undefined') return null;
@@ -1452,13 +1452,13 @@ const PreviewRenderer = (() => {
     }
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-     RENDERER: IJOP â€” Helper bersama
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────
+     RENDERER: IJOP — Helper bersama
+  ──────────────────────────────────────────────── */
 
-  /** Format ISO date â†’ "14 Oktober 2026" (panjang, Indonesia) */
+  /** Format ISO date → "14 Oktober 2026" (panjang, Indonesia) */
   function _formatTanggalPanjang(isoDate) {
-    if (!isoDate) return 'â€¦â€¦â€¦â€¦â€¦.';
+    if (!isoDate) return '…………….';
     const bulan = [
       'Januari','Februari','Maret','April','Mei','Juni',
       'Juli','Agustus','September','Oktober','November','Desember',
@@ -1473,10 +1473,10 @@ const PreviewRenderer = (() => {
 
   /**
    * Ambil nama bulan Indonesia dan tahun dari ISO date.
-   * Contoh: "2026-10-14" â†’ "Oktober 2026"
+   * Contoh: "2026-10-14" → "Oktober 2026"
    */
   function _formatBulanTahun(isoDate) {
-    if (!isoDate) return 'â€¦â€¦â€¦â€¦â€¦.';
+    if (!isoDate) return '…………….';
     const bulan = [
       'Januari','Februari','Maret','April','Mei','Juni',
       'Juli','Agustus','September','Oktober','November','Desember',
@@ -1495,7 +1495,7 @@ const PreviewRenderer = (() => {
     const rows = fields.map(f => {
       const displayVal = (f.value != null && f.value !== '')
         ? _esc(f.value)
-        : _esc('â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦');
+        : _esc('…………………………………………');
       return `<tr>
         <td style="white-space:nowrap;padding-right:4mm;">${_esc(f.label)}</td>
         <td style="padding-right:2mm;">:</td>
@@ -1505,9 +1505,9 @@ const PreviewRenderer = (() => {
     return `<table style="border-collapse:collapse;margin-bottom:8pt;">${rows}</table>`;
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-     RENDERER: IJOP 1 â€” Surat Permohonan dari Lembaga
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────
+     RENDERER: IJOP 1 — Surat Permohonan dari Lembaga
+  ──────────────────────────────────────────────── */
   function _renderIjopPermohonan(data, kop, margin, typo) {
     const s   = data?.surat   || {};
     const l   = data?.lembaga || {};
@@ -1531,13 +1531,13 @@ const PreviewRenderer = (() => {
           <tr>
             <td style="width:55%;">
               <table style="border-collapse:collapse;">
-                <tr><td style="width:90px;">Nomor</td><td style="padding:0 6px;">:</td><td style="white-space:pre-wrap;">${s.nomor ? _esc(s.nomor) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦..'}</td></tr>
+                <tr><td style="width:90px;">Nomor</td><td style="padding:0 6px;">:</td><td style="white-space:pre-wrap;">${s.nomor ? _esc(s.nomor) : '………………………..'}</td></tr>
                 <tr><td>Lampiran</td><td style="padding:0 6px;">:</td><td>7 (tujuh) lembar</td></tr>
                 <tr><td>Perihal</td><td style="padding:0 6px;">:</td><td><strong>Permohonan Perpanjangan izin Operasional Lembaga Pendidikan</strong></td></tr>
               </table>
             </td>
             <td style="text-align:left;vertical-align:top;">
-              ${s.namaKabupatenKota ? _esc(s.namaKabupatenKota) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦.'}, ${_formatBulanTahun(s.tanggal)}
+              ${s.namaKabupatenKota ? _esc(s.namaKabupatenKota) : '………………….'}, ${_formatBulanTahun(s.tanggal)}
             </td>
           </tr>
         </table>
@@ -1562,13 +1562,13 @@ const PreviewRenderer = (() => {
 
         <!-- Data Lembaga -->
         <table style="border-collapse:collapse;margin-left:20pt;margin-bottom:12pt;">
-          <tr><td style="width:160px;">Nama RA/Madrasah</td><td style="padding:0 6px;">:</td><td>${l.namaRaMadrasah ? _esc(l.namaRaMadrasah) : 'â€¦â€¦â€¦â€¦â€¦'}</td></tr>
-          <tr><td>NSM</td><td style="padding:0 6px;">:</td><td>${l.nsm ? _esc(l.nsm) : 'â€¦â€¦â€¦â€¦â€¦'}</td></tr>
-          <tr><td>NPSN</td><td style="padding:0 6px;">:</td><td>${l.npsn ? _esc(l.npsn) : 'â€¦â€¦â€¦â€¦â€¦'}</td></tr>
-          <tr><td>Alamat</td><td style="padding:0 6px;">:</td><td>${l.alamat ? _esc(l.alamat) : 'â€¦â€¦â€¦â€¦â€¦'}</td></tr>
-          <tr><td>Akte Notaris</td><td style="padding:0 6px;">:</td><td>${l.akteNotaris ? _esc(l.akteNotaris) : 'â€¦â€¦â€¦â€¦â€¦'}</td></tr>
-          <tr><td>Pengesahan Akte Notaris</td><td style="padding:0 6px;">:</td><td>${l.pengesahanAkteNotaris ? _esc(l.pengesahanAkteNotaris) : 'â€¦â€¦â€¦â€¦â€¦'}</td></tr>
-          <tr><td>Peringkat Akreditasi</td><td style="padding:0 6px;">:</td><td>${l.peringkatAkreditasi ? _esc(l.peringkatAkreditasi) : 'â€¦â€¦â€¦â€¦â€¦'}</td></tr>
+          <tr><td style="width:160px;">Nama RA/Madrasah</td><td style="padding:0 6px;">:</td><td>${l.namaRaMadrasah ? _esc(l.namaRaMadrasah) : '……………'}</td></tr>
+          <tr><td>NSM</td><td style="padding:0 6px;">:</td><td>${l.nsm ? _esc(l.nsm) : '……………'}</td></tr>
+          <tr><td>NPSN</td><td style="padding:0 6px;">:</td><td>${l.npsn ? _esc(l.npsn) : '……………'}</td></tr>
+          <tr><td>Alamat</td><td style="padding:0 6px;">:</td><td>${l.alamat ? _esc(l.alamat) : '……………'}</td></tr>
+          <tr><td>Akte Notaris</td><td style="padding:0 6px;">:</td><td>${l.akteNotaris ? _esc(l.akteNotaris) : '……………'}</td></tr>
+          <tr><td>Pengesahan Akte Notaris</td><td style="padding:0 6px;">:</td><td>${l.pengesahanAkteNotaris ? _esc(l.pengesahanAkteNotaris) : '……………'}</td></tr>
+          <tr><td>Peringkat Akreditasi</td><td style="padding:0 6px;">:</td><td>${l.peringkatAkreditasi ? _esc(l.peringkatAkreditasi) : '……………'}</td></tr>
         </table>
 
         <!-- Persyaratan -->
@@ -1593,17 +1593,17 @@ const PreviewRenderer = (() => {
         <!-- Tanda Tangan -->
         <div style="margin-top:24pt;display:flex;justify-content:flex-end;">
           <div style="text-align:center;min-width:150px;">
-            <p style="margin:0;">${k.jabatan ? _esc(k.jabatan) : 'Kepala RA/Madrasahâ€¦â€¦â€¦â€¦..'}</p>
+            <p style="margin:0;">${k.jabatan ? _esc(k.jabatan) : 'Kepala RA/Madrasah…………..'}</p>
             <div style="height:50pt;"></div>
-            <p style="margin:0;text-decoration:underline;font-weight:bold;">${k.namaKepala ? _esc(k.namaKepala) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦.'}</p>
+            <p style="margin:0;text-decoration:underline;font-weight:bold;">${k.namaKepala ? _esc(k.namaKepala) : '…………………………….'}</p>
           </div>
         </div>
       </div>`;
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-     RENDERER: IJOP 2 â€” SPTJM dari Kepala Satpen
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────
+     RENDERER: IJOP 2 — SPTJM dari Kepala Satpen
+  ──────────────────────────────────────────────── */
   function _renderIjopSptjmSatpen(data, kop, margin, typo) {
     const s  = data?.surat  || {};
     const kp = data?.kepala || {};
@@ -1624,7 +1624,7 @@ const PreviewRenderer = (() => {
         <!-- Judul -->
         <div style="text-align:center;margin:14pt 0 4pt 0;">
           <p style="margin:0;font-weight:bold;font-size:inherit;">SURAT PERNYATAAN TANGGUNG JAWAB MUTLAK</p>
-          <p style="margin:4pt 0 0 0;white-space:pre-wrap;">Nomor : ${s.nomor ? _esc(s.nomor) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦'}</p>
+          <p style="margin:4pt 0 0 0;white-space:pre-wrap;">Nomor : ${s.nomor ? _esc(s.nomor) : '…………………………'}</p>
         </div>
 
         <!-- Pembuka -->
@@ -1666,21 +1666,21 @@ const PreviewRenderer = (() => {
         <!-- Meterai + TTD -->
         <div style="display:flex;justify-content:flex-end;">
           <div style="text-align:center;min-width:160px;">
-            <p style="margin:0;">${s.namaDesa ? _esc(s.namaDesa) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦'}, ${_formatBulanTahun(s.tanggal)}</p>
+            <p style="margin:0;">${s.namaDesa ? _esc(s.namaDesa) : '…………………'}, ${_formatBulanTahun(s.tanggal)}</p>
             <p style="margin:4pt 0 0 0;">Yang menyatakan,</p>
             <div style="border:1px solid #aaa;border-radius:50%;width:52px;height:52px;margin:8pt auto;display:flex;align-items:center;justify-content:center;font-size:7pt;color:#666;text-align:center;line-height:1.2;">
               Meterai<br/>Rp 10.000,-
             </div>
             <div style="height:14pt;"></div>
-            <p style="margin:0;text-decoration:underline;font-weight:bold;">${kp.nama ? _esc(kp.nama) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦'}</p>
+            <p style="margin:0;text-decoration:underline;font-weight:bold;">${kp.nama ? _esc(kp.nama) : '………………………………'}</p>
           </div>
         </div>
       </div>`;
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-     RENDERER: IJOP 3 â€” Rekomendasi dari Pengawas
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────
+     RENDERER: IJOP 3 — Rekomendasi dari Pengawas
+  ──────────────────────────────────────────────── */
   function _renderIjopRekomendasiPengawas(data, kop, margin, typo) {
     const s   = data?.surat             || {};
     const pw  = data?.pengawas          || {};
@@ -1732,7 +1732,7 @@ const PreviewRenderer = (() => {
         <p style="margin:0 0 16pt 0;text-align:justify;">
           Berdasarkan hasil pemantauan, evaluasi dan pembinaan secara langsung terhadap aspek administrasi,
           kelayakan sarana prasarana, serta proses kegiatan belajar mengajar di RA/Madrasah tersebut,
-          kami menyatakan bahwa <strong>${l.namaLembaga ? _esc(l.namaLembaga) : 'â€¦â€¦â€¦(nama RA/Madrasah)â€¦â€¦â€¦'}</strong>
+          kami menyatakan bahwa <strong>${l.namaLembaga ? _esc(l.namaLembaga) : '………(nama RA/Madrasah)………'}</strong>
           masih <strong>AKTIF</strong>, <strong>LAYAK</strong> dan <strong>MEMENUHI SYARAT</strong>
           untuk diberikan perpanjangan izin operasional.
         </p>
@@ -1748,23 +1748,23 @@ const PreviewRenderer = (() => {
             <p style="margin:0;">Mengetahui,</p>
             <p style="margin:0;">Kepala Seksi Pendidikan Madrasah</p>
             <div style="height:50pt;"></div>
-            <p style="margin:0;text-decoration:underline;font-weight:bold;">${(pn.kasiPenmad?.nama) ? _esc(pn.kasiPenmad.nama) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦'}</p>
-            <p style="margin:0;">NIP. ${(pn.kasiPenmad?.nip) ? _esc(pn.kasiPenmad.nip) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦..'}</p>
+            <p style="margin:0;text-decoration:underline;font-weight:bold;">${(pn.kasiPenmad?.nama) ? _esc(pn.kasiPenmad.nama) : '…………………………………'}</p>
+            <p style="margin:0;">NIP. ${(pn.kasiPenmad?.nip) ? _esc(pn.kasiPenmad.nip) : '…………………………………..'}</p>
           </div>
           <div style="text-align:center;min-width:160px;">
             <p style="margin:0;">Muara Beliti, ${_formatBulanTahun(s.tanggal)}</p>
             <p style="margin:0;">Pengawas Madrasah</p>
             <div style="height:50pt;"></div>
-            <p style="margin:0;text-decoration:underline;font-weight:bold;">${pw.nama ? _esc(pw.nama) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦'}</p>
-            <p style="margin:0;">NIP. ${pw.nip ? _esc(pw.nip) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦..'}</p>
+            <p style="margin:0;text-decoration:underline;font-weight:bold;">${pw.nama ? _esc(pw.nama) : '…………………………………'}</p>
+            <p style="margin:0;">NIP. ${pw.nip ? _esc(pw.nip) : '…………………………………..'}</p>
           </div>
         </div>
       </div>`;
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-     RENDERER: IJOP 4 â€” Rekomendasi dari Kakankemenag
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────
+     RENDERER: IJOP 4 — Rekomendasi dari Kakankemenag
+  ──────────────────────────────────────────────── */
   function _renderIjopRekomendasiKankemenag(data, kop, margin, typo) {
     const s  = data?.surat         || {};
     const kk = data?.kakankemenag  || {};
@@ -1827,16 +1827,16 @@ const PreviewRenderer = (() => {
             <p style="margin:0;">Muara Beliti, ${_formatBulanTahun(s.tanggal)}</p>
             <p style="margin:0;">Kepala,</p>
             <div style="height:50pt;"></div>
-            <p style="margin:0;text-decoration:underline;font-weight:bold;">${kk.nama ? _esc(kk.nama) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦'}</p>
-            <p style="margin:0;">NIP. ${kk.nip ? _esc(kk.nip) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦..'}</p>
+            <p style="margin:0;text-decoration:underline;font-weight:bold;">${kk.nama ? _esc(kk.nama) : '…………………………………'}</p>
+            <p style="margin:0;">NIP. ${kk.nip ? _esc(kk.nip) : '…………………………………..'}</p>
           </div>
         </div>
       </div>`;
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-     RENDERER: IJOP 5 â€” SPTJM dari Kakankemenag
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ────────────────────────────────────────────────
+     RENDERER: IJOP 5 — SPTJM dari Kakankemenag
+  ──────────────────────────────────────────────── */
   function _renderIjopSptjmKankemenag(data, kop, margin, typo) {
     const s  = data?.surat        || {};
     const kk = data?.kakankemenag || {};
@@ -1900,14 +1900,14 @@ const PreviewRenderer = (() => {
               Meterai<br/>Rp 10.000,-
             </div>
             <div style="height:14pt;"></div>
-            <p style="margin:0;text-decoration:underline;font-weight:bold;">${kk.nama ? _esc(kk.nama) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦'}</p>
-            <p style="margin:0;">NIP. ${kk.nip ? _esc(kk.nip) : 'â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦â€¦..'}</p>
+            <p style="margin:0;text-decoration:underline;font-weight:bold;">${kk.nama ? _esc(kk.nama) : '…………………………………'}</p>
+            <p style="margin:0;">NIP. ${kk.nip ? _esc(kk.nip) : '…………………………………..'}</p>
           </div>
         </div>
       </div>`;
   }
 
-  /* â”€â”€ Escape helper â”€â”€ */
+  /* ── Escape helper ── */
   function _esc(v) {
     return Utils.escapeHtml(String(v ?? ''));
   }
@@ -1955,9 +1955,9 @@ const PreviewRenderer = (() => {
     }
   }
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  /* ────────────────────────────────────────────────
      RENDERER: REKAP NILAI
-  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  ──────────────────────────────────────────────── */
   function _renderRekapNilai(data, kop, margin, typo) {
     const hdr  = data?.header        && typeof data.header === 'object'        ? data.header        : {};
     const ttd  = data?.tandaTangan   && typeof data.tandaTangan === 'object'   ? data.tandaTangan   : {};
@@ -1976,10 +1976,10 @@ const PreviewRenderer = (() => {
     const jumlahTpBab   = Math.min(4, Math.max(1, parseInt(hdr.jumlahTpBab,  10) || 3));
     const jumlahLm      = Math.min(4, Math.max(1, parseInt(hdr.jumlahLm,     10) || 2));
 
-    /* â”€â”€ KOP â”€â”€ */
+    /* ── KOP ── */
     const kopHtml = _buildKopHtml(kop);
 
-    /* â”€â”€ Header Info Dokumen â”€â”€ */
+    /* ── Header Info Dokumen ── */
     const infoHtml = `
       <div class="doc-meta rekap-nilai-meta">
         <table>
@@ -2013,14 +2013,14 @@ const PreviewRenderer = (() => {
         </table>
       </div>`;
 
-    /* â”€â”€ Judul â”€â”€ */
+    /* ── Judul ── */
     const judulHtml = `
       <div class="doc-title-block">
         <h1 class="doc-title">REKAPITULASI NILAI</h1>
         ${isModeFormat ? '<p style="font-size:0.78em;color:#666;margin:0 0 4pt;font-style:italic;">(Format \u2014 kolom nilai dikosongkan, siap cetak)</p>' : ''}
       </div>`;
 
-    /* â”€â”€ Bangun header tabel multi-row â”€â”€
+    /* ── Bangun header tabel multi-row ──
        Struktur sesuai dokumen asli:
 
        Baris 1 : No(rs3) | Nama(rs3) | Formatif (colspan bab*tp) | Sumatif (colspan lm) | STS(rs3) | SAS(rs3) | Praktik(rs3) | Nilai Akhir(rs3)
@@ -2036,54 +2036,7 @@ const PreviewRenderer = (() => {
     const totalFormatifCols = jumlahBab * jumlahTpBab;
     const totalCols = 2 + totalFormatifCols + jumlahLm + 4; // No + Nama + formatif cols + LM cols + STS+SAS+Praktik+NA
 
-    /* Baris 1: grup besar
-       - "Formatif (Lingkup BAB)" hanya 1 baris â†’ di baris 2 akan diisi sub-grup BAB
-       - "Sumatif (Lingkup Materi)" rowspan=2 â†’ menempati baris 1 & 2,
-         sedangkan LM1..LMn akan muncul di baris 2 (satu baris sendiri) */
-    const hBgColor = tableConfig?.colors?.header || '#FFFFFF';
-    const hBgStyle = `background-color:${hBgColor}`;
-    const row1 = `
-      <tr>
-        <th rowspan="3" style="width:8mm;${hBgStyle}">No.</th>
-        <th rowspan="3" style="width:${colWidthNama};text-align:left;${hBgStyle}">Nama Murid</th>
-        <th colspan="${totalFormatifCols}" style="${hBgStyle}">Formatif (Lingkup BAB)</th>
-        <th rowspan="2" colspan="${jumlahLm}" style="${hBgStyle}">Sumatif (Lingkup Materi)</th>
-        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Sumatif Tengah Semester</th>
-        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Sumatif Akhir Semester</th>
-        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Praktik</th>
-        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Nilai Akhir</th>
-      </tr>`;
-
-    /* Baris 2: sub-grup BAB saja (LM tidak ada di sini â€” sudah tercakup rowspan baris 1) */
-    let row2Cells = '';
-    for (let b = 1; b <= jumlahBab; b++) {
-      const ci = colIdxBabStart + (b - 1) * jumlahTpBab;
-      row2Cells += `<th colspan="${jumlahTpBab}" style="${buildHeaderCellStyle(ci, hBgStyle)}">BAB ${b}</th>`;
-    }
-    const row2 = `<tr>${row2Cells}</tr>`;
-
-    /* Baris 3: TP per BAB + LM1..LMn (rowspan baris 1 sudah habis, LM muncul di sini) */
-    let row3Cells = '';
-    for (let b = 1; b <= jumlahBab; b++) {
-      for (let tp = 1; tp <= jumlahTpBab; tp++) {
-        const ci = colIdxBabStart + (b - 1) * jumlahTpBab + (tp - 1);
-        row3Cells += `<th style="width:${colWidthNilai};${buildHeaderCellStyle(ci, hBgStyle)}">TP${tp}</th>`;
-      }
-    }
-    for (let l = 1; l <= jumlahLm; l++) {
-      const ci = colIdxLmStart + (l - 1);
-      row3Cells += `<th style="width:${colWidthLm};${buildHeaderCellStyle(ci, hBgStyle)}">LM${l}</th>`;
-    }
-    const row3 = `<tr>${row3Cells}</tr>`;
-
-    /* Helper ambil nilai (kosong jika mode Format) */
-    const getVal = (murid, key) => {
-      if (isModeFormat) return '';
-      const v = murid[key];
-      return (v !== undefined && v !== null && v !== '') ? _esc(String(v)) : '';
-    };
-
-    /* â”€â”€ Ambil tableConfig dari TableConfigManager (sama seperti DPU) â”€â”€ */
+    /* -- Ambil tableConfig LEBIH AWAL, sebelum dipakai membangun header -- */
     const tableConfig = _getTableConfig('rekap-nilai', 'rekap-nilai');
 
     /* Helper: bangun inline style untuk <th> dari tableConfig */
@@ -2115,7 +2068,6 @@ const PreviewRenderer = (() => {
     };
 
     /* Helper: hitung colIndex absolut (posisi dalam daftar kolom flat) */
-    /* Urutan: no(0), namaMurid(1), bab1_tp1..babN_tpN, lm1..lmN, sts, sas, praktik, nilaiAkhir */
     const colIdxNo        = 0;
     const colIdxNama      = 1;
     const colIdxBabStart  = 2;
@@ -2124,6 +2076,55 @@ const PreviewRenderer = (() => {
     const colIdxSas       = colIdxSts + 1;
     const colIdxPraktik   = colIdxSas + 1;
     const colIdxNa        = colIdxPraktik + 1;
+
+    /* Baris 1: grup besar
+       - "Formatif (Lingkup BAB)" hanya 1 baris → di baris 2 akan diisi sub-grup BAB
+       - "Sumatif (Lingkup Materi)" rowspan=2 → menempati baris 1 & 2,
+         sedangkan LM1..LMn akan muncul di baris 2 (satu baris sendiri) */
+    const hBgColor = tableConfig?.colors?.header || '#FFFFFF';
+    const hBgStyle = `background-color:${hBgColor}`;
+    const row1 = `
+      <tr>
+        <th rowspan="3" style="width:8mm;${hBgStyle}">No.</th>
+        <th rowspan="3" style="width:${colWidthNama};text-align:left;${hBgStyle}">Nama Murid</th>
+        <th colspan="${totalFormatifCols}" style="${hBgStyle}">Formatif (Lingkup BAB)</th>
+        <th rowspan="2" colspan="${jumlahLm}" style="${hBgStyle}">Sumatif (Lingkup Materi)</th>
+        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Sumatif Tengah Semester</th>
+        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Sumatif Akhir Semester</th>
+        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Praktik</th>
+        <th rowspan="3" style="width:${colWidthBig};${hBgStyle}">Nilai Akhir</th>
+      </tr>`;
+
+    /* Baris 2: sub-grup BAB saja (LM tidak ada di sini — sudah tercakup rowspan baris 1) */
+    let row2Cells = '';
+    for (let b = 1; b <= jumlahBab; b++) {
+      const ci = colIdxBabStart + (b - 1) * jumlahTpBab;
+      row2Cells += `<th colspan="${jumlahTpBab}" style="${buildHeaderCellStyle(ci, hBgStyle)}">BAB ${b}</th>`;
+    }
+    const row2 = `<tr>${row2Cells}</tr>`;
+
+    /* Baris 3: TP per BAB + LM1..LMn (rowspan baris 1 sudah habis, LM muncul di sini) */
+    let row3Cells = '';
+    for (let b = 1; b <= jumlahBab; b++) {
+      for (let tp = 1; tp <= jumlahTpBab; tp++) {
+        const ci = colIdxBabStart + (b - 1) * jumlahTpBab + (tp - 1);
+        row3Cells += `<th style="width:${colWidthNilai};${buildHeaderCellStyle(ci, hBgStyle)}">TP${tp}</th>`;
+      }
+    }
+    for (let l = 1; l <= jumlahLm; l++) {
+      const ci = colIdxLmStart + (l - 1);
+      row3Cells += `<th style="width:${colWidthLm};${buildHeaderCellStyle(ci, hBgStyle)}">LM${l}</th>`;
+    }
+    const row3 = `<tr>${row3Cells}</tr>`;
+
+    /* Helper ambil nilai (kosong jika mode Format) */
+    const getVal = (murid, key) => {
+      if (isModeFormat) return '';
+      const v = murid[key];
+      return (v !== undefined && v !== null && v !== '') ? _esc(String(v)) : '';
+    };
+
+    /* ── Ambil tableConfig dari TableConfigManager (sama seperti DPU) ── */
 
     /* Baris data murid */
     let bodyRows = '';
@@ -2173,7 +2174,7 @@ const PreviewRenderer = (() => {
         </table>
       </div>`;
 
-    /* â”€â”€ Tanda Tangan â”€â”€ */
+    /* ── Tanda Tangan ── */
     const tanggalStr  = ttd.tanggalTerbit ? _formatTanggalPanjang(ttd.tanggalTerbit) : '\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026\u2026';
     const namaKab     = _esc(ttd.namaKabupaten     || 'Musi Rawas');
     const namaSekolah = _esc(ttd.namaSekolahan     || '');
@@ -2214,7 +2215,7 @@ const PreviewRenderer = (() => {
       </div>`;
   }
 
-  /* â”€â”€ Public API â”€â”€ */
+  /* ── Public API ── */
   return {
     init,
     render,
