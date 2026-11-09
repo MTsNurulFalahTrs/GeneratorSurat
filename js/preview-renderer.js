@@ -2036,35 +2036,38 @@ const PreviewRenderer = (() => {
     const totalFormatifCols = jumlahBab * jumlahTpBab;
     const totalCols = 2 + totalFormatifCols + jumlahLm + 4; // No + Nama + formatif cols + LM cols + STS+SAS+Praktik+NA
 
-    /* Baris 1: grup besar */
+    /* Baris 1: grup besar
+       - "Formatif (Lingkup BAB)" hanya 1 baris → di baris 2 akan diisi sub-grup BAB
+       - "Sumatif (Lingkup Materi)" rowspan=2 → menempati baris 1 & 2,
+         sedangkan LM1..LMn akan muncul di baris 2 (satu baris sendiri) */
     const row1 = `
       <tr>
         <th rowspan="3" style="width:8mm;">No.</th>
         <th rowspan="3" style="width:${colWidthNama};text-align:left;">Nama Murid</th>
         <th colspan="${totalFormatifCols}">Formatif (Lingkup BAB)</th>
-        <th colspan="${jumlahLm}">Sumatif (Lingkup Materi)</th>
+        <th rowspan="2" colspan="${jumlahLm}">Sumatif (Lingkup Materi)</th>
         <th rowspan="3" style="width:${colWidthBig};">Sumatif Tengah Semester</th>
         <th rowspan="3" style="width:${colWidthBig};">Sumatif Akhir Semester</th>
         <th rowspan="3" style="width:${colWidthBig};">Praktik</th>
         <th rowspan="3" style="width:${colWidthBig};">Nilai Akhir</th>
       </tr>`;
 
-    /* Baris 2: sub-grup BAB (dengan colspan TP) + kolom LM (rowspan=2, tidak ada TP) */
+    /* Baris 2: sub-grup BAB saja (LM tidak ada di sini — sudah tercakup rowspan baris 1) */
     let row2Cells = '';
     for (let b = 1; b <= jumlahBab; b++) {
       row2Cells += `<th colspan="${jumlahTpBab}">BAB ${b}</th>`;
     }
-    for (let l = 1; l <= jumlahLm; l++) {
-      row2Cells += `<th rowspan="2" style="width:${colWidthLm};">LM${l}</th>`;
-    }
     const row2 = `<tr>${row2Cells}</tr>`;
 
-    /* Baris 3: hanya TP untuk setiap BAB (kolom LM sudah di-rowspan) */
+    /* Baris 3: TP per BAB + LM1..LMn (rowspan baris 1 sudah habis, LM muncul di sini) */
     let row3Cells = '';
     for (let b = 1; b <= jumlahBab; b++) {
       for (let tp = 1; tp <= jumlahTpBab; tp++) {
         row3Cells += `<th style="width:${colWidthNilai};">TP${tp}</th>`;
       }
+    }
+    for (let l = 1; l <= jumlahLm; l++) {
+      row3Cells += `<th style="width:${colWidthLm};">LM${l}</th>`;
     }
     const row3 = `<tr>${row3Cells}</tr>`;
 
