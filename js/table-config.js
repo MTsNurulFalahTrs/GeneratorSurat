@@ -283,10 +283,10 @@ const TableConfigManager = (() => {
         (merge default + user override)
   ──────────────────────────────────────────────── */
   /**
-   * @param  {string} templateId
-   * @param  {string} tableId
-   * @returns {Object} { header: { columns: {...} }, body: { columns: {...} } }
-   *   Config yang sudah siap dipakai renderer.
+   * @param {any} tableConfig
+   * @param {number} rowNumber
+   * @param {number} colIndex
+   * @returns {string} Warna latar sel.
    */
   function getBodyCellColor(tableConfig, rowNumber, colIndex) {
     const rules = Array.isArray(tableConfig?.bodyColorRules) ? tableConfig.bodyColorRules : [];
