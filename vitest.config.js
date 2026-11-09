@@ -2,14 +2,28 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    // Jalankan test di Node environment (bukan browser)
-    // Fungsi murni di utils.js dan validation.js tidak butuh DOM
+    // Aplikasi menggunakan classic browser scripts yang diuji dalam VM Node.
     environment: 'node',
     include: ['tests/**/*.test.js'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
-      include: ['js/utils.js', 'js/validation.js'],
+      // Sertakan file yang belum dijalankan tes: coverage 0% harus terlihat,
+      // bukan tersembunyi dari laporan. Semua modul internal serta API diukur.
+      all: true,
+      include: [
+        'js/**/*.js',
+        'templates/**/*.js',
+        'api/**/*.js',
+      ],
+      exclude: [
+        'js/vendor/**',
+        '**/*.d.ts',
+        'node_modules/**',
+        'coverage/**',
+        'dist/**',
+      ],
+      reporter: ['text', 'html', 'json-summary', 'lcov'],
+      reportsDirectory: './coverage',
     },
   },
 });
